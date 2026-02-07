@@ -101,5 +101,5 @@ El componente realiza los siguientes cálculos en cada actualización:
 ---
 
 ## 📄 Licencia
-
-[MIT](https://choosealicense.com/licenses/mit/)
+PolyForm Noncommercial License 1.0.0 ->
+https://polyformproject.org/licenses/noncommercial/1.0.0
