@@ -12,7 +12,16 @@ class AccurateForecastFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(self, user_input=None):
         """Menú Principal: ¿Qué quieres hacer?"""
-        self._db = self.hass.data[DOMAIN]["db"]
+        # Asegurar que DOMAIN existe en hass.data
+        self.hass.data.setdefault(DOMAIN, {})
+
+        # Inicializar la base de datos si no existe
+        if "db" not in self.hass.data[DOMAIN]:
+            self._db = PVDatabase(self.hass)
+            await self._db.async_load()
+            self.hass.data[DOMAIN]["db"] = self._db
+        else:
+            self._db = self.hass.data[DOMAIN]["db"]
         
         return self.async_show_menu(
             step_id="user",
