@@ -115,7 +115,10 @@ class AccurateForecastFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
             # Datos del Sensor Fuente (Origen)
             vol.Required(CONF_REF_SENSOR): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain="sensor")
+                selector.EntitySelectorConfig(
+                    domain="sensor", 
+                    device_class=["power", "irradiance"]
+                )
             ),
             vol.Required(CONF_REF_AZIMUTH, default=180): vol.Coerce(float),
             vol.Required(CONF_REF_TILT, default=0): vol.Coerce(float), # 0 = Horizontal
@@ -125,7 +128,7 @@ class AccurateForecastFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 selector.EntitySelectorConfig(domain="sensor", device_class="temperature")
             ),
             vol.Optional(CONF_WIND_SENSOR): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain="sensor")
+                selector.EntitySelectorConfig(domain="sensor", device_class="wind_speed")
             ),
         })
 

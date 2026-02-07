@@ -46,10 +46,15 @@ class PVDatabase:
             "noct": noct,
             "voc": voc,
             "isc": isc,
-            "vmp": vmp,
-            "imp": imp
         }
         return self.async_save()
+
+    def delete_model(self, model_id):
+        """Elimina un modelo de la DB."""
+        if model_id in self.data:
+            del self.data[model_id]
+            return self.async_save()
+        return False
 
     def get_model(self, model_id):
         return self.data.get(model_id)
