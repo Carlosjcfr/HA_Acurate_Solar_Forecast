@@ -1,0 +1,46 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "Configuración de Previsión Solar",
+                "description": "Elige una acción:",
+                "menu_options": {
+                    "add_string": "Añadir Nuevo String",
+                    "add_pv_model": "Añadir Modelo de Panel FV"
+                }
+            },
+            "add_pv_model": {
+                "title": "Añadir Modelo de Panel",
+                "description": "Introduce las especificaciones técnicas de tu panel fotovoltaico.",
+                "data": {
+                    "name": "Nombre del Modelo",
+                    "p_stc": "Potencia STC (W)",
+                    "gamma": "Coeficiente de Temperatura (%/°C)",
+                    "noct": "NOCT (°C)"
+                }
+            },
+            "add_string": {
+                "title": "Añadir String",
+                "description": "Configura un nuevo string de paneles solares.",
+                "data": {
+                    "string_name": "Nombre del String",
+                    "panel_model": "Modelo de Panel",
+                    "num_panels": "Número de Paneles",
+                    "azimuth": "Azimut (180=Sur)",
+                    "tilt": "Inclinación (Grados)",
+                    "ref_sensor": "Sensor de Potencia de Referencia",
+                    "ref_azimuth": "Azimut del Sensor de Referencia",
+                    "ref_tilt": "Inclinación del Sensor de Referencia",
+                    "temp_sensor": "Sensor de Temperatura",
+                    "wind_sensor": "Sensor de Viento"
+                }
+            }
+        },
+        "error": {
+            "unknown": "Error inesperado"
+        },
+        "abort": {
+            "already_configured": "El dispositivo ya está configurado"
+        }
+    }
+}

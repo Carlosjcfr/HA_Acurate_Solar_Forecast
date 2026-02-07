@@ -1,0 +1,46 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "Solar Forecast Configuration",
+                "description": "Choose an action:",
+                "menu_options": {
+                    "add_string": "Add New String",
+                    "add_pv_model": "Add PV Panel Model"
+                }
+            },
+            "add_pv_model": {
+                "title": "Add PV Panel Model",
+                "description": "Enter the technical specifications of your PV panel.",
+                "data": {
+                    "name": "Model Name",
+                    "p_stc": "Power at STC (W)",
+                    "gamma": "Temperature Coefficient (%/°C)",
+                    "noct": "NOCT (°C)"
+                }
+            },
+            "add_string": {
+                "title": "Add String",
+                "description": "Configure a new string of solar panels.",
+                "data": {
+                    "string_name": "String Name",
+                    "panel_model": "Panel Model",
+                    "num_panels": "Number of Panels",
+                    "azimuth": "Azimuth (180=South)",
+                    "tilt": "Tilt (Degrees)",
+                    "ref_sensor": "Reference Power Sensor",
+                    "ref_azimuth": "Reference Sensor Azimuth",
+                    "ref_tilt": "Reference Sensor Tilt",
+                    "temp_sensor": "Temperature Sensor",
+                    "wind_sensor": "Wind Speed Sensor"
+                }
+            }
+        },
+        "error": {
+            "unknown": "Unexpected error"
+        },
+        "abort": {
+            "already_configured": "Device is already configured"
+        }
+    }
+}
