@@ -16,7 +16,11 @@
                     "name": "Model Name",
                     "p_stc": "Power at STC (W)",
                     "gamma": "Temperature Coefficient (%/°C)",
-                    "noct": "NOCT (°C)"
+                    "noct": "NOCT (°C)",
+                    "voc": "Open Circuit Voltage (Voc)",
+                    "isc": "Short Circuit Current (Isc)",
+                    "vmp": "Voltage at Max Power (Vmp)",
+                    "imp": "Current at Max Power (Imp)"
                 }
             },
             "add_string": {

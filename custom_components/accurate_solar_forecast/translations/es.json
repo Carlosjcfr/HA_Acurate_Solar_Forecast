@@ -16,7 +16,11 @@
                     "name": "Nombre del Modelo",
                     "p_stc": "Potencia STC (W)",
                     "gamma": "Coeficiente de Temperatura (%/°C)",
-                    "noct": "NOCT (°C)"
+                    "noct": "NOCT (°C)",
+                    "voc": "Voltaje de Circuito Abierto (Voc)",
+                    "isc": "Corriente de Cortocircuito (Isc)",
+                    "vmp": "Voltaje a Máxima Potencia (Vmp)",
+                    "imp": "Corriente a Máxima Potencia (Imp)"
                 }
             },
             "add_string": {

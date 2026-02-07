@@ -15,3 +15,12 @@ CONF_REF_AZIMUTH = "ref_azimuth" # Orientación del sensor físico
 # Sensores Ambientales
 CONF_TEMP_SENSOR = "temp_sensor"
 CONF_WIND_SENSOR = "wind_sensor"
+
+# PV Model Parameters
+CONF_P_STC = "p_stc"
+CONF_VOC = "voc"
+CONF_ISC = "isc"
+CONF_VMP = "vmp"
+CONF_IMP = "imp"
+CONF_GAMMA = "gamma"
+CONF_NOCT = "noct"

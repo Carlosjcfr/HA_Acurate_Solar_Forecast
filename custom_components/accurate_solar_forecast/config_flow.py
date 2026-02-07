@@ -37,7 +37,11 @@ class AccurateForecastFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 user_input["name"],
                 user_input["p_stc"],
                 user_input["gamma"],
-                user_input["noct"]
+                user_input["noct"],
+                user_input[CONF_VOC],
+                user_input[CONF_ISC],
+                user_input[CONF_VMP],
+                user_input[CONF_IMP]
             )
             # Volver al menú o cerrar
             return self.async_create_entry(title="Modelo Guardado", data={})
@@ -47,6 +51,10 @@ class AccurateForecastFlow(config_entries.ConfigFlow, domain=DOMAIN):
             vol.Required("p_stc", default=400): vol.Coerce(float),
             vol.Required("gamma", default=-0.35): vol.Coerce(float), # %/C
             vol.Required("noct", default=45): vol.Coerce(float),
+            vol.Required(CONF_VOC, default=50.0): vol.Coerce(float),
+            vol.Required(CONF_ISC, default=11.0): vol.Coerce(float),
+            vol.Required(CONF_VMP, default=41.0): vol.Coerce(float),
+            vol.Required(CONF_IMP, default=10.0): vol.Coerce(float),
         })
 
         return self.async_show_form(step_id="add_pv_model", data_schema=schema, errors=errors)
