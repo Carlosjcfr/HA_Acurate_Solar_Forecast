@@ -101,5 +101,5 @@ El componente realiza los siguientes cálculos en cada actualización:
 ---
 
 ## 📄 Licencia
-PolyForm Noncommercial License 1.0.0 ->
-https://polyformproject.org/licenses/noncommercial/1.0.0
+PolyForm Strict License 1.0.0 -> 
+https://polyformproject.org/licenses/strict/1.0.0
