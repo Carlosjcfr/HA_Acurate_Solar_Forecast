@@ -1,4 +1,4 @@
-DOMAIN = "accurate_forecast"
+DOMAIN = "accurate_solar_forecast"
 
 # Configuración del String
 CONF_STRING_NAME = "string_name"

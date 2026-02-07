@@ -1,5 +1,5 @@
 {
-    "domain": "accurate_forecast",
+    "domain": "accurate_solar_forecast",
     "name": "Accurate Solar Forecast",
     "codeowners": [
         "@Carlosjcfr"
