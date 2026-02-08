@@ -142,16 +142,41 @@ class SolarStringSensor(SensorEntity):
         # P = P_stc * (Irr / 1000) * [1 + gamma * (Tcell - 25)]
         p_stc = self._panel_data.get("p_stc", 400)
         gamma = self._panel_data.get("gamma", -0.4) / 100.0 # Convertir % a decimal
-        num_panels = self._config.get(CONF_NUM_PANELS, 1)
+        num_panels_series = self._config.get(CONF_NUM_PANELS, 1)
+        num_strings_parallel = self._config.get(CONF_NUM_STRINGS, 1)
 
         # Factor térmico
-        temp_factor = 1 + (gamma * (t_cell - 25))
+        # Asumimos que Gamma aplica principalmente a Potencia y Voltaje.
+        # Coeficiente de voltaje suele ser similar a gamma de potencia (negativo).
+        temp_diff = t_cell - 25
+        temp_factor_power = 1 + (gamma * temp_diff)
         
-        # Potencia unitaria
-        power_unit = p_stc * (irr_target / 1000.0) * temp_factor
+        # Potencia unitaria STC * IrrRatio * TempFactor
+        power_unit = p_stc * (irr_target / 1000.0) * temp_factor_power
         
-        # Potencia total
-        total_power = max(0, power_unit * num_panels)
+        # Potencia total = Potencia Unitaria * Total Paneles
+        total_panels = num_panels_series * num_strings_parallel
+        total_power = max(0, power_unit * total_panels)
+
+        # --- CÁLCULO DE TENSIÓN E INTENSIDAD (ESTIMACIÓN) ---
+        vmp = self._panel_data.get("vmp", 30.0)
+        imp = self._panel_data.get("imp", 10.0)
+        
+        # Voltaje: Depende temperatura (Gamma) y NO de irradiancia (idealmente, aunque baja un poco con poca luz)
+        # V_string = Vmp * N_series * [1 + Gamma_V * (Tcell - 25)]
+        # Usamos Gamma de Potencia como aproximación para Voltaje si no tenemos Beta_Voc
+        # (El voltaje cae con el calor, igual que la potencia)
+        v_string = vmp * num_panels_series * temp_factor_power
+        
+        # Corriente: Depende linealmente de irradiancia y poco de temperatura
+        # I_string = Imp * (Irr / 1000) * N_parallel
+        # (Ignoramos pequeño coeficiente positivo de temperatura para corriente)
+        i_total = imp * (irr_target / 1000.0) * num_strings_parallel
+
+        # Si no hay sol, V e I son 0 (o cercanos a 0, V cae rápido sin luz)
+        if irr_target < 1:
+            v_string = 0
+            i_total = 0
 
         self._attr_native_value = round(total_power, 2)
         self._attr_extra_state_attributes = {
@@ -160,10 +185,12 @@ class SolarStringSensor(SensorEntity):
             "factor_transposicion": round(geometric_factor, 3),
             "temperatura_celula": round(t_cell, 1),
             "temperatura_ambiente": round(t_amb, 1),
-            "factor_perdida_termica": round(temp_factor, 3),
+            "factor_perdida_termica": round(temp_factor_power, 3),
             "sun_azimuth": round(sun_az, 1),
             "sun_elevation": round(sun_el, 1),
-            "panel_model": self._panel_data.get("name")
+            "panel_model": self._panel_data.get("name"),
+            "voltaje_total_estimado": round(v_string, 1),
+            "corriente_total_estimada": round(i_total, 2)
         }
 
         self.async_write_ha_state()
