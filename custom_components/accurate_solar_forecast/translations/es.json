@@ -37,10 +37,11 @@
                 "data": {
                     "string_name": "Nombre del String",
                     "panel_model": "Modelo de Panel",
-                    "num_panels": "Número de Paneles",
+                    "num_panels": "Número de Paneles (Serie)",
+                    "num_strings": "Número de Strings en Paralelo",
                     "azimuth": "Azimut (180=Sur)",
                     "tilt": "Inclinación (Grados)",
-                    "ref_sensor": "Sensor de Potencia de Referencia",
+                    "ref_sensor": "Sensor de Irradiancia de Referencia (W/m2)",
                     "ref_azimuth": "Azimut del Sensor de Referencia",
                     "ref_tilt": "Inclinación del Sensor de Referencia",
                     "temp_sensor": "Sensor de Temperatura",

@@ -108,6 +108,7 @@ class AccurateForecastFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 selector.SelectSelectorConfig(options=list(models_filtered.values()), mode="dropdown")
             ),
             vol.Required(CONF_NUM_PANELS, default=1): int,
+            vol.Required(CONF_NUM_STRINGS, default=1): int,
             
             # Geometría del String Nuevo
             vol.Required(CONF_AZIMUTH, default=180): vol.All(vol.Coerce(float), vol.Range(min=0, max=360)),
@@ -117,7 +118,7 @@ class AccurateForecastFlow(config_entries.ConfigFlow, domain=DOMAIN):
             vol.Required(CONF_REF_SENSOR): selector.EntitySelector(
                 selector.EntitySelectorConfig(
                     domain="sensor", 
-                    device_class=["power", "irradiance"]
+                    device_class="irradiance"
                 )
             ),
             vol.Required(CONF_REF_AZIMUTH, default=180): vol.Coerce(float),
