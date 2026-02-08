@@ -4,6 +4,7 @@ DOMAIN = "accurate_solar_forecast"
 CONF_STRING_NAME = "string_name"
 CONF_PANEL_MODEL = "panel_model" # ID del modelo en nuestra DB
 CONF_NUM_PANELS = "num_panels"
+CONF_NUM_STRINGS = "num_strings" # Number of parallel strings
 CONF_TILT = "tilt"               # Inclinación String
 CONF_AZIMUTH = "azimuth"         # Orientación String (0=Norte, 180=Sur)
 

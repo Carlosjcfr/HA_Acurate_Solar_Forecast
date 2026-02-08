@@ -117,7 +117,7 @@ class AccurateForecastFlow(config_entries.ConfigFlow, domain=DOMAIN):
             vol.Required(CONF_REF_SENSOR): selector.EntitySelector(
                 selector.EntitySelectorConfig(
                     domain="sensor", 
-                    device_class=["power", "irradiance"]
+                    device_class="irradiance"
                 )
             ),
             vol.Required(CONF_REF_AZIMUTH, default=180): vol.Coerce(float),
