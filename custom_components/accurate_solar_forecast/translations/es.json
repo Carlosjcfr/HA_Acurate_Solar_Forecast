@@ -3,11 +3,11 @@
         "step": {
             "user": {
                 "title": "Accurate solar forecast",
-                "description": "Elije una Acción:",
+                "description": "¿Que quieres añadir?",
                 "menu_options": {
-                    "add_pv_model": "Añadir Modulo Fotovoltaico",
-                    "add_irradiance_sensor": "Añadir sensor de Irradiancia",
-                    "add_string": "Nuevo forecast de string"
+                    "add_pv_model": "Nuevo Modulo Fotovoltaico",
+                    "add_irradiance_sensor": "Nuevo Sensor de irradiancia",
+                    "add_string": "Nuevo String"
                 }
             },
             "add_pv_model": {

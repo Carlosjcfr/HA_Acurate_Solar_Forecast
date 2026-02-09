@@ -3,11 +3,11 @@
         "step": {
             "user": {
                 "title": "Solar Forecast Configuration",
-                "description": "Choose an action:",
+                "description": "What do you want to add?",
                 "menu_options": {
-                    "add_pv_model": "Add PV Panel Model",
-                    "add_irradiance_sensor": "Add Irradiance Sensor",
-                    "add_string": "Add New String"
+                    "add_pv_model": "New PV Module",
+                    "add_irradiance_sensor": "New Irradiance Sensor",
+                    "add_string": "New String"
                 }
             },
             "add_pv_model": {
