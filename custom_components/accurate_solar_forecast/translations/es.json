@@ -5,9 +5,8 @@
                 "title": "Accurate solar forecast",
                 "description": "Elije una Acción:",
                 "menu_options": {
-                    "add_pv_model": "Añadir Modulo Fotovoltaico",
-                    "add_irradiance_sensor": "Añadir sensor de Irradiancia",
-                    "add_string": "Nuevo forecast de string"
+                    "add_string": "Añadir Sensor de Producción PV",
+                    "add_pv_model": "Añadir Modelo de Panel FV"
                 }
             },
             "add_pv_model": {
@@ -43,15 +42,21 @@
                 }
             },
             "add_string_details": {
-                "title": "Añadir String - Detalles",
+                "title": "Añadir Sensor FV - Detalles del String",
                 "description": "Paso 2: Configura el modelo y la geometría.",
                 "data": {
-                    "string_name": "Nombre del String",
+                    "string_name": "Nombre del Sensor",
                     "panel_model": "Modelo de Panel",
                     "num_panels": "Número de Paneles (Serie)",
                     "num_strings": "Número de Strings en Paralelo",
                     "azimuth": "Azimut (180=Sur)",
-                    "tilt": "Inclinación (Grados)",
+                    "tilt": "Inclinación (Grados)"
+                }
+            },
+            "ref_sensor": {
+                "title": "Añadir Sensor FV - Sensores de Referencia",
+                "description": "Paso 3: Configura los sensores ambientales y de referencia.",
+                "data": {
                     "ref_sensor": "Sensor de Irradiancia de Referencia (W/m2)",
                     "ref_azimuth": "Azimut del Sensor de Referencia",
                     "ref_tilt": "Inclinación del Sensor de Referencia",

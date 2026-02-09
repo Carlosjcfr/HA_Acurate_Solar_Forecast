@@ -5,9 +5,8 @@
                 "title": "Solar Forecast Configuration",
                 "description": "Choose an action:",
                 "menu_options": {
-                    "add_pv_model": "Add PV Panel Model",
-                    "add_irradiance_sensor": "Add Irradiance Sensor",
-                    "add_string": "Add New String"
+                    "add_string": "Add Production Sensor",
+                    "add_pv_model": "Add PV Panel Model"
                 }
             },
             "add_pv_model": {
@@ -46,12 +45,18 @@
                 "title": "Add String - Details",
                 "description": "Step 2: Configure model and geometry.",
                 "data": {
-                    "string_name": "String Name",
+                    "string_name": "Sensor Name",
                     "panel_model": "Panel Model",
                     "num_panels": "Number of Panels (Series)",
                     "num_strings": "Number of Parallel Strings",
                     "azimuth": "Azimut (180=South)",
-                    "tilt": "Tilt (Degrees)",
+                    "tilt": "Tilt (Degrees)"
+                }
+            },
+            "ref_sensor": {
+                "title": "Add Production Sensor - Reference",
+                "description": "Step 3: Configure environmental and reference sensors.",
+                "data": {
                     "ref_sensor": "Reference Irradiance Sensor (W/m2)",
                     "ref_azimuth": "Reference Sensor Azimuth",
                     "ref_tilt": "Reference Sensor Tilt",
