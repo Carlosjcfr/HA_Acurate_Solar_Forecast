@@ -24,6 +24,16 @@
                     "imp": "Current at Max Power (Imp)"
                 }
             },
+            "add_irradiance_sensor": {
+                "title": "Add Irradiance Sensor",
+                "description": "Configure an existing irradiance sensor.",
+                "data": {
+                    "name": "Name",
+                    "ref_sensor": "Irradiance Sensor",
+                    "temp_sensor": "Temperature Sensor",
+                    "wind_sensor": "Wind Speed Sensor"
+                }
+            },
             "add_string": {
                 "title": "Add String - Brand",
                 "description": "Step 1: Select Panel Brand.",

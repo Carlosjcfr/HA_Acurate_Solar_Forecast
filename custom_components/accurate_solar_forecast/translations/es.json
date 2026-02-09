@@ -2,8 +2,8 @@
     "config": {
         "step": {
             "user": {
-                "title": "Configuración de Previsión Solar",
-                "description": "Elige una acción:",
+                "title": "Accurate solar forecast",
+                "description": "Elije una Acción:",
                 "menu_options": {
                     "add_string": "Añadir Sensor de Producción PV",
                     "add_pv_model": "Añadir Modelo de Panel FV"
@@ -22,6 +22,16 @@
                     "isc": "Corriente de Cortocircuito (Isc)",
                     "vmp": "Voltaje a Máxima Potencia (Vmp)",
                     "imp": "Corriente a Máxima Potencia (Imp)"
+                }
+            },
+            "add_irradiance_sensor": {
+                "title": "Añadir sensor de Irradiancia",
+                "description": "Configura un sensor de irradiancia existente.",
+                "data": {
+                    "name": "Nombre",
+                    "ref_sensor": "Sensor de Irradiancia",
+                    "temp_sensor": "Sensor de Temperatura",
+                    "wind_sensor": "Sensor de Viento"
                 }
             },
             "add_string": {
