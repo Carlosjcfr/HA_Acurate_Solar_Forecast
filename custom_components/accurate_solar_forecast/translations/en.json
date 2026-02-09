@@ -5,8 +5,9 @@
                 "title": "Solar Forecast Configuration",
                 "description": "Choose an action:",
                 "menu_options": {
-                    "add_string": "Add New String",
-                    "add_pv_model": "Add PV Panel Model"
+                    "add_pv_model": "Add PV Panel Model",
+                    "add_irradiance_sensor": "Add Irradiance Sensor",
+                    "add_string": "Add New String"
                 }
             },
             "add_pv_model": {
@@ -22,6 +23,16 @@
                     "isc": "Short Circuit Current (Isc)",
                     "vmp": "Voltage at Max Power (Vmp)",
                     "imp": "Current at Max Power (Imp)"
+                }
+            },
+            "add_irradiance_sensor": {
+                "title": "Add Irradiance Sensor",
+                "description": "Configure an existing irradiance sensor.",
+                "data": {
+                    "name": "Name",
+                    "ref_sensor": "Irradiance Sensor",
+                    "temp_sensor": "Temperature Sensor",
+                    "wind_sensor": "Wind Speed Sensor"
                 }
             },
             "add_string": {

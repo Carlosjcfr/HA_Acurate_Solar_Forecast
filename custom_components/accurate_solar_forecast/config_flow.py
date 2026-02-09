@@ -27,7 +27,7 @@ class AccurateForecastFlow(config_entries.ConfigFlow, domain=DOMAIN):
         
         return self.async_show_menu(
             step_id="user",
-            menu_options=["add_string", "add_pv_model"]
+            menu_options=["add_pv_model", "add_irradiance_sensor", "add_string"]
         )
 
     # --- OPCIÓN A: AÑADIR MODELO A LA BASE DE DATOS ---
@@ -72,6 +72,33 @@ class AccurateForecastFlow(config_entries.ConfigFlow, domain=DOMAIN):
         })
 
         return self.async_show_form(step_id="add_pv_model", data_schema=schema, errors=errors)
+
+    # --- OPCIÓN C: AÑADIR SENSOR DE IRRADIANCIA ---
+    async def async_step_add_irradiance_sensor(self, user_input=None):
+        if user_input is not None:
+            # Create entry for irradiance sensor
+            return self.async_create_entry(
+                title=user_input["name"],
+                data=user_input
+            )
+
+        schema = vol.Schema({
+            vol.Required("name"): str,
+            vol.Required(CONF_REF_SENSOR): selector.EntitySelector(
+                selector.EntitySelectorConfig(
+                    domain="sensor", 
+                    device_class=["irradiance", "power"]
+                )
+            ),
+            vol.Optional(CONF_TEMP_SENSOR): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain="sensor", device_class="temperature")
+            ),
+            vol.Optional(CONF_WIND_SENSOR): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain="sensor", device_class="wind_speed")
+            ),
+        })
+
+        return self.async_show_form(step_id="add_irradiance_sensor", data_schema=schema)
 
     # --- OPCIÓN B: CREAR UN STRING (SENSOR) - PASO 1: SELECCIONAR MARCA ---
     async def async_step_add_string(self, user_input=None):
