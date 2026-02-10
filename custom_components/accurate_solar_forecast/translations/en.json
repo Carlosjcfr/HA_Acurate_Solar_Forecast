@@ -3,9 +3,10 @@
         "step": {
             "user": {
                 "title": "Solar Forecast Configuration",
-                "description": "What do you want to add?",
+                "description": "What do you want to do?",
                 "menu_options": {
                     "add_pv_model": "New PV Module",
+                    "configure_sensors": "Configure Sensors",
                     "add_string": "New String"
                 }
             },
@@ -24,35 +25,73 @@
                     "imp": "Imp"
                 }
             },
-            "add_string": {
-                "title": "New String",
-                "description": "Select the PV module manufacturer.",
-                "data": {
-                    "brand": "PV Module Manufacturer"
+            "configure_sensors": {
+                "title": "Configure Sensors",
+                "description": "Manage your sensor groups.",
+                "menu_options": {
+                    "create_sensor_group": "Create Sensor Group",
+                    "edit_sensor_group_select": "Edit Sensor Group"
                 }
             },
-            "add_string_details": {
-                "title": "New String",
-                "description": "Configure sensors and string details.",
+            "create_sensor_group": {
+                "title": "Create Sensor Group",
+                "description": "Define physical sensors available at a location.",
                 "data": {
-                    "string_name": "Name",
+                    "sensor_group_name": "Group Name",
                     "irradiance_sensor": "Irradiance Sensor",
-                    "temp_sensor": "Ambient Temp Sensor",
+                    "temperature_sensor": "Ambient Temp Sensor",
+                    "temp_panel_sensor": "Panel Temp Sensor",
+                    "wind_sensor": "Wind Speed Sensor (m/s)",
+                    "ref_tilt": "Ref. Sensor Tilt (°)",
+                    "ref_orientation": "Ref. Sensor Orientation (180=S)"
+                }
+            },
+            "edit_sensor_group_select": {
+                "title": "Edit Group",
+                "description": "Select the sensor group to edit.",
+                "data": {
+                    "selected_group": "Sensor Group"
+                }
+            },
+            "edit_sensor_group_form": {
+                "title": "Edit Group",
+                "description": "Modify sensors or geometry.",
+                "data": {
+                    "sensor_group_name": "Group Name",
+                    "irradiance_sensor": "Irradiance Sensor",
+                    "temperature_sensor": "Ambient Temp Sensor",
                     "temp_panel_sensor": "Panel Temp Sensor",
                     "wind_sensor": "Wind Speed Sensor (m/s)",
                     "ref_tilt": "Ref. Sensor Tilt",
-                    "ref_orientation": "Ref. Sensor Orientation",
+                    "ref_orientation": "Ref. Sensor Orientation"
+                }
+            },
+            "add_string": {
+                "title": "New String",
+                "description": "Link a sensor group to a PV module.",
+                "data": {
+                    "string_name": "String Name",
+                    "selected_sensor_group": "Sensor Group",
+                    "brand": "Panel Manufacturer"
+                }
+            },
+            "add_string_details": {
+                "title": "String Details",
+                "description": "Configure the PV array geometry.",
+                "data": {
                     "panel_model": "PV Module",
                     "num_panels": "Series Panels Count",
                     "num_strings": "Parallel Strings Count",
-                    "tilt": "Tilt (°)",
-                    "azimuth": "Azimuth (180° = South)"
+                    "tilt": "Panel Tilt (°)",
+                    "azimuth": "Panel Azimuth (180=S)"
                 }
             }
         }
     },
     "error": {
-        "unknown": "Unexpected error"
+        "unknown": "Unexpected error",
+        "no_sensor_groups": "No sensor groups created. Create one first.",
+        "no_sensor_groups_available": "No sensor groups available. Go back and create one in 'Configure Sensors'."
     },
     "abort": {
         "already_configured": "Device is already configured"

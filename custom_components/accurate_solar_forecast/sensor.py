@@ -4,28 +4,127 @@ from homeassistant.components.sensor import SensorEntity, SensorDeviceClass, Sen
 from homeassistant.const import UnitOfPower, UnitOfTemperature, UnitOfSpeed
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.event import async_track_state_change_event
+from homeassistant.helpers.entity import DeviceInfo
 from .const import *
 
 _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
-    # Solo creamos sensor si es un String (no si solo añadimos un modelo)
-    if CONF_STRING_NAME in config_entry.data:
-        db = hass.data[DOMAIN]["db"]
-        async_add_entities([SolarStringSensor(hass, config_entry.data, db)], update_before_add=True)
+    """Set up the Accurate Solar Forecast sensors from a config entry."""
+    db = hass.data[DOMAIN]["db"] # DB is assumed to be loaded in __init__
+    
+    # CASE 1: SENSOR GROUP (GROUP OF SENSORS)
+    if CONF_SENSOR_GROUP_NAME in config_entry.data:
+        # Create entities for this group
+        entities = []
+        name = config_entry.data[CONF_SENSOR_GROUP_NAME]
+        
+        # We need a unique ID for the device based on the config entry ID or name
+        device_id = config_entry.entry_id 
+        
+        # 1. Irradiance Proxy
+        if CONF_REF_SENSOR in config_entry.data:
+            entities.append(SensorGroupProxySensor(
+                hass, config_entry, device_id, name, "Irradiance",
+                config_entry.data[CONF_REF_SENSOR], "irradiance", "W/m²"
+            ))
+            
+        # 2. Temperature Proxy
+        if CONF_TEMP_SENSOR in config_entry.data:
+            entities.append(SensorGroupProxySensor(
+                hass, config_entry, device_id, name, "Temperature",
+                config_entry.data[CONF_TEMP_SENSOR], "temperature", "°C"
+            ))
+            
+        # 3. Panel Temp Proxy (Optional)
+        if config_entry.data.get(CONF_TEMP_PANEL_SENSOR):
+            entities.append(SensorGroupProxySensor(
+                hass, config_entry, device_id, name, "Panel Temperature",
+                config_entry.data[CONF_TEMP_PANEL_SENSOR], "temperature", "°C"
+            ))
+
+        # 4. Wind Proxy (Optional)
+        if config_entry.data.get(CONF_WIND_SENSOR):
+             entities.append(SensorGroupProxySensor(
+                hass, config_entry, device_id, name, "Wind Speed",
+                config_entry.data[CONF_WIND_SENSOR], "wind_speed", "m/s"
+            ))
+            
+        async_add_entities(entities)
+
+    # CASE 2: SOLAR STRING (POWER PREDICTION)
+    elif CONF_STRING_NAME in config_entry.data:
+        # We need to look up the Sensor Group data!
+        # The string entry has 'selected_sensor_group' (which is the name/ID in DB)
+        # However, to be robust, we should probably look up the CONFIG ENTRY of the sensor group?
+        # OR just use the DB since the sensors are entities in HA anyway.
+        # Let's use the DB to get the entity IDs associated with that group name.
+        
+        group_name = config_entry.data.get("selected_sensor_group")
+        # In this implementation, the value stored was the Name (key in DB dict was name-based id)
+        # But wait, config_flow list_sensor_groups returned {id: name}. SelectSelector returns the KEY (id).
+        # So group_name is actually the group_id.
+        
+        sensor_group_data = db.get_sensor_group(group_name)
+        
+        if sensor_group_data:
+            async_add_entities([SolarStringSensor(hass, config_entry.data, db, sensor_group_data)], update_before_add=True)
+        else:
+            _LOGGER.error(f"Sensor group '{group_name}' not found in DB for string {config_entry.title}")
+
+
+class SensorGroupProxySensor(SensorEntity):
+    """A sensor that mirrors the value of another sensor, grouped under a device."""
+    
+    def __init__(self, hass, config_entry, device_id, device_name, name_suffix, source_entity_id, device_class, unit):
+        self.hass = hass
+        self._source_entity_id = source_entity_id
+        self._attr_name = f"{device_name} {name_suffix}"
+        self._attr_unique_id = f"{device_id}_{name_suffix.lower().replace(' ', '_')}"
+        self._attr_device_class = device_class
+        self._attr_native_unit_of_measurement = unit
+        self._attr_state_class = SensorStateClass.MEASUREMENT
+        self._attr_should_poll = False
+        
+        # Device Info to group them together
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, device_id)},
+            name=device_name,
+            manufacturer="Accurate Solar Forecast",
+            model="Sensor Group",
+        )
+
+    async def async_added_to_hass(self):
+        """Subscribe to source entity."""
+        self.async_on_remove(
+            async_track_state_change_event(self.hass, [self._source_entity_id], self._update_state)
+        )
+        self._update_state()
+
+    @callback
+    def _update_state(self, event=None):
+        state = self.hass.states.get(self._source_entity_id)
+        if state and state.state not in ["unavailable", "unknown"]:
+            try:
+                self._attr_native_value = float(state.state)
+            except ValueError:
+                self._attr_native_value = None
+        else:
+            self._attr_native_value = None
+        self.async_write_ha_state()
+
 
 class SolarStringSensor(SensorEntity):
-    def __init__(self, hass, config_entry, db):
+    def __init__(self, hass, config_entry_data, db, sensor_group_data):
         self.hass = hass
-        self._config = config_entry # config_entry.data really
+        self._config = config_entry_data
         self._db = db
+        self._sensor_group = sensor_group_data
         
         # Recuperar datos del modelo desde la DB usando el nombre
         model_name = self._config.get(CONF_PANEL_MODEL)
-        # Búsqueda inversa simple (nombre -> datos)
         self._panel_data = None
         if db and db.data:
-            # Buscar por nombre en los valores del dict
             for v in db.data.values():
                 if v.get("name") == model_name:
                     self._panel_data = v
@@ -39,11 +138,24 @@ class SolarStringSensor(SensorEntity):
         self._attr_native_value = 0
         self._attr_extra_state_attributes = {}
 
+        # Link to the Sensor Group Device? Or create its own device?
+        # Strings are virtual, maybe its own device or no device (just entity).
+        # Let's give it a device so it looks nice in UI.
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, self._attr_unique_id)},
+            name=self._attr_name,
+            manufacturer=self._panel_data.get("brand", "Generic") if self._panel_data else "Generic",
+            model=model_name,
+            via_device=(DOMAIN, sensor_group_data.get(CONF_SENSOR_GROUP_NAME)) # Logically linked
+        )
+
     @property
     def check_config(self):
-        return self._panel_data is not None
+        return self._panel_data is not None and self._sensor_group is not None
 
     def get_float_state(self, entity_id, default=0.0):
+        if not entity_id:
+            return default
         state = self.hass.states.get(entity_id)
         if state and state.state not in ["unavailable", "unknown"]:
             try:
@@ -54,19 +166,11 @@ class SolarStringSensor(SensorEntity):
 
     def calculate_cos_incidence(self, sun_az, sun_el, panel_az, panel_tilt):
         """Calcula el coseno del ángulo de incidencia."""
-        # Convertir todo a radianes
-        # Azimuth en HA: 0=Norte, 90=Este, 180=Sur, 270=Oeste
-        # Tilt: 0=Horizontal, 90=Vertical
-        
-        # Zenit Solar = 90 - Elevación
         sol_zenith_rad = math.radians(90 - sun_el)
         sol_az_rad = math.radians(sun_az)
-        
         panel_tilt_rad = math.radians(panel_tilt)
         panel_az_rad = math.radians(panel_az)
 
-        # Fórmula general del ángulo de incidencia
-        # cos(AOI) = cos(ZenitSol)*cos(TiltPanel) + sin(ZenitSol)*sin(TiltPanel)*cos(AzSol - AzPanel)
         cos_theta = (math.cos(sol_zenith_rad) * math.cos(panel_tilt_rad)) + \
                     (math.sin(sol_zenith_rad) * math.sin(panel_tilt_rad) * math.cos(sol_az_rad - panel_az_rad))
         
@@ -75,7 +179,6 @@ class SolarStringSensor(SensorEntity):
     @callback
     def _update_logic(self, event=None):
         if not self.check_config:
-            _LOGGER.warning("Datos del panel no encontrados para el cálculo.")
             return
 
         # 1. Datos Solares
@@ -95,85 +198,64 @@ class SolarStringSensor(SensorEntity):
             self.async_write_ha_state()
             return
 
-        # 2. Datos del Sensor de Referencia (Irradiancia)
-        ref_sensor = self._config.get(CONF_REF_SENSOR)
+        # 2. Datos del Sensor de Referencia (DESDE EL GRUPO DE SENSORES)
+        ref_sensor = self._sensor_group.get(CONF_REF_SENSOR)
         irr_ref = self.get_float_state(ref_sensor, 0.0)
         
-        # 3. Datos Ambientales
-        temp_sensor = self._config.get(CONF_TEMP_SENSOR)
+        # 3. Datos Ambientales (DESDE EL GRUPO DE SENSORES)
+        temp_sensor = self._sensor_group.get(CONF_TEMP_SENSOR)
         t_amb = self.get_float_state(temp_sensor, 25.0)
         
-        wind_sensor = self._config.get(CONF_WIND_SENSOR)
-        wind_speed = 1.0 # Default suave si no hay sensor
+        wind_sensor = self._sensor_group.get(CONF_WIND_SENSOR)
+        wind_speed = 1.0 
         if wind_sensor:
             wind_speed = self.get_float_state(wind_sensor, 1.0)
+            
+        # Panel Temp (Si existe en el grupo)
+        # ... logic not implemented fully in previous version but ready here
 
         # 4. Cálculos Geométricos para Transposición
-        # Panel Destino
         target_az = self._config.get(CONF_AZIMUTH)
         target_tilt = self._config.get(CONF_TILT)
         cos_theta_target = self.calculate_cos_incidence(sun_az, sun_el, target_az, target_tilt)
 
-        # Sensor Referencia
-        ref_az = self._config.get(CONF_REF_ORIENTATION)
-        ref_tilt = self._config.get(CONF_REF_TILT)
+        # Sensor Referencia (GEOMETRÍA DESDE EL GRUPO)
+        ref_az = self._sensor_group.get(CONF_REF_ORIENTATION)
+        ref_tilt = self._sensor_group.get(CONF_REF_TILT)
         cos_theta_ref = self.calculate_cos_incidence(sun_az, sun_el, ref_az, ref_tilt)
 
         # Transposición de Irradiancia
-        # Evitamos división por cero o valores absurdos si el sensor de ref está muy oblicuo
         if cos_theta_ref < 0.05:
-            # Fallback: Si el sensor ref no "ve" bien el sol, asumimos que irr_ref es difusa/global
-            # y no aplicamos factor geométrico agresivo, o lo limitamos.
-            # Para simplificar: si el ref no ve el sol, la estimación es poco fiable.
             geometric_factor = 0 if irr_ref > 10 else 1 
         else:
             geometric_factor = cos_theta_target / cos_theta_ref
         
         irr_target = irr_ref * geometric_factor
 
-        # 5. Modelo Térmico (Temperatura de Célula)
-        # Usamos fórmula NOCT estándar ajustada: Tcell = Tamb + (NOCT - 20) * (Irr / 800)
-        # Si quisiéramos usar viento (modelo Faiman), sería más complejo.
-        # Por robustez inicial, usamos NOCT que viene en la DB.
+        # 5. Modelo Térmico
         noct = self._panel_data.get("noct", 45)
         t_cell = t_amb + (irr_target / 800) * (noct - 20)
 
         # 6. Cálculo de Potencia DC
-        # P = P_stc * (Irr / 1000) * [1 + gamma * (Tcell - 25)]
         p_stc = self._panel_data.get("p_stc", 400)
-        gamma = self._panel_data.get("gamma", -0.4) / 100.0 # Convertir % a decimal
+        gamma = self._panel_data.get("gamma", -0.4) / 100.0
         num_panels_series = self._config.get(CONF_NUM_PANELS, 1)
         num_strings_parallel = self._config.get(CONF_NUM_STRINGS, 1)
 
-        # Factor térmico
-        # Asumimos que Gamma aplica principalmente a Potencia y Voltaje.
-        # Coeficiente de voltaje suele ser similar a gamma de potencia (negativo).
         temp_diff = t_cell - 25
         temp_factor_power = 1 + (gamma * temp_diff)
         
-        # Potencia unitaria STC * IrrRatio * TempFactor
         power_unit = p_stc * (irr_target / 1000.0) * temp_factor_power
-        
-        # Potencia total = Potencia Unitaria * Total Paneles
         total_panels = num_panels_series * num_strings_parallel
         total_power = max(0, power_unit * total_panels)
 
-        # --- CÁLCULO DE TENSIÓN E INTENSIDAD (ESTIMACIÓN) ---
+        # VOLTAJE E INTENSIDAD (Estimación)
         vmp = self._panel_data.get("vmp", 30.0)
         imp = self._panel_data.get("imp", 10.0)
         
-        # Voltaje: Depende temperatura (Gamma) y NO de irradiancia (idealmente, aunque baja un poco con poca luz)
-        # V_string = Vmp * N_series * [1 + Gamma_V * (Tcell - 25)]
-        # Usamos Gamma de Potencia como aproximación para Voltaje si no tenemos Beta_Voc
-        # (El voltaje cae con el calor, igual que la potencia)
         v_string = vmp * num_panels_series * temp_factor_power
-        
-        # Corriente: Depende linealmente de irradiancia y poco de temperatura
-        # I_string = Imp * (Irr / 1000) * N_parallel
-        # (Ignoramos pequeño coeficiente positivo de temperatura para corriente)
         i_total = imp * (irr_target / 1000.0) * num_strings_parallel
 
-        # Si no hay sol, V e I son 0 (o cercanos a 0, V cae rápido sin luz)
         if irr_target < 1:
             v_string = 0
             i_total = 0
@@ -185,24 +267,19 @@ class SolarStringSensor(SensorEntity):
             "factor_transposicion": round(geometric_factor, 3),
             "temperatura_celula": round(t_cell, 1),
             "temperatura_ambiente": round(t_amb, 1),
-            "factor_perdida_termica": round(temp_factor_power, 3),
-            "sun_azimuth": round(sun_az, 1),
-            "sun_elevation": round(sun_el, 1),
-            "panel_model": self._panel_data.get("name"),
             "voltaje_total_estimado": round(v_string, 1),
             "corriente_total_estimada": round(i_total, 2)
         }
-
         self.async_write_ha_state()
 
     async def async_added_to_hass(self):
         """Suscribirse a actualizaciones."""
-        entities = ["sun.sun", self._config.get(CONF_REF_SENSOR), self._config.get(CONF_TEMP_SENSOR)]
-        if self._config.get(CONF_WIND_SENSOR):
-            entities.append(self._config.get(CONF_WIND_SENSOR))
+        # Get entities from the sensor group dict
+        entities = ["sun.sun", self._sensor_group.get(CONF_REF_SENSOR), self._sensor_group.get(CONF_TEMP_SENSOR)]
+        if self._sensor_group.get(CONF_WIND_SENSOR):
+            entities.append(self._sensor_group.get(CONF_WIND_SENSOR))
             
         self.async_on_remove(
             async_track_state_change_event(self.hass, entities, self._update_logic)
         )
-        # Primera actualización
         self._update_logic()

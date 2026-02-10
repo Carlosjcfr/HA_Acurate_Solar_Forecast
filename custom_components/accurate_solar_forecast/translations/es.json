@@ -3,9 +3,10 @@
         "step": {
             "user": {
                 "title": "Accurate solar forecast",
-                "description": "¿Que quieres añadir?",
+                "description": "¿Qué quieres hacer?",
                 "menu_options": {
-                    "add_pv_model": "Nuevo Modulo Fotovoltaico",
+                    "add_pv_model": "Nuevo Módulo Fotovoltaico",
+                    "configure_sensors": "Configurar sensores",
                     "add_string": "Nuevo String"
                 }
             },
@@ -24,35 +25,73 @@
                     "imp": "Imp"
                 }
             },
-            "add_string": {
-                "title": "Nuevo String",
-                "description": "Selecciona el fabricante del módulo.",
-                "data": {
-                    "brand": "Fabricante del Modulo Fotovoltaico"
+            "configure_sensors": {
+                "title": "Configurar Sensores",
+                "description": "Gestiona tus grupos de sensores.",
+                "menu_options": {
+                    "create_sensor_group": "Crear grupo de sensores",
+                    "edit_sensor_group_select": "Editar grupo de sensores"
                 }
             },
-            "add_string_details": {
-                "title": "Nuevo String",
-                "description": "Configura los sensores y detalles del string.",
+            "create_sensor_group": {
+                "title": "Crear Grupo de Sensores",
+                "description": "Define los sensores físicos disponibles en una ubicación.",
                 "data": {
-                    "string_name": "Nombre",
+                    "sensor_group_name": "Nombre del Grupo",
                     "irradiance_sensor": "Sensor de Irradiancia",
-                    "temp_sensor": "Sensor de t° ambiental",
+                    "temperature_sensor": "Tª Ambiental",
+                    "temp_panel_sensor": "Sensor de t° del panel",
+                    "wind_sensor": "Sensor de v. viento (m/s)",
+                    "ref_tilt": "Inclinación Sensor Ref. (°)",
+                    "ref_orientation": "Orientación Sensor Ref. (180=S)"
+                }
+            },
+            "edit_sensor_group_select": {
+                "title": "Editar Grupo",
+                "description": "Selecciona el grupo de sensores a editar.",
+                "data": {
+                    "selected_group": "Grupo de Sensores"
+                }
+            },
+            "edit_sensor_group_form": {
+                "title": "Editar Grupo",
+                "description": "Modifica los sensores o la geometría.",
+                "data": {
+                    "sensor_group_name": "Nombre del Grupo",
+                    "irradiance_sensor": "Sensor de Irradiancia",
+                    "temperature_sensor": "Tª Ambiental",
                     "temp_panel_sensor": "Sensor de t° del panel",
                     "wind_sensor": "Sensor de v. viento (m/s)",
                     "ref_tilt": "Inclinación Sensor Ref.",
-                    "ref_orientation": "Orientación Sensor Ref.",
-                    "panel_model": "Módulo Fotovoltaico",
-                    "num_panels": "Número de paneles en serie",
-                    "num_strings": "Número de Series en paralelo",
-                    "tilt": "Inclinación (°)",
-                    "azimuth": "Orientación (180° = SUR)"
+                    "ref_orientation": "Orientación Sensor Ref."
+                }
+            },
+            "add_string": {
+                "title": "Nuevo String",
+                "description": "Vincula un grupo de sensores a un modelo de placa.",
+                "data": {
+                    "string_name": "Nombre del String",
+                    "selected_sensor_group": "Grupo de Sensores",
+                    "brand": "Fabricante del Panel"
+                }
+            },
+            "add_string_details": {
+                "title": "Detalles del String",
+                "description": "Configura la geometría del array fotovoltaico.",
+                "data": {
+                    "panel_model": "Modelo de Panel",
+                    "num_panels": "Paneles en serie",
+                    "num_strings": "Series en paralelo",
+                    "tilt": "Inclinación Paneles (°)",
+                    "azimuth": "Orientación Paneles (180=S)"
                 }
             }
         }
     },
     "error": {
-        "unknown": "Error inesperado"
+        "unknown": "Error inesperado",
+        "no_sensor_groups": "No hay grupos de sensores creados. Crea uno primero.",
+        "no_sensor_groups_available": "No hay grupos de sensores disponibles. Ve atrás y crea uno en 'Configurar sensores'."
     },
     "abort": {
         "already_configured": "El dispositivo ya está configurado"

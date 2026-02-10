@@ -1,10 +1,10 @@
 # ☀️ Accurate Solar Forecast for Home Assistant
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
-[![Maintainer](https://img.shields.io/badge/maintainer-%40tu_usuario-blue)](https://github.com/tu_usuario)
+[![Maintainer](https://img.shields.io/badge/maintainer-Carlosjcfr-blue)](https://github.com/Carlosjcfr)
 [![version](https://img.shields.io/badge/version-1.0.0-green)]()
 
-**Accurate Forecast** es una integración personalizada para Home Assistant diseñada para estimar la producción fotovoltaica con alta precisión física y geométrica.
+**Accurate Solar Forecast** es una integración personalizada para Home Assistant diseñada para estimar la producción fotovoltaica con alta precisión física y geométrica.
 
 A diferencia de las estimaciones simples, este componente utiliza **motores de transposición de irradiancia**, permitiendo simular múltiples strings con diferentes orientaciones utilizando **un único sensor de referencia** (piranómetro o sensor solar).
 
@@ -16,35 +16,21 @@ Olvídate de comprar múltiples sensores de irradiancia.
 
 * Calcula la radiación incidente en cualquier superficie (orientación/inclinación).
 * Utiliza la posición solar en tiempo real (Azimut y Elevación) para calcular el **Ángulo de Incidencia (AOI)**.
-* Transpone matemáticamente la lectura de un sensor origen a ilimitados strings virtuales.
+* **Gestión Geométrica Completa:** Configura la orientación e inclinación tanto de tus paneles como de tus sensores de referencia (ej: una estación meteorológica horizontal o un sensor en el tejado).
+
+### ⚙️ Arquitectura Modular (Nuevo)
+
+Diseñado para instalaciones complejas:
+
+* **Grupos de Sensores:** Configura tus estaciones meteorológicas o conjuntos de sensores *una sola vez*. Se crearán como Dispositivos en Home Assistant.
+* **Strings Flexibles:** Crea múltiples strings virtuales (ej: Este, Oeste, Pérgola) usando el mismo grupo de sensores como fuente.
 
 ### 💾 Base de Datos de Paneles (PV Database)
 
 Sistema de gestión de inventario integrado.
 
-* **Define una vez, usa siempre:** Crea modelos de tus placas solares (Potencia, Coeficientes, NOCT) y guárdalos en la base de datos interna.
+* **Define una vez, usa siempre:** Crea modelos de tus placas solares (Potencia, Coeficientes, NOCT, Voc, Isc, Vmp, Imp) y guárdalos en la base de datos interna.
 * **Reutilizable:** Asigna el mismo modelo de panel a diferentes strings sin volver a introducir fichas técnicas.
-
-### 🌡️ Física Térmica Avanzada
-
-El calor reduce el rendimiento solar. Esta integración calcula las pérdidas (*derating*) seleccionando automáticamente la mejor lógica disponible según tus sensores:
-
-| Prioridad | Método | Sensores Necesarios | Precisión |
-| :--- | :--- | :--- | :--- |
-| 1️⃣ | **Medición Directa** | Temp. Panel | ⭐⭐⭐ (Máxima) |
-| 2️⃣ | **Modelo Faiman** | Ambiente + Viento | ⭐⭐ (Alta) |
-| 3️⃣ | **Modelo NOCT** | Ambiente | ⭐ (Estándar) |
-
-### ⚡ Gestión Multi-String
-
-* Soporte para ilimitados strings.
-* Configuración independiente de Azimut, Inclinación (Tilt) y número de paneles por string.
-
-### ⚙️ Configuración 100% UI
-
-* Olvídate de editar YAML.
-* **Config Flow Nativo:** Asistente paso a paso para añadir modelos a la base de datos o configurar nuevos strings.
-* Menús dinámicos con selectores.
 
 ---
 
@@ -53,44 +39,54 @@ El calor reduce el rendimiento solar. Esta integración calcula las pérdidas (*
 ### Opción 1: HACS (Recomendado)
 
 1. Añade este repositorio como **Custom Repository** en HACS.
-2. Busca "Accurate Forecast" e instala.
+2. Busca "Accurate Solar Forecast" e instala.
 3. Reinicia Home Assistant.
 
 ### Opción 2: Manual
 
-1. Descarga la carpeta `accurate_forecast`.
-2. Cópiala dentro de `config/custom_components/`.
+1. Descarga la carpeta `custom_components/accurate_solar_forecast`.
+2. Cópiala dentro de `config/custom_components/` en tu instalación de HA.
 3. Reinicia Home Assistant.
 
 ---
 
 ## 📖 Uso y Configuración
 
-Ve a **Ajustes** > **Dispositivos y Servicios** > **Añadir Integración** > **Accurate Forecast**.
+Ve a **Ajustes** > **Dispositivos y Servicios** > **Añadir Integración** > **Accurate Solar Forecast**.
 
-### Paso 1: Crear un Modelo de Panel
+### Paso 1: Crear un Modelo de Panel (PV Model)
 
-Selecciona la opción **"Añadir Nuevo Modelo de Panel"**. Necesitarás la ficha técnica de tu placa:
+Selecciona la opción **"Nuevo Módulo Fotovoltaico"**. Necesitarás la ficha técnica de tu placa:
 
-* **Nombre:** (Ej: `Longi 450W Hi-MO`)
-* **Marca:** (Ej: `Longi`, `Jinko`, `Canadian Solar`...)
-* **P_stc:** Potencia Pico (W)
-* **Gamma:** Coeficiente de Temperatura (%/°C)
-* **NOCT:** Temperatura de operación nominal.
-* **Voc:** Voltaje de Circuito Abierto (V)
-* **Isc:** Corriente de Cortocircuito (A)
-* **Vmp:** Voltaje a Máxima Potencia (V)
-* **Imp:** Corriente a Máxima Potencia (A)
+* **Modelo:** Nombre identificativo (Ej: `Longi 450W Hi-MO`).
+* **Fabricante:** Marca del panel (Ej: `Longi`, `Jinko`...).
+* **Especificaciones:** Potencia (STC), Gamma (%/°C), NOCT, Voc, Isc, Vmp, Imp.
 
-### Paso 2: Crear un String
+### Paso 2: Configurar Sensores (Sensor Group)
 
-Selecciona **"Configurar Nuevo String"**:
+Antes de crear strings, define qué sensores tienes disponibles. Selecciona **"Configurar Sensores"** > **"Crear Grupo"**:
 
-1. **Selecciona la marca** del panel.
-2. **Elige el modelo** específico (filtrado por la marca seleccionada).
-3. Introduce el número de paneles.
-4. Define la orientación (Azimut) e inclinación del string.
-5. Selecciona tu **sensor de irradiancia de referencia** y define cómo está instalado (plano, inclinado, etc.).
+1. **Nombre:** Identificador del grupo (Ej: "Estación Metereológica Tejado").
+2. **Sensores Físicos:**
+    * **Irradiancia (Obligatorio)**.
+    * **Temperatura Ambiental (Obligatorio)**.
+    * **Temp. Panel / Viento (Opcionales)**.
+3. **Geometría del Sensor:**
+    * Defines cómo está instalado tu sensor de irradiancia (Tilt y Orientación). Esto es vital para calcular la transposición correctamente.
+
+*Resultado:* Se creará un **Dispositivo** en Home Assistant con las entidades de los sensores configurados.
+
+### Paso 3: Crear un String
+
+Selecciona **"Nuevo String"**. El proceso ahora es muy rápido:
+
+1. **Selecciona Grupo de Sensores:** Elige la estación meteorológica que alimentará los cálculos de este string.
+2. **Selecciona Fabricante del Panel:** Elige la marca.
+3. **Configura Detalles del String:**
+    * **Nombre:** (Ej: "String Pérgola").
+    * **Módulo FV:** Selecciona el modelo específico.
+    * **Configuración Eléctrica:** Número de paneles en serie y strings en paralelo.
+    * **Geometría del Panel:** Inclinación (Tilt) y Orientación (Azimut) de las placas.
 
 ---
 
@@ -99,10 +95,11 @@ Selecciona **"Configurar Nuevo String"**:
 El componente realiza los siguientes cálculos en cada actualización:
 
 1. **Geometría Solar:** Obtiene la posición del sol (`sun.sun`).
-2. **Cálculo AOI:** Determina el ángulo de incidencia tanto para el sensor de referencia como para el panel objetivo.
-3. **Factor Geométrico:** `Irradiancia_Target = Irradiancia_Ref * (cos(θ_target) / cos(θ_ref))`
-4. **Modelo Térmico:** Calcula la temperatura de la célula ($T_{cell}$) basándose en la disipación de calor (viento) o calentamiento pasivo.
-5. **Potencia Final:** Aplica el coeficiente de pérdidas por temperatura a la irradiancia transpuesta.
+2. **Cálculo AOI:** Determina el ángulo de incidencia solar tanto para el **sensor de referencia** (definido en el Grupo de Sensores) como para el **panel objetivo** (definido en el String).
+3. **Factor Geométrico:** Transpone la irradiancia medida a la superficie del panel:
+    `Irradiancia_Target = Irradiancia_Ref * (cos(θ_target) / cos(θ_ref))`
+4. **Modelo Térmico:** Calcula la temperatura de la célula ($T_{cell}$) basándose en los datos del Grupo de Sensores.
+5. **Potencia Final:** Aplica el coeficiente de pérdidas por temperatura (Gamma) a la potencia base generada.
 
 ---
 
