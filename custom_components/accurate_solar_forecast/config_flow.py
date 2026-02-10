@@ -29,7 +29,7 @@ class AccurateForecastFlow(config_entries.ConfigFlow, domain=DOMAIN):
         
         return self.async_show_menu(
             step_id="user",
-            menu_options=["add_pv_model", "configure_sensors", "add_string"]
+            menu_options=["add_pv_model", "add_string", "configure_sensors"]
         )
 
     # --- OPCIÓN A: AÑADIR MODELO A LA BASE DE DATOS ---

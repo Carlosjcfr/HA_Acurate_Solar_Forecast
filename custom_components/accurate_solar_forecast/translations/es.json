@@ -3,11 +3,11 @@
         "step": {
             "user": {
                 "title": "Accurate solar forecast",
-                "description": "¿Qué quieres hacer?",
+                "description": "¿Que quieres añadir?",
                 "menu_options": {
                     "add_pv_model": "Nuevo Módulo Fotovoltaico",
-                    "configure_sensors": "Configurar sensores",
-                    "add_string": "Nuevo String"
+                    "add_string": "Nuevo String",
+                    "configure_sensors": "Configurar sensores"
                 }
             },
             "add_pv_model": {
@@ -38,12 +38,12 @@
                 "description": "Define los sensores físicos disponibles en una ubicación.",
                 "data": {
                     "sensor_group_name": "Nombre del Grupo",
-                    "irradiance_sensor": "Sensor de Irradiancia",
-                    "temperature_sensor": "Tª Ambiental",
-                    "temp_panel_sensor": "Sensor de t° del panel",
+                    "irradiance_sensor": "Irradiancia *",
+                    "temperature_sensor": "Tª Ambiental *",
+                    "temp_panel_sensor": "Tª del panel *",
                     "wind_sensor": "Sensor de v. viento (m/s)",
-                    "ref_tilt": "Inclinación Sensor Ref. (°)",
-                    "ref_orientation": "Orientación Sensor Ref. (180=S)"
+                    "ref_tilt": "Inclinación sensor de irrad (º) *",
+                    "ref_orientation": "Orientación sensor de irrad. (180º=S) *"
                 }
             },
             "edit_sensor_group_select": {
@@ -58,12 +58,12 @@
                 "description": "Modifica los sensores o la geometría.",
                 "data": {
                     "sensor_group_name": "Nombre del Grupo",
-                    "irradiance_sensor": "Sensor de Irradiancia",
-                    "temperature_sensor": "Tª Ambiental",
-                    "temp_panel_sensor": "Sensor de t° del panel",
+                    "irradiance_sensor": "Irradiancia *",
+                    "temperature_sensor": "Tª Ambiental *",
+                    "temp_panel_sensor": "Tª del panel *",
                     "wind_sensor": "Sensor de v. viento (m/s)",
-                    "ref_tilt": "Inclinación Sensor Ref.",
-                    "ref_orientation": "Orientación Sensor Ref."
+                    "ref_tilt": "Inclinación sensor de irrad (º) *",
+                    "ref_orientation": "Orientación sensor de irrad. (180º=S) *"
                 }
             },
             "add_string": {
