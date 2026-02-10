@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.0-beta1] - 2026-02-10
+
+### Added
+
+- **Edit String Functionality:** Users can now edit existing string configurations (geometry and model) directly from the "Configure Strings" menu.
+- **Delete PV Module:** Restored the ability to delete PV models from the database via the "PV Models" menu.
+- **Validations:** Implemented strict range validations for all numeric inputs:
+  - Tilt: 0-90 degrees.
+  - Azimuth: 0-360 degrees.
+  - Panel/String Counts: Must be at least 1.
+  - Module Specs: Must be positive values (NOCT limited to 0-100).
+- **Default Model Protection:** Added a safety check to prevent deletion of the default "Generic 450W" module.
+
+### Changed
+
+- **UI Polish:** Updated success screen title to "Success" / "Éxito" for better clarity.
+- **Database Logic:** Migrated `delete_model` to async operation for better performance and consistency.
+
+### Fixed
+
+- **Menu options:** Fixed missing translation for "Edit String" in the main menu.
+
 ## [v1.1.0-beta2] - 2026-02-10
 
 ### Added

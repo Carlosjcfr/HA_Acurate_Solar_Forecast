@@ -22,7 +22,8 @@
                 "title": "Acciones",
                 "description": "Configuración de arrays solares.",
                 "menu_options": {
-                    "string_create_select_brand": "Crear String"
+                    "string_create_select_brand": "Crear String",
+                    "string_edit_select": "Editar String"
                 }
             },
             "menu_sensor_groups": {
