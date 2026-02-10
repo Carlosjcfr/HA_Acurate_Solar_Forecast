@@ -3,35 +3,34 @@
         "step": {
             "user": {
                 "title": "Accurate solar forecast",
-                "description": "¿Qué quieres gestionar?",
+                "description": "¿Que quieres añadir?",
                 "menu_options": {
                     "menu_pv_models": "Configurar Módulos Fotovoltaicos",
                     "menu_strings": "Configurar Strings",
-                    "menu_sensor_groups": "Configurar Sensores"
+                    "menu_sensor_groups": "Configurar sensores"
                 }
             },
             "menu_pv_models": {
-                "title": "Módulos Fotovoltaicos",
+                "title": "Acciones",
                 "description": "Base de datos de paneles.",
                 "menu_options": {
-                    "pv_model_create": "Crear Nuevo Módulo",
-                    "pv_model_edit_select": "Editar Módulo Existente",
-                    "pv_model_delete_select": "Eliminar Módulo"
+                    "pv_model_create": "Crear módulo FV",
+                    "pv_model_edit_select": "Editar módulo FV"
                 }
             },
             "menu_strings": {
-                "title": "Strings",
+                "title": "Acciones",
                 "description": "Configuración de arrays solares.",
                 "menu_options": {
-                    "string_create_select_brand": "Crear Nuevo String"
+                    "string_create_select_brand": "Crear String"
                 }
             },
             "menu_sensor_groups": {
-                "title": "Sensores",
+                "title": "Acciones",
                 "description": "Configuración de grupos de sensores.",
                 "menu_options": {
-                    "sensor_group_create": "Crear Grupo de Sensores",
-                    "sensor_group_edit_select": "Editar Grupo de Sensores"
+                    "sensor_group_create": "Crear grupo",
+                    "sensor_group_edit_select": "Editar grupo"
                 }
             },
             "pv_model_create": {
@@ -69,13 +68,6 @@
                     "isc": "Isc *",
                     "vmp": "Vmp *",
                     "imp": "Imp *"
-                }
-            },
-            "pv_model_delete_select": {
-                "title": "Eliminar Módulo",
-                "description": "Selecciona el módulo a eliminar permanentemente.",
-                "data": {
-                    "selected_model": "Módulo Fotovoltaico"
                 }
             },
             "sensor_group_create": {

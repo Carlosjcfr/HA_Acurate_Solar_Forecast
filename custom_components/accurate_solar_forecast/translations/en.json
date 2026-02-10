@@ -3,35 +3,34 @@
         "step": {
             "user": {
                 "title": "Solar Forecast Configuration",
-                "description": "What do you want to manage?",
+                "description": "What do you want to add?",
                 "menu_options": {
                     "menu_pv_models": "Configure PV Modules",
                     "menu_strings": "Configure Strings",
-                    "menu_sensor_groups": "Configure Sensors"
+                    "menu_sensor_groups": "Configure sensors"
                 }
             },
             "menu_pv_models": {
-                "title": "PV Modules",
+                "title": "Actions",
                 "description": "PV Model Database.",
                 "menu_options": {
-                    "pv_model_create": "Create New Module",
-                    "pv_model_edit_select": "Edit Existing Module",
-                    "pv_model_delete_select": "Delete Module"
+                    "pv_model_create": "Create PV Module",
+                    "pv_model_edit_select": "Edit PV Module"
                 }
             },
             "menu_strings": {
-                "title": "Strings",
+                "title": "Actions",
                 "description": "Solar Array Configuration.",
                 "menu_options": {
-                    "string_create_select_brand": "Create New String"
+                    "string_create_select_brand": "Create String"
                 }
             },
             "menu_sensor_groups": {
-                "title": "Sensors",
+                "title": "Actions",
                 "description": "Sensor Group Configuration.",
                 "menu_options": {
-                    "sensor_group_create": "Create Sensor Group",
-                    "sensor_group_edit_select": "Edit Sensor Group"
+                    "sensor_group_create": "Create Group",
+                    "sensor_group_edit_select": "Edit Group"
                 }
             },
             "pv_model_create": {
@@ -69,13 +68,6 @@
                     "isc": "Isc *",
                     "vmp": "Vmp *",
                     "imp": "Imp *"
-                }
-            },
-            "pv_model_delete_select": {
-                "title": "Delete Module",
-                "description": "Select module to delete permanently.",
-                "data": {
-                    "selected_model": "PV Module"
                 }
             },
             "sensor_group_create": {
