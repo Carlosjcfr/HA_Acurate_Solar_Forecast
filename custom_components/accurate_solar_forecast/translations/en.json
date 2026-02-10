@@ -168,7 +168,7 @@
         },
         "abort": {
             "already_configured": "Device is already configured",
-            "models_saved": "PV Modules list updated!"
+            "pv_models_saved": "PV Modules list updated!"
         }
     }
 }

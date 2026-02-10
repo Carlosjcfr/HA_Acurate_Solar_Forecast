@@ -130,7 +130,7 @@ class AccurateForecastFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_pv_model_finish(self, user_input=None):
         """Finalizar el flujo de modelos (sin crear entrada en HA, solo guardando DB)."""
-        return self.async_abort(reason="models_saved")
+        return self.async_abort(reason="pv_models_saved")
 
 
     # Helper: Model Form
