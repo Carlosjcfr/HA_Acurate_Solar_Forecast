@@ -87,7 +87,7 @@
                     "irradiance_sensor": "Irradiance",
                     "temperature_sensor": "Ambient Temp",
                     "temp_panel_sensor": "Panel Temp",
-                    "wind_sensor": "Wind Speed (m/s)",
+                    "wind_sensor": "Wind Speed",
                     "ref_tilt": "Irrad. Sensor Tilt (°)",
                     "ref_orientation": "Irrad. Sensor Orientation (180°=S)",
                     "weather_entity": "Weather forecast"
@@ -108,7 +108,7 @@
                     "irradiance_sensor": "Irradiance",
                     "temperature_sensor": "Ambient Temp",
                     "temp_panel_sensor": "Panel Temp",
-                    "wind_sensor": "Wind Speed (m/s)",
+                    "wind_sensor": "Wind Speed",
                     "ref_tilt": "Irrad. Sensor Tilt (°)",
                     "ref_orientation": "Irrad. Sensor Orientation (180°=S)",
                     "weather_entity": "Weather forecast"
@@ -186,7 +186,7 @@
                     "irradiance_sensor": "Irradiance",
                     "temperature_sensor": "Ambient Temp",
                     "temp_panel_sensor": "Panel Temp",
-                    "wind_sensor": "Wind Speed (m/s)",
+                    "wind_sensor": "Wind Speed",
                     "ref_tilt": "Irrad. Sensor Tilt (°)",
                     "ref_orientation": "Irrad. Sensor Orientation (180°=S)",
                     "weather_entity": "Weather forecast"

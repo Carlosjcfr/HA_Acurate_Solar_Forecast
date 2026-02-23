@@ -50,8 +50,9 @@ class StringsFlowMixin:
                  self.hass.config_entries.async_update_entry(self.reconfigure_entry, data=final_data)
                  return self.async_update_reload_and_abort(self.reconfigure_entry)
              else:
+                 title = final_data.get(CONF_ROOF_NAME) or final_data.get(CONF_STRING_NAME)
                  return self.async_create_entry(
-                    title=self.temp_data[CONF_STRING_NAME], 
+                    title=title, 
                     data=final_data
                 )
             

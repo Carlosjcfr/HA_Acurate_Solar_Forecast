@@ -87,7 +87,7 @@
                     "irradiance_sensor": "Irradiancia",
                     "temperature_sensor": "Tª Ambiental",
                     "temp_panel_sensor": "Tª del panel",
-                    "wind_sensor": "Sensor de v. viento (m/s)",
+                    "wind_sensor": "Sensor de viento",
                     "ref_tilt": "Inclinación sensor de irrad (º)",
                     "ref_orientation": "Orientación sensor de irrad (180º=S)",
                     "weather_entity": "Pronostico del tiempo"
@@ -108,7 +108,7 @@
                     "irradiance_sensor": "Irradiancia",
                     "temperature_sensor": "Tª Ambiental",
                     "temp_panel_sensor": "Tª del panel",
-                    "wind_sensor": "Sensor de v. viento (m/s)",
+                    "wind_sensor": "Sensor de viento",
                     "ref_tilt": "Inclinación sensor de irrad (º)",
                     "ref_orientation": "Orientación sensor de irrad (180º=S)",
                     "weather_entity": "Pronostico del tiempo"
@@ -186,7 +186,7 @@
                     "irradiance_sensor": "Irradiancia",
                     "temperature_sensor": "Tª Ambiental",
                     "temp_panel_sensor": "Tª del panel",
-                    "wind_sensor": "Sensor de v. viento (m/s)",
+                    "wind_sensor": "Sensor de viento",
                     "ref_tilt": "Inclinación sensor de irrad (º)",
                     "ref_orientation": "Orientación sensor de irrad (180º=S)",
                     "weather_entity": "Pronostico del tiempo"
