@@ -28,12 +28,22 @@ class AccurateForecastCommonFlow:
             val = default_data.get(key)
             return val if val is not None else fallback
 
+        ref_default = get_default(CONF_REF_SENSOR)
+        if ref_default is not vol.UNDEFINED and ref_default not in valid_irradiance_sensors:
+             # Ensure the old valid sensor is temporarily allowed so the form doesn't crash
+             valid_irradiance_sensors.append(ref_default)
+             
+        wind_default = get_default(CONF_WIND_SENSOR)
+        if wind_default is not vol.UNDEFINED and wind_default not in valid_wind_sensors:
+             # Ensure the old valid sensor is temporarily allowed so the form doesn't crash
+             valid_wind_sensors.append(wind_default)
+
         return vol.Schema({
             vol.Required(CONF_SENSOR_GROUP_NAME, default=get_default(CONF_SENSOR_GROUP_NAME, "")): str,
             vol.Optional(CONF_WEATHER_ENTITY, default=get_default(CONF_WEATHER_ENTITY)): selector.EntitySelector(
                 selector.EntitySelectorConfig(domain="weather")
             ),
-            vol.Required(CONF_REF_SENSOR, default=get_default(CONF_REF_SENSOR)): selector.EntitySelector(
+            vol.Required(CONF_REF_SENSOR, default=ref_default): selector.EntitySelector(
                 selector.EntitySelectorConfig(include_entities=valid_irradiance_sensors)
             ),
             vol.Required(CONF_REF_TILT, default=get_default(CONF_REF_TILT, 0)): vol.All(vol.Coerce(float), vol.Range(min=0, max=90)),
@@ -44,7 +54,7 @@ class AccurateForecastCommonFlow:
             vol.Optional(CONF_TEMP_PANEL_SENSOR, default=get_default(CONF_TEMP_PANEL_SENSOR)): selector.EntitySelector(
                 selector.EntitySelectorConfig(domain="sensor", device_class="temperature")
             ),
-            vol.Optional(CONF_WIND_SENSOR, default=get_default(CONF_WIND_SENSOR)): selector.EntitySelector(
+            vol.Optional(CONF_WIND_SENSOR, default=wind_default): selector.EntitySelector(
                 selector.EntitySelectorConfig(include_entities=valid_wind_sensors)
             ),
         })
@@ -61,12 +71,20 @@ class AccurateForecastCommonFlow:
              val = self.temp_data.get(key)
              return val if val is not None else fallback
 
+         group_default = self.temp_data.get("selected_sensor_group")
+         if group_default not in group_options:
+             group_default = vol.UNDEFINED
+             
+         brand_default = self.temp_data.get(CONF_BRAND, "Generic")
+         if brand_default not in brands_list:
+             brand_default = vol.UNDEFINED
+
          schema_dict = {
             vol.Required(CONF_STRING_NAME, default=get_default(CONF_STRING_NAME)): str,
-            vol.Required("selected_sensor_group", default=get_default("selected_sensor_group")): selector.SelectSelector(
+            vol.Required("selected_sensor_group", default=group_default): selector.SelectSelector(
                 selector.SelectSelectorConfig(options=group_options, mode="dropdown")
             ),
-            vol.Required(CONF_BRAND, default=get_default(CONF_BRAND, "Generic")): selector.SelectSelector(
+            vol.Required(CONF_BRAND, default=brand_default): selector.SelectSelector(
                 selector.SelectSelectorConfig(options=brands_list, mode="dropdown")
             ),
          }
@@ -81,7 +99,7 @@ class AccurateForecastCommonFlow:
              )
              
          roof_default = self.temp_data.get(CONF_ROOF_NAME)
-         if roof_default:
+         if roof_default and roof_default in roof_options:
               schema_dict[vol.Optional(CONF_ROOF_NAME, default=roof_default)] = selector.SelectSelector(
                   selector.SelectSelectorConfig(options=roof_options, mode="dropdown", custom_value=False)
               )
@@ -126,9 +144,14 @@ class AccurateForecastCommonFlow:
                      if CONF_AZIMUTH not in self.temp_data:
                          default_azimuth = roof_data.get("azimuth") or 180
 
+        model_default = self.temp_data.get(CONF_PANEL_MODEL)
+        model_options = list(models_filtered.values())
+        if model_default not in model_options:
+            model_default = vol.UNDEFINED
+            
         return vol.Schema({
-            vol.Required(CONF_PANEL_MODEL, default=get_default(CONF_PANEL_MODEL)): selector.SelectSelector(
-                selector.SelectSelectorConfig(options=list(models_filtered.values()), mode="dropdown")
+            vol.Required(CONF_PANEL_MODEL, default=model_default): selector.SelectSelector(
+                selector.SelectSelectorConfig(options=model_options, mode="dropdown")
             ),
             vol.Required(CONF_NUM_PANELS, default=get_default(CONF_NUM_PANELS, 1)): vol.All(int, vol.Range(min=1)),
             vol.Required(CONF_NUM_STRINGS, default=get_default(CONF_NUM_STRINGS, 1)): vol.All(int, vol.Range(min=1)),
@@ -604,6 +627,7 @@ class AccurateForecastFlow(AccurateForecastCommonFlow, config_entries.ConfigFlow
              )
              return self.async_update_reload_and_abort(self.reconfigure_entry)
              
+        schema = self._get_sensor_group_schema(self.reconfigure_entry.data)
         return self.async_show_form(step_id="reconfigure_sensor_group", data_schema=schema)
 
     async def async_step_reconfigure_string(self, user_input=None):
