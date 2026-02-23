@@ -136,7 +136,7 @@ class AccurateForecastCommonFlow:
             vol.Required(CONF_AZIMUTH, default=default_azimuth): vol.All(vol.Coerce(float), vol.Range(min=0, max=360)),
         })
 
-class AccurateForecastFlow(config_entries.ConfigFlow, AccurateForecastCommonFlow, domain=DOMAIN):
+class AccurateForecastFlow(AccurateForecastCommonFlow, config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
     
     @staticmethod
@@ -610,7 +610,7 @@ class AccurateForecastFlow(config_entries.ConfigFlow, AccurateForecastCommonFlow
         self.temp_data = dict(self.reconfigure_entry.data)
         return await self.async_step_string_create_select_relations()
 
-class AccurateForecastOptionsFlowHandler(config_entries.OptionsFlow, AccurateForecastCommonFlow):
+class AccurateForecastOptionsFlowHandler(AccurateForecastCommonFlow, config_entries.OptionsFlow):
     def __init__(self, config_entry):
         self.config_entry = config_entry
         self.temp_data = dict(config_entry.data)
