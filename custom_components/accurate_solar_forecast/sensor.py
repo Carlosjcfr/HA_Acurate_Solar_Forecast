@@ -116,7 +116,7 @@ class SolarStringSensor(SensorEntity):
                  dev_reg = dr.async_get(hass)
                  device = dev_reg.async_get(entity_entry.device_id)
                  if device:
-                     device_identifiers = device.identifiers
+                     device_iden = device.identifiers
 
         if not device_iden:
             # Fallback: Create independent device
@@ -439,7 +439,8 @@ class SolarStringPerformanceSensor(SensorEntity):
         self.hass = hass
         self._config = config_entry_data
         self._string_name = self._config.get(CONF_STRING_NAME)
-        self._attr_name = f"{self._string_name} Rendimiento"
+        self._attr_has_entity_name = True
+        self._attr_translation_key = "performance"
         self._attr_unique_id = f"str_{self._string_name.lower().replace(' ', '_')}_performance"
         
         # Link to same device
@@ -543,10 +544,11 @@ class SolarStringPerformanceSensor(SensorEntity):
 class PVDatabaseSensor(SensorEntity):
     """Sensor to show PV Database status."""
     
-    _attr_name = "Módulos Fotovoltaicos"
+    _attr_has_entity_name = True
+    _attr_translation_key = "pv_db_status"
     _attr_unique_id = "pv_database_status"
     _attr_icon = "mdi:solar-panel"
-    _attr_native_unit_of_measurement = "modelos"
+    _attr_native_unit_of_measurement = "items"
 
     def __init__(self, hass, db):
         self.hass = hass
@@ -561,9 +563,13 @@ class PVDatabaseSensor(SensorEntity):
 
     def _update_state(self):
         models = self._db.list_models()
-        self._attr_native_value = len(models)
+        roofs = self._db.list_roofs()
+        self._attr_native_value = len(models) + len(roofs)
         self._attr_extra_state_attributes = {
-            "model_list": list(models.keys())
+            "models_count": len(models),
+            "roofs_count": len(roofs),
+            "model_list": list(models.values()),
+            "roof_list": list(roofs.values())
         }
     
     async def async_added_to_hass(self):

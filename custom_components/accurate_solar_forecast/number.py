@@ -54,7 +54,7 @@ class SolarStringNumberEntity(NumberEntity):
 class SolarStringTiltNumber(SolarStringNumberEntity):
     """Number entity for controlling Panel Tilt."""
     
-    _attr_name = "Inclinación"
+    _attr_translation_key = "tilt"
     _attr_native_min_value = 0
     _attr_native_max_value = 90
     _attr_native_step = 1
@@ -82,7 +82,7 @@ class SolarStringTiltNumber(SolarStringNumberEntity):
 class SolarStringAzimuthNumber(SolarStringNumberEntity):
     """Number entity for controlling Panel Azimuth."""
     
-    _attr_name = "Orientación"
+    _attr_translation_key = "azimuth"
     _attr_native_min_value = 0
     _attr_native_max_value = 360
     _attr_native_step = 1

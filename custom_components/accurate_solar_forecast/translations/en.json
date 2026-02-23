@@ -6,6 +6,7 @@
                 "description": "What do you want to add?",
                 "menu_options": {
                     "menu_pv_models": "Configure PV Modules",
+                    "menu_roofs": "Configure Roofs",
                     "string_create_select_relations": "Create/Add String",
                     "menu_sensor_groups": "Configure Sensors"
                 }
@@ -133,6 +134,38 @@
                     "azimuth": "Azimuth (180°=S)"
                 }
             },
+            "menu_roofs": {
+                "title": "Roof Actions",
+                "description": "Manage the roof orientations database.",
+                "menu_options": {
+                    "roof_create": "Create roof",
+                    "roof_edit_select": "Edit roof",
+                    "roof_delete_select": "Delete roof"
+                }
+            },
+            "roof_edit_select": {
+                "title": "Edit Roof",
+                "description": "Select the roof to edit.",
+                "data": {
+                    "selected_roof": "Roof"
+                }
+            },
+            "roof_edit_form": {
+                "title": "Edit Roof",
+                "description": "Modify roof details.",
+                "data": {
+                    "name": "Name",
+                    "tilt": "Tilt (°)",
+                    "azimuth": "Azimuth (180°=S)"
+                }
+            },
+            "roof_delete_select": {
+                "title": "Delete Roof",
+                "description": "Select the roof to delete.",
+                "data": {
+                    "selected_roof": "Roof to delete"
+                }
+            },
             "string_create_details": {
                 "title": "String Details",
                 "description": "Step 2: Geometry and Model.",
@@ -184,6 +217,29 @@
             "already_configured": "Device is already configured",
             "pv_models_saved": "PV Modules list updated!",
             "reconfigure_successful": "Configuration successfully updated!"
+        }
+    },
+    "entity": {
+        "select": {
+            "roof": {
+                "name": "Roof"
+            }
+        },
+        "number": {
+            "tilt": {
+                "name": "Tilt"
+            },
+            "azimuth": {
+                "name": "Azimuth"
+            }
+        },
+        "sensor": {
+            "pv_db_status": {
+                "name": "PV Modules"
+            },
+            "performance": {
+                "name": "Performance"
+            }
         }
     }
 }

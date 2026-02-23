@@ -75,6 +75,13 @@ class PVDatabase:
     def get_roof(self, roof_id):
         return self.roofs.get(roof_id)
 
+    def delete_roof(self, roof_id):
+        """Removes a roof from the database."""
+        if roof_id in self.roofs:
+            del self.roofs[roof_id]
+            return self.async_save()
+        return False
+
     # --- PV MODEL METHODS ---
     def add_model(self, name, brand, p_stc, gamma, noct, voc, isc, vmp, imp):
         model_id = name.lower().replace(" ", "_")
