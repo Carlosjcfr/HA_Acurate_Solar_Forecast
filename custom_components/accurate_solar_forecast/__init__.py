@@ -1,6 +1,6 @@
 from homeassistant.core import HomeAssistant
 from .const import DOMAIN, CONF_SENSOR_GROUP_NAME
-from .pv_database import PVDatabase
+from .acurate_solar_sensor_db import PVDatabase
 import logging
 
 _LOGGER = logging.getLogger(__name__)

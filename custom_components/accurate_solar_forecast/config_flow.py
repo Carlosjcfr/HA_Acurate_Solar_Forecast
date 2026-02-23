@@ -3,19 +3,26 @@ from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.helpers import selector
 from .const import *
-from .pv_database import PVDatabase
+from .acurate_solar_sensor_db import PVDatabase
 
 class AccurateForecastCommonFlow:
     """Common methods for both ConfigFlow and OptionsFlow."""
     
     def _get_sensor_group_schema(self, default_data):
         valid_irradiance_sensors = []
+        valid_wind_sensors = []
         for state in self.hass.states.async_all("sensor"):
             attributes = state.attributes
             if (attributes.get("device_class") == "irradiance" or 
                 attributes.get("unit_of_measurement") in ["W/m²", "W/m2"]):
                 valid_irradiance_sensors.append(state.entity_id)
+                
+            if (attributes.get("device_class") == "wind_speed" or 
+                attributes.get("unit_of_measurement") in ["m/s", "km/h"]):
+                valid_wind_sensors.append(state.entity_id)
+                
         valid_irradiance_sensors.sort()
+        valid_wind_sensors.sort()
 
         def get_default(key, fallback=vol.UNDEFINED):
             val = default_data.get(key)
@@ -38,7 +45,7 @@ class AccurateForecastCommonFlow:
                 selector.EntitySelectorConfig(domain="sensor", device_class="temperature")
             ),
             vol.Optional(CONF_WIND_SENSOR, default=get_default(CONF_WIND_SENSOR)): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain="sensor", device_class="wind_speed")
+                selector.EntitySelectorConfig(include_entities=valid_wind_sensors)
             ),
         })
 
