@@ -61,6 +61,10 @@ class SolarStringRoofSelect(SelectEntity):
                      device_identifiers = device.identifiers
                      found_device = True
 
+        roof_name = self._data.get(CONF_ROOF_NAME)
+        if not found_device and roof_name:
+             device_identifiers = {(DOMAIN, f"roof_{roof_name.lower().replace(' ', '_')}")}
+
         return DeviceInfo(
             identifiers=device_identifiers,
             name=self._string_name if not found_device else None,

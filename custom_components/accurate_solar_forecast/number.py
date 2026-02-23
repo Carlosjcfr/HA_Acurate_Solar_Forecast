@@ -2,7 +2,7 @@ import logging
 from homeassistant.components.number import NumberEntity, NumberDeviceClass, NumberMode
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity import DeviceInfo
-from .const import DOMAIN, CONF_STRING_NAME, CONF_TILT, CONF_AZIMUTH, CONF_SENSOR_GROUP_NAME
+from .const import DOMAIN, CONF_STRING_NAME, CONF_TILT, CONF_AZIMUTH, CONF_SENSOR_GROUP_NAME, CONF_ROOF_NAME
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -36,8 +36,8 @@ class SolarStringNumberEntity(NumberEntity):
         # Try to link to Real Production Sensor's device if configured
         from .const import CONF_REAL_PRODUCTION_SENSOR
         from homeassistant.helpers import device_registry as dr, entity_registry as er
-        
         real_sensor_id = self._data.get(CONF_REAL_PRODUCTION_SENSOR)
+        self.found_device = False
         if real_sensor_id:
              ent_reg = er.async_get(self.hass)
              entity_entry = ent_reg.async_get(real_sensor_id)
@@ -46,6 +46,11 @@ class SolarStringNumberEntity(NumberEntity):
                  device = dev_reg.async_get(entity_entry.device_id)
                  if device:
                      device_identifiers = device.identifiers
+                     found_device = True
+
+        roof_name = self._data.get(CONF_ROOF_NAME)
+        if not getattr(self, "found_device", False) and roof_name:
+             device_identifiers = {(DOMAIN, f"roof_{roof_name.lower().replace(' ', '_')}")}
 
         return DeviceInfo(
             identifiers=device_identifiers

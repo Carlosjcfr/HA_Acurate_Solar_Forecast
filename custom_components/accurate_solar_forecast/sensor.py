@@ -118,13 +118,20 @@ class SolarStringSensor(SensorEntity):
                  if device:
                      device_iden = device.identifiers
 
+        roof_name = self._config.get(CONF_ROOF_NAME)
+        
         if not device_iden:
-            # Fallback: Create independent device
-            device_iden = {(DOMAIN, self._attr_unique_id)} 
+            # Group by Roof instead of String if possible
+            if roof_name:
+                device_iden = {(DOMAIN, f"roof_{roof_name.lower().replace(' ', '_')}")}
+                device_name = roof_name
+            else:
+                device_iden = {(DOMAIN, self._attr_unique_id)} 
+                device_name = self._attr_name
 
         self._attr_device_info = DeviceInfo(
             identifiers=device_iden,
-            name=self._attr_name if not real_sensor_id else None, # If linked, use inverter name (handled by HA merging)
+            name=device_name if not real_sensor_id else None, # If linked, use inverter name (handled by HA merging)
             manufacturer=self._panel_data.get("brand", "Generic") if not real_sensor_id else None,
             model=model_name if not real_sensor_id else None,
             via_device=(DOMAIN, sensor_group_data.get(CONF_SENSOR_GROUP_NAME)) if not real_sensor_id else None
@@ -465,8 +472,13 @@ class SolarStringPerformanceSensor(SensorEntity):
                      # We use the REAL device identifiers
                      device_iden = device_identifiers
 
+        roof_name = self._config.get(CONF_ROOF_NAME)
+        
         if not device_iden:
-            device_iden = {(DOMAIN, string_id)} 
+            if roof_name:
+                device_iden = {(DOMAIN, f"roof_{roof_name.lower().replace(' ', '_')}")}
+            else:
+                device_iden = {(DOMAIN, string_id)} 
             
         self._attr_device_info = DeviceInfo(
             identifiers=device_iden
