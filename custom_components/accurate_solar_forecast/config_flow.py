@@ -1,13 +1,141 @@
 import voluptuous as vol
 from homeassistant import config_entries
+from homeassistant.core import callback
 from homeassistant.helpers import selector
 from .const import *
 from .pv_database import PVDatabase
 
-class AccurateForecastFlow(config_entries.ConfigFlow, domain=DOMAIN):
+class AccurateForecastCommonFlow:
+    """Common methods for both ConfigFlow and OptionsFlow."""
+    
+    def _get_sensor_group_schema(self, default_data):
+        valid_irradiance_sensors = []
+        for state in self.hass.states.async_all("sensor"):
+            attributes = state.attributes
+            if (attributes.get("device_class") == "irradiance" or 
+                attributes.get("unit_of_measurement") in ["W/m²", "W/m2"]):
+                valid_irradiance_sensors.append(state.entity_id)
+        valid_irradiance_sensors.sort()
+
+        def get_default(key, fallback=vol.UNDEFINED):
+            val = default_data.get(key)
+            return val if val is not None else fallback
+
+        return vol.Schema({
+            vol.Required(CONF_SENSOR_GROUP_NAME, default=get_default(CONF_SENSOR_GROUP_NAME, "")): str,
+            vol.Optional(CONF_WEATHER_ENTITY, default=get_default(CONF_WEATHER_ENTITY)): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain="weather")
+            ),
+            vol.Required(CONF_REF_SENSOR, default=get_default(CONF_REF_SENSOR)): selector.EntitySelector(
+                selector.EntitySelectorConfig(include_entities=valid_irradiance_sensors)
+            ),
+            vol.Required(CONF_REF_TILT, default=get_default(CONF_REF_TILT, 0)): vol.All(vol.Coerce(float), vol.Range(min=0, max=90)),
+            vol.Required(CONF_REF_ORIENTATION, default=get_default(CONF_REF_ORIENTATION, 180)): vol.All(vol.Coerce(float), vol.Range(min=0, max=360)),
+            vol.Required(CONF_TEMP_SENSOR, default=get_default(CONF_TEMP_SENSOR)): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain="sensor", device_class="temperature")
+            ),
+            vol.Optional(CONF_TEMP_PANEL_SENSOR, default=get_default(CONF_TEMP_PANEL_SENSOR)): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain="sensor", device_class="temperature")
+            ),
+            vol.Optional(CONF_WIND_SENSOR, default=get_default(CONF_WIND_SENSOR)): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain="sensor", device_class="wind_speed")
+            ),
+        })
+
+    def _get_string_select_relations_schema(self):
+         brands_list = self._db.list_brands()
+         sensor_groups = self._db.list_sensor_groups()
+         if not sensor_groups: return None # Indicate abort condition
+         
+         group_options = list(sensor_groups.keys())
+         roof_options = ["Nuevo tejado"] + list(self._db.list_roofs().values())
+
+         def get_default(key, fallback=vol.UNDEFINED):
+             val = self.temp_data.get(key)
+             return val if val is not None else fallback
+
+         schema_dict = {
+            vol.Required(CONF_STRING_NAME, default=get_default(CONF_STRING_NAME)): str,
+            vol.Required("selected_sensor_group", default=get_default("selected_sensor_group")): selector.SelectSelector(
+                selector.SelectSelectorConfig(options=group_options, mode="dropdown")
+            ),
+            vol.Required(CONF_BRAND, default=get_default(CONF_BRAND, "Generic")): selector.SelectSelector(
+                selector.SelectSelectorConfig(options=brands_list, mode="dropdown")
+            ),
+         }
+         
+         if self.temp_data.get(CONF_REAL_PRODUCTION_SENSOR):
+             schema_dict[vol.Optional(CONF_REAL_PRODUCTION_SENSOR, default=self.temp_data.get(CONF_REAL_PRODUCTION_SENSOR))] = selector.EntitySelector(
+                 selector.EntitySelectorConfig(domain="sensor", device_class="power")
+             )
+         else:
+             schema_dict[vol.Optional(CONF_REAL_PRODUCTION_SENSOR)] = selector.EntitySelector(
+                 selector.EntitySelectorConfig(domain="sensor", device_class="power")
+             )
+             
+         roof_default = self.temp_data.get(CONF_ROOF_NAME)
+         if roof_default:
+              schema_dict[vol.Optional(CONF_ROOF_NAME, default=roof_default)] = selector.SelectSelector(
+                  selector.SelectSelectorConfig(options=roof_options, mode="dropdown", custom_value=False)
+              )
+         else:
+              schema_dict[vol.Optional(CONF_ROOF_NAME)] = selector.SelectSelector(
+                  selector.SelectSelectorConfig(options=roof_options, mode="dropdown", custom_value=False)
+              )
+              
+         return vol.Schema(schema_dict)
+
+    def _get_roof_create_schema(self):
+        return vol.Schema({
+            vol.Required("name"): str,
+            vol.Required(CONF_TILT, default=30): vol.All(vol.Coerce(float), vol.Range(min=0, max=90)),
+            vol.Required(CONF_AZIMUTH, default=180): vol.All(vol.Coerce(float), vol.Range(min=0, max=360)),
+        })
+
+    def _get_string_details_schema(self):
+        def get_default(key, fallback=vol.UNDEFINED):
+            val = self.temp_data.get(key)
+            return val if val is not None else fallback
+
+        selected_brand = self.temp_data.get(CONF_BRAND, "Generic")
+        models_filtered = self._db.list_models_by_brand(selected_brand)
+        
+        default_tilt = self.temp_data.get(CONF_TILT, 30)
+        default_azimuth = self.temp_data.get(CONF_AZIMUTH, 180)
+        
+        roof_name = self.temp_data.get(CONF_ROOF_NAME)
+        if roof_name:
+             roof_id = None
+             for rid, rname in self._db.list_roofs().items():
+                 if rname == roof_name:
+                     roof_id = rid
+                     break
+             
+             if roof_id:
+                 roof_data = self._db.get_roof(roof_id)
+                 if roof_data:
+                     if CONF_TILT not in self.temp_data:  # If not reconfiguring existing tilt
+                         default_tilt = roof_data.get("tilt") or 30
+                     if CONF_AZIMUTH not in self.temp_data:
+                         default_azimuth = roof_data.get("azimuth") or 180
+
+        return vol.Schema({
+            vol.Required(CONF_PANEL_MODEL, default=get_default(CONF_PANEL_MODEL)): selector.SelectSelector(
+                selector.SelectSelectorConfig(options=list(models_filtered.values()), mode="dropdown")
+            ),
+            vol.Required(CONF_NUM_PANELS, default=get_default(CONF_NUM_PANELS, 1)): vol.All(int, vol.Range(min=1)),
+            vol.Required(CONF_NUM_STRINGS, default=get_default(CONF_NUM_STRINGS, 1)): vol.All(int, vol.Range(min=1)),
+            vol.Required(CONF_TILT, default=default_tilt): vol.All(vol.Coerce(float), vol.Range(min=0, max=90)),
+            vol.Required(CONF_AZIMUTH, default=default_azimuth): vol.All(vol.Coerce(float), vol.Range(min=0, max=360)),
+        })
+
+class AccurateForecastFlow(config_entries.ConfigFlow, AccurateForecastCommonFlow, domain=DOMAIN):
     VERSION = 1
     
-    
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry):
+        return AccurateForecastOptionsFlowHandler(config_entry)
 
     def __init__(self):
         self._db = None
@@ -350,41 +478,7 @@ class AccurateForecastFlow(config_entries.ConfigFlow, domain=DOMAIN):
     # Helper: Sensor Group Form
     def _show_sensor_group_form(self, step_id, errors, default_data=None):
         if default_data is None: default_data = {}
-        
-        # Valid Sensors
-        valid_irradiance_sensors = []
-        for state in self.hass.states.async_all("sensor"):
-            attributes = state.attributes
-            if (attributes.get("device_class") == "irradiance" or 
-                attributes.get("unit_of_measurement") in ["W/m²", "W/m2"]):
-                valid_irradiance_sensors.append(state.entity_id)
-        valid_irradiance_sensors.sort()
-
-        # Prepare defaults, handling None values correctly by converting to vol.UNDEFINED
-        def get_default(key, fallback=vol.UNDEFINED):
-            val = default_data.get(key)
-            return val if val is not None else fallback
-
-        schema = vol.Schema({
-            vol.Required(CONF_SENSOR_GROUP_NAME, default=get_default(CONF_SENSOR_GROUP_NAME, "")): str,
-            vol.Optional(CONF_WEATHER_ENTITY, default=get_default(CONF_WEATHER_ENTITY)): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain="weather")
-            ),
-            vol.Required(CONF_REF_SENSOR, default=get_default(CONF_REF_SENSOR)): selector.EntitySelector(
-                selector.EntitySelectorConfig(include_entities=valid_irradiance_sensors)
-            ),
-            vol.Required(CONF_REF_TILT, default=get_default(CONF_REF_TILT, 0)): vol.All(vol.Coerce(float), vol.Range(min=0, max=90)),
-            vol.Required(CONF_REF_ORIENTATION, default=get_default(CONF_REF_ORIENTATION, 180)): vol.All(vol.Coerce(float), vol.Range(min=0, max=360)),
-            vol.Required(CONF_TEMP_SENSOR, default=get_default(CONF_TEMP_SENSOR)): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain="sensor", device_class="temperature")
-            ),
-            vol.Optional(CONF_TEMP_PANEL_SENSOR, default=get_default(CONF_TEMP_PANEL_SENSOR)): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain="sensor", device_class="temperature")
-            ),
-            vol.Optional(CONF_WIND_SENSOR, default=get_default(CONF_WIND_SENSOR)): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain="sensor", device_class="wind_speed")
-            ),
-        })
+        schema = self._get_sensor_group_schema(default_data)
         return self.async_show_form(step_id=step_id, data_schema=schema, errors=errors)
 
     # =================================================================================
@@ -406,51 +500,10 @@ class AccurateForecastFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 
             return await self.async_step_string_create_details()
 
-         brands_list = self._db.list_brands()
-         sensor_groups = self._db.list_sensor_groups()
-         
-         if not sensor_groups:
+         schema = self._get_string_select_relations_schema()
+         if schema is None:
              return self.async_abort(reason="no_sensor_groups_available")
-         
-         group_options = list(sensor_groups.keys())
-         
-         # Prepare Roof Options
-         roof_options = ["Nuevo tejado"] + list(self._db.list_roofs().values())
-
-         def get_default(key, fallback=vol.UNDEFINED):
-             val = self.temp_data.get(key)
-             return val if val is not None else fallback
-
-         schema_dict = {
-            vol.Required(CONF_STRING_NAME, default=get_default(CONF_STRING_NAME)): str,
-            vol.Required("selected_sensor_group", default=get_default("selected_sensor_group")): selector.SelectSelector(
-                selector.SelectSelectorConfig(options=group_options, mode="dropdown")
-            ),
-            vol.Required(CONF_BRAND, default=get_default(CONF_BRAND, "Generic")): selector.SelectSelector(
-                selector.SelectSelectorConfig(options=brands_list, mode="dropdown")
-            ),
-         }
-         
-         if self.temp_data.get(CONF_REAL_PRODUCTION_SENSOR):
-             schema_dict[vol.Optional(CONF_REAL_PRODUCTION_SENSOR, default=self.temp_data.get(CONF_REAL_PRODUCTION_SENSOR))] = selector.EntitySelector(
-                 selector.EntitySelectorConfig(domain="sensor", device_class="power")
-             )
-         else:
-             schema_dict[vol.Optional(CONF_REAL_PRODUCTION_SENSOR)] = selector.EntitySelector(
-                 selector.EntitySelectorConfig(domain="sensor", device_class="power")
-             )
              
-         roof_default = self.temp_data.get(CONF_ROOF_NAME)
-         if roof_default:
-              schema_dict[vol.Optional(CONF_ROOF_NAME, default=roof_default)] = selector.SelectSelector(
-                  selector.SelectSelectorConfig(options=roof_options, mode="dropdown", custom_value=False)
-              )
-         else:
-              schema_dict[vol.Optional(CONF_ROOF_NAME)] = selector.SelectSelector(
-                  selector.SelectSelectorConfig(options=roof_options, mode="dropdown", custom_value=False)
-              )
-              
-         schema = vol.Schema(schema_dict)
          return self.async_show_form(step_id="string_create_select_relations", data_schema=schema)
 
     # 3.1.1 CREATE ROOF (Intermediate Step)
@@ -468,11 +521,7 @@ class AccurateForecastFlow(config_entries.ConfigFlow, domain=DOMAIN):
             
             return await self.async_step_string_create_details()
             
-        schema = vol.Schema({
-            vol.Required("name"): str,
-            vol.Required(CONF_TILT, default=30): vol.All(vol.Coerce(float), vol.Range(min=0, max=90)),
-            vol.Required(CONF_AZIMUTH, default=180): vol.All(vol.Coerce(float), vol.Range(min=0, max=360)),
-        })
+        schema = self._get_roof_create_schema()
         return self.async_show_form(step_id="roof_create", data_schema=schema)
 
     # 3.1 CREATE STRING - Step B: Details
@@ -488,43 +537,7 @@ class AccurateForecastFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     data=final_data
                 )
             
-        def get_default(key, fallback=vol.UNDEFINED):
-            val = self.temp_data.get(key)
-            return val if val is not None else fallback
-
-        selected_brand = self.temp_data.get(CONF_BRAND, "Generic")
-        models_filtered = self._db.list_models_by_brand(selected_brand)
-        
-        # Check defaults from Roof if we don't have explicit defaults already in temp_data
-        default_tilt = self.temp_data.get(CONF_TILT, 30)
-        default_azimuth = self.temp_data.get(CONF_AZIMUTH, 180)
-        
-        roof_name = self.temp_data.get(CONF_ROOF_NAME)
-        if roof_name:
-             # Find roof by name (we store NAME in temp_data)
-             roof_id = None
-             for rid, rname in self._db.list_roofs().items():
-                 if rname == roof_name:
-                     roof_id = rid
-                     break
-             
-             if roof_id:
-                 roof_data = self._db.get_roof(roof_id)
-                 if roof_data:
-                     if CONF_TILT not in self.temp_data:  # If not reconfiguring existing tilt
-                         default_tilt = roof_data.get("tilt") or 30
-                     if CONF_AZIMUTH not in self.temp_data:
-                         default_azimuth = roof_data.get("azimuth") or 180
-
-        schema = vol.Schema({
-            vol.Required(CONF_PANEL_MODEL, default=get_default(CONF_PANEL_MODEL)): selector.SelectSelector(
-                selector.SelectSelectorConfig(options=list(models_filtered.values()), mode="dropdown")
-            ),
-            vol.Required(CONF_NUM_PANELS, default=get_default(CONF_NUM_PANELS, 1)): vol.All(int, vol.Range(min=1)),
-            vol.Required(CONF_NUM_STRINGS, default=get_default(CONF_NUM_STRINGS, 1)): vol.All(int, vol.Range(min=1)),
-            vol.Required(CONF_TILT, default=default_tilt): vol.All(vol.Coerce(float), vol.Range(min=0, max=90)),
-            vol.Required(CONF_AZIMUTH, default=default_azimuth): vol.All(vol.Coerce(float), vol.Range(min=0, max=360)),
-        })
+        schema = self._get_string_details_schema()
         return self.async_show_form(step_id="string_create_details", data_schema=schema)
 
 
@@ -583,9 +596,91 @@ class AccurateForecastFlow(config_entries.ConfigFlow, domain=DOMAIN):
              )
              return self.async_update_reload_and_abort(self.reconfigure_entry)
              
-        return self._show_sensor_group_form("reconfigure_sensor_group", {}, default_data=self.reconfigure_entry.data)
+        return self.async_show_form(step_id="reconfigure_sensor_group", data_schema=schema)
 
     async def async_step_reconfigure_string(self, user_input=None):
         """Handle reconfiguration of a String by reusing the creation flow."""
         self.temp_data = dict(self.reconfigure_entry.data)
         return await self.async_step_string_create_select_relations()
+
+class AccurateForecastOptionsFlowHandler(config_entries.OptionsFlow, AccurateForecastCommonFlow):
+    def __init__(self, config_entry):
+        self.config_entry = config_entry
+        self.temp_data = dict(config_entry.data)
+        self._db = None
+
+    async def async_step_init(self, user_input=None):
+        self.hass.data.setdefault(DOMAIN, {})
+        if "db" not in self.hass.data[DOMAIN]:
+            self._db = PVDatabase(self.hass)
+            await self._db.async_load()
+            self.hass.data[DOMAIN]["db"] = self._db
+        else:
+            self._db = self.hass.data[DOMAIN]["db"]
+            
+        if CONF_SENSOR_GROUP_NAME in self.config_entry.data:
+            return await self.async_step_sensor_group()
+        elif CONF_STRING_NAME in self.config_entry.data:
+            return await self.async_step_string_select_relations()
+            
+        return self.async_abort(reason="unknown_entry_type")
+
+    async def async_step_sensor_group(self, user_input=None):
+        if user_input is not None:
+             old_name = self.config_entry.data[CONF_SENSOR_GROUP_NAME]
+             new_name = user_input[CONF_SENSOR_GROUP_NAME]
+             
+             if old_name != new_name:
+                 old_id = old_name.lower().replace(" ", "_")
+                 await self._db.delete_sensor_group(old_id)
+                 
+             await self._db.add_sensor_group(
+                new_name,
+                user_input[CONF_REF_SENSOR],
+                user_input[CONF_TEMP_SENSOR],
+                user_input.get(CONF_TEMP_PANEL_SENSOR),
+                user_input.get(CONF_WIND_SENSOR),
+                user_input[CONF_REF_TILT],
+                user_input[CONF_REF_ORIENTATION],
+                user_input.get(CONF_WEATHER_ENTITY)
+             )
+             
+             self.hass.config_entries.async_update_entry(self.config_entry, data=user_input)
+             return self.async_create_entry(title="", data={})
+             
+        schema = self._get_sensor_group_schema(self.config_entry.data)
+        return self.async_show_form(step_id="sensor_group", data_schema=schema)
+
+    async def async_step_string_select_relations(self, user_input=None):
+         if user_input is not None:
+            self.temp_data.update(user_input)
+            if self.temp_data.get(CONF_ROOF_NAME) == "Nuevo tejado":
+                return await self.async_step_roof_create()
+            return await self.async_step_string_details()
+
+         schema = self._get_string_select_relations_schema()
+         if schema is None:
+             return self.async_abort(reason="no_sensor_groups_available")
+             
+         return self.async_show_form(step_id="string_select_relations", data_schema=schema)
+
+    async def async_step_roof_create(self, user_input=None):
+        if user_input is not None:
+            name = user_input["name"]
+            tilt = user_input[CONF_TILT]
+            azimuth = user_input[CONF_AZIMUTH]
+            await self._db.add_roof(name, tilt, azimuth)
+            self.temp_data[CONF_ROOF_NAME] = name
+            return await self.async_step_string_details()
+            
+        schema = self._get_roof_create_schema()
+        return self.async_show_form(step_id="roof_create", data_schema=schema)
+
+    async def async_step_string_details(self, user_input=None):
+        if user_input is not None:
+             final_data = {**self.temp_data, **user_input}
+             self.hass.config_entries.async_update_entry(self.config_entry, data=final_data)
+             return self.async_create_entry(title="", data={})
+            
+        schema = self._get_string_details_schema()
+        return self.async_show_form(step_id="string_details", data_schema=schema)
