@@ -398,7 +398,7 @@ class AccurateForecastFlow(config_entries.ConfigFlow, domain=DOMAIN):
     # 3.1 CREATE STRING - Step A: Select Brand & Group
     async def async_step_string_create_select_relations(self, user_input=None):
          if user_input is not None:
-            self.temp_data = user_input
+            self.temp_data.update(user_input)
             
             # Check for "Nuevo tejado"
             if self.temp_data.get(CONF_ROOF_NAME) == "Nuevo tejado":
@@ -417,28 +417,40 @@ class AccurateForecastFlow(config_entries.ConfigFlow, domain=DOMAIN):
          # Prepare Roof Options
          roof_options = ["Nuevo tejado"] + list(self._db.list_roofs().values())
 
-         schema = vol.Schema({
-            vol.Required(CONF_STRING_NAME): str,
-            vol.Required("selected_sensor_group"): selector.SelectSelector(
+         def get_default(key, fallback=vol.UNDEFINED):
+             val = self.temp_data.get(key)
+             return val if val is not None else fallback
+
+         schema_dict = {
+            vol.Required(CONF_STRING_NAME, default=get_default(CONF_STRING_NAME)): str,
+            vol.Required("selected_sensor_group", default=get_default("selected_sensor_group")): selector.SelectSelector(
                 selector.SelectSelectorConfig(options=group_options, mode="dropdown")
             ),
-            vol.Required(CONF_BRAND, default="Generic"): selector.SelectSelector(
+            vol.Required(CONF_BRAND, default=get_default(CONF_BRAND, "Generic")): selector.SelectSelector(
                 selector.SelectSelectorConfig(options=brands_list, mode="dropdown")
             ),
-            vol.Optional(CONF_REAL_PRODUCTION_SENSOR): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain="sensor", device_class="power")
-            ),
-            vol.Optional(CONF_ROOF_NAME, default="Nuevo tejado"): selector.SelectSelector(
-                selector.SelectSelectorConfig(
-                    options=roof_options, 
-                    mode="dropdown",
-                    custom_value=False # Must select "Nuevo tejado" to create, or pick existing. No free text here to avoid confusion? 
-                    # If we want free text "Create new" implicit, we keep True.
-                    # But user asked for specific flow: select "Nuevo tejado" -> go to form.
-                    # So custom_value=False forces selection.
-                )
-            ),
-        })
+         }
+         
+         if self.temp_data.get(CONF_REAL_PRODUCTION_SENSOR):
+             schema_dict[vol.Optional(CONF_REAL_PRODUCTION_SENSOR, default=self.temp_data.get(CONF_REAL_PRODUCTION_SENSOR))] = selector.EntitySelector(
+                 selector.EntitySelectorConfig(domain="sensor", device_class="power")
+             )
+         else:
+             schema_dict[vol.Optional(CONF_REAL_PRODUCTION_SENSOR)] = selector.EntitySelector(
+                 selector.EntitySelectorConfig(domain="sensor", device_class="power")
+             )
+             
+         roof_default = self.temp_data.get(CONF_ROOF_NAME)
+         if roof_default:
+              schema_dict[vol.Optional(CONF_ROOF_NAME, default=roof_default)] = selector.SelectSelector(
+                  selector.SelectSelectorConfig(options=roof_options, mode="dropdown", custom_value=False)
+              )
+         else:
+              schema_dict[vol.Optional(CONF_ROOF_NAME)] = selector.SelectSelector(
+                  selector.SelectSelectorConfig(options=roof_options, mode="dropdown", custom_value=False)
+              )
+              
+         schema = vol.Schema(schema_dict)
          return self.async_show_form(step_id="string_create_select_relations", data_schema=schema)
 
     # 3.1.1 CREATE ROOF (Intermediate Step)
@@ -467,17 +479,25 @@ class AccurateForecastFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_string_create_details(self, user_input=None):
         if user_input is not None:
              final_data = {**self.temp_data, **user_input}
-             return self.async_create_entry(
-                title=self.temp_data[CONF_STRING_NAME], 
-                data=final_data
-            )
+             if getattr(self, "reconfigure_entry", None):
+                 self.hass.config_entries.async_update_entry(self.reconfigure_entry, data=final_data)
+                 return self.async_update_reload_and_abort(self.reconfigure_entry)
+             else:
+                 return self.async_create_entry(
+                    title=self.temp_data[CONF_STRING_NAME], 
+                    data=final_data
+                )
             
-        selected_brand = self.temp_data[CONF_BRAND]
+        def get_default(key, fallback=vol.UNDEFINED):
+            val = self.temp_data.get(key)
+            return val if val is not None else fallback
+
+        selected_brand = self.temp_data.get(CONF_BRAND, "Generic")
         models_filtered = self._db.list_models_by_brand(selected_brand)
         
-        # Check defaults from Roof
-        default_tilt = 30
-        default_azimuth = 180
+        # Check defaults from Roof if we don't have explicit defaults already in temp_data
+        default_tilt = self.temp_data.get(CONF_TILT, 30)
+        default_azimuth = self.temp_data.get(CONF_AZIMUTH, 180)
         
         roof_name = self.temp_data.get(CONF_ROOF_NAME)
         if roof_name:
@@ -491,20 +511,21 @@ class AccurateForecastFlow(config_entries.ConfigFlow, domain=DOMAIN):
              if roof_id:
                  roof_data = self._db.get_roof(roof_id)
                  if roof_data:
-                     default_tilt = roof_data.get("tilt") or 30
-                     default_azimuth = roof_data.get("azimuth") or 180
+                     if CONF_TILT not in self.temp_data:  # If not reconfiguring existing tilt
+                         default_tilt = roof_data.get("tilt") or 30
+                     if CONF_AZIMUTH not in self.temp_data:
+                         default_azimuth = roof_data.get("azimuth") or 180
 
         schema = vol.Schema({
-            vol.Required(CONF_PANEL_MODEL): selector.SelectSelector(
+            vol.Required(CONF_PANEL_MODEL, default=get_default(CONF_PANEL_MODEL)): selector.SelectSelector(
                 selector.SelectSelectorConfig(options=list(models_filtered.values()), mode="dropdown")
             ),
-            vol.Required(CONF_NUM_PANELS, default=1): vol.All(int, vol.Range(min=1)),
-            vol.Required(CONF_NUM_STRINGS, default=1): vol.All(int, vol.Range(min=1)),
+            vol.Required(CONF_NUM_PANELS, default=get_default(CONF_NUM_PANELS, 1)): vol.All(int, vol.Range(min=1)),
+            vol.Required(CONF_NUM_STRINGS, default=get_default(CONF_NUM_STRINGS, 1)): vol.All(int, vol.Range(min=1)),
             vol.Required(CONF_TILT, default=default_tilt): vol.All(vol.Coerce(float), vol.Range(min=0, max=90)),
             vol.Required(CONF_AZIMUTH, default=default_azimuth): vol.All(vol.Coerce(float), vol.Range(min=0, max=360)),
         })
         return self.async_show_form(step_id="string_create_details", data_schema=schema)
-
 
 
     # =================================================================================
@@ -565,42 +586,6 @@ class AccurateForecastFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self._show_sensor_group_form("reconfigure_sensor_group", {}, default_data=self.reconfigure_entry.data)
 
     async def async_step_reconfigure_string(self, user_input=None):
-        """Handle reconfiguration of a String."""
-        if user_input is not None:
-             final_data = {**self.reconfigure_entry.data, **user_input}
-             # For strings, if Brand changed, we are just updating data map. 
-             # Logic is simpler as Strings don't have a separate DB entry, they rely on 'data'
-             
-             # Note: If String Name is in data, update title?
-             # User input for 'string_edit_details' does NOT include string name or brand/group selection
-             # If we want to allow editing those, we need a 2-step reconfigure or a fuller form.
-             # Based on current 'edit' logic, we just show details.
-             
-             self.hass.config_entries.async_update_entry(
-                 self.reconfigure_entry, 
-                 data=final_data
-             )
-             return self.async_update_reload_and_abort(self.reconfigure_entry)
-        
-        # Determine defaults
-        default_data = self.reconfigure_entry.data
-        brand = default_data.get(CONF_BRAND, "Generic")
-        models_filtered = self._db.list_models_by_brand(brand)
-        
-        # Reuse the schema from 'string_edit_details' logic
-        # We can't reuse _show_form easily because 'string_edit_details' builds schema inline
-        # So we duplicate the schema building here for safety and clarity
-        schema = vol.Schema({
-            vol.Required(CONF_PANEL_MODEL, default=default_data.get(CONF_PANEL_MODEL)): selector.SelectSelector(
-                selector.SelectSelectorConfig(options=list(models_filtered.values()), mode="dropdown")
-            ),
-            vol.Required(CONF_NUM_PANELS, default=default_data.get(CONF_NUM_PANELS, 1)): vol.All(int, vol.Range(min=1)),
-            vol.Required(CONF_NUM_STRINGS, default=default_data.get(CONF_NUM_STRINGS, 1)): vol.All(int, vol.Range(min=1)),
-            vol.Required(CONF_TILT, default=default_data.get(CONF_TILT, 30)): vol.All(vol.Coerce(float), vol.Range(min=0, max=90)),
-            vol.Required(CONF_AZIMUTH, default=default_data.get(CONF_AZIMUTH, 180)): vol.All(vol.Coerce(float), vol.Range(min=0, max=360)),
-            vol.Optional(CONF_REAL_PRODUCTION_SENSOR, default=default_data.get(CONF_REAL_PRODUCTION_SENSOR)): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain="sensor", device_class="power")
-            ),
-        })
-        
-        return self.async_show_form(step_id="reconfigure_string", data_schema=schema)
+        """Handle reconfiguration of a String by reusing the creation flow."""
+        self.temp_data = dict(self.reconfigure_entry.data)
+        return await self.async_step_string_create_select_relations()
