@@ -3,7 +3,7 @@ from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.helpers import selector
 from .const import *
-from .acurate_solar_sensor_db import PVDatabase
+from .acurate_solar_sensor_db import AcurateSolarSensorDB
 
 class AccurateForecastCommonFlow:
     """Common methods for both ConfigFlow and OptionsFlow."""
@@ -165,7 +165,7 @@ class AccurateForecastFlow(config_entries.ConfigFlow, AccurateForecastCommonFlow
 
         # Inicializar la base de datos si no existe
         if "db" not in self.hass.data[DOMAIN]:
-            self._db = PVDatabase(self.hass)
+            self._db = AcurateSolarSensorDB(self.hass)
             await self._db.async_load()
             self.hass.data[DOMAIN]["db"] = self._db
         else:
@@ -556,7 +556,7 @@ class AccurateForecastFlow(config_entries.ConfigFlow, AccurateForecastCommonFlow
         # Ensure DB is loaded (as async_step_user is not called here)
         self.hass.data.setdefault(DOMAIN, {})
         if "db" not in self.hass.data[DOMAIN]:
-            self._db = PVDatabase(self.hass)
+            self._db = AcurateSolarSensorDB(self.hass)
             await self._db.async_load()
             self.hass.data[DOMAIN]["db"] = self._db
         else:
@@ -619,7 +619,7 @@ class AccurateForecastOptionsFlowHandler(config_entries.OptionsFlow, AccurateFor
     async def async_step_init(self, user_input=None):
         self.hass.data.setdefault(DOMAIN, {})
         if "db" not in self.hass.data[DOMAIN]:
-            self._db = PVDatabase(self.hass)
+            self._db = AcurateSolarSensorDB(self.hass)
             await self._db.async_load()
             self.hass.data[DOMAIN]["db"] = self._db
         else:

@@ -1,6 +1,6 @@
 from homeassistant.core import HomeAssistant
 from .const import DOMAIN, CONF_SENSOR_GROUP_NAME
-from .acurate_solar_sensor_db import PVDatabase
+from .acurate_solar_sensor_db import AcurateSolarSensorDB
 import logging
 
 _LOGGER = logging.getLogger(__name__)
@@ -10,13 +10,13 @@ PLATFORMS = ["sensor", "number", "select"]
 async def async_setup_entry(hass: HomeAssistant, entry):
     # Cargar la DB y ponerla disponible globalmente
     if DOMAIN not in hass.data:
-        db = PVDatabase(hass)
+        db = AcurateSolarSensorDB(hass)
         await db.async_load()
         hass.data[DOMAIN] = {"db": db}
     else:
         # Ensure older entries get the DB reference if hot-reloading
         if "db" not in hass.data[DOMAIN]:
-             db = PVDatabase(hass)
+             db = AcurateSolarSensorDB(hass)
              await db.async_load()
              hass.data[DOMAIN]["db"] = db
 
@@ -27,7 +27,7 @@ async def async_setup(hass: HomeAssistant, config):
     # Inicialización global
     hass.data.setdefault(DOMAIN, {})
     if "db" not in hass.data[DOMAIN]:
-        db = PVDatabase(hass)
+        db = AcurateSolarSensorDB(hass)
         await db.async_load()
         hass.data[DOMAIN]["db"] = db
     return True

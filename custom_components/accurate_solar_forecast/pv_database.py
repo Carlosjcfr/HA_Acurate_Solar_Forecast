@@ -6,7 +6,7 @@ from .const import CONF_SENSOR_GROUP_NAME, CONF_REF_SENSOR, CONF_REF_TILT, CONF_
 STORAGE_VERSION = 1
 STORAGE_KEY = "accurate_forecast_pv_models"
 
-class PVDatabase:
+class AcurateSolarSensorDB:
     def __init__(self, hass):
         self._store = Store(hass, STORAGE_VERSION, STORAGE_KEY)
         self.data = {}

@@ -70,7 +70,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     # We can attach this sensor to any sensor group entry or create it once.
     # Let's attach it to Sensor Groups for now as they are "system" level.
     if CONF_SENSOR_GROUP_NAME in config_entry.data and "db" in hass.data[DOMAIN]:
-         async_add_entities([PVDatabaseSensor(hass, hass.data[DOMAIN]["db"])])
+         async_add_entities([AcurateSolarSensorDBSensor(hass, hass.data[DOMAIN]["db"])])
 
 
 
@@ -541,7 +541,7 @@ class SolarStringPerformanceSensor(SensorEntity):
         self.async_write_ha_state()
 
 
-class PVDatabaseSensor(SensorEntity):
+class AcurateSolarSensorDBSensor(SensorEntity):
     """Sensor to show PV Database status."""
     
     _attr_has_entity_name = True
