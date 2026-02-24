@@ -185,9 +185,13 @@ class AccurateForecastFlow(AccurateForecastCommonFlow, config_entries.ConfigFlow
         else:
             self._db = self.hass.data[DOMAIN]["db"]
         
-        menu_options = ["menu_pv_models", "menu_roofs"]
+        menu_options = ["menu_pv_models"]
         
-        menu_options = ["menu_pv_models", "menu_roofs", "menu_sensor_groups"]
+        # Strings/Roofs require a sensor group to be associated with
+        if self._db.list_sensor_groups() and len(self._db.list_sensor_groups()) > 0:
+            menu_options.append("menu_roofs")
+            
+        menu_options.append("menu_sensor_groups")
         
         return self.async_show_menu(
             step_id="user",

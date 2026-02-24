@@ -60,18 +60,15 @@ class SolarStringNumberEntity(NumberEntity):
                      device_identifiers = device.identifiers
                      found_device = True
 
-        roof_name = self._data.get(CONF_ROOF_NAME)
-        if not getattr(self, "found_device", False) and roof_name:
-             device_identifiers = {(DOMAIN, f"roof_{roof_name.lower().replace(' ', '_')}")}
+        if getattr(self, "found_device", False):
+            # No fallback to roof since we want a device per string
+            pass
 
         return DeviceInfo(
             identifiers=device_identifiers
         )
 
 class SolarStringTiltNumber(SolarStringNumberEntity):
-    """Number entity for controlling Panel Tilt."""
-    
-    _attr_translation_key = "tilt"
     _attr_native_min_value = 0
     _attr_native_max_value = 90
     _attr_native_step = 1
@@ -81,6 +78,7 @@ class SolarStringTiltNumber(SolarStringNumberEntity):
 
     def __init__(self, hass, string_data, db, config_entry, string_id, roof_id):
         super().__init__(hass, string_data, db, config_entry, string_id, roof_id)
+        self._attr_name = f"{self._string_name} Inclinación"
         self._attr_unique_id = f"str_{self._string_id}_tilt"
         self._attr_native_value = self._data.get(CONF_TILT, 0)
 
@@ -96,9 +94,6 @@ class SolarStringTiltNumber(SolarStringNumberEntity):
         await self.hass.config_entries.async_reload(self._config_entry.entry_id)
 
 class SolarStringAzimuthNumber(SolarStringNumberEntity):
-    """Number entity for controlling Panel Azimuth."""
-    
-    _attr_translation_key = "azimuth"
     _attr_native_min_value = 0
     _attr_native_max_value = 360
     _attr_native_step = 1
@@ -108,6 +103,7 @@ class SolarStringAzimuthNumber(SolarStringNumberEntity):
 
     def __init__(self, hass, string_data, db, config_entry, string_id, roof_id):
         super().__init__(hass, string_data, db, config_entry, string_id, roof_id)
+        self._attr_name = f"{self._string_name} Orientación"
         self._attr_unique_id = f"str_{self._string_id}_azimuth"
         self._attr_native_value = self._data.get(CONF_AZIMUTH, 180)
 

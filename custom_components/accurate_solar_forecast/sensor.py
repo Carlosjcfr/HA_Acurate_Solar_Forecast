@@ -94,8 +94,10 @@ class SolarStringSensor(SensorEntity):
                     self._panel_data = v
                     break
         
-        self._attr_name = self._config.get(CONF_STRING_NAME)
-        self._attr_unique_id = f"str_{self._config.get(CONF_STRING_NAME).lower().replace(' ', '_')}"
+        string_name_raw = self._config.get(CONF_STRING_NAME)
+        self._attr_has_entity_name = True
+        self._attr_name = f"{string_name_raw} Potencia"
+        self._attr_unique_id = f"str_{string_name_raw.lower().replace(' ', '_')}"
         self._attr_native_unit_of_measurement = UnitOfPower.WATT
         self._attr_device_class = SensorDeviceClass.POWER
         self._attr_state_class = SensorStateClass.MEASUREMENT
@@ -123,13 +125,8 @@ class SolarStringSensor(SensorEntity):
         roof_name = self._config.get(CONF_ROOF_NAME)
         
         if not device_iden:
-            # Group by Roof instead of String if possible
-            if roof_name:
-                device_iden = {(DOMAIN, f"roof_{roof_name.lower().replace(' ', '_')}")}
-                device_name = roof_name
-            else:
-                device_iden = {(DOMAIN, self._attr_unique_id)} 
-                device_name = self._attr_name
+            device_iden = {(DOMAIN, self._attr_unique_id)} 
+            device_name = string_name_raw
 
         self._attr_device_info = DeviceInfo(
             identifiers=device_iden,
@@ -449,7 +446,7 @@ class SolarStringPerformanceSensor(SensorEntity):
         self._config = config_entry_data
         self._string_name = self._config.get(CONF_STRING_NAME)
         self._attr_has_entity_name = True
-        self._attr_translation_key = "performance"
+        self._attr_name = f"{self._string_name} Rendimiento"
         self._attr_unique_id = f"str_{self._string_name.lower().replace(' ', '_')}_performance"
         
         # Link to same device
@@ -474,13 +471,8 @@ class SolarStringPerformanceSensor(SensorEntity):
                      # We use the REAL device identifiers
                      device_iden = device_identifiers
 
-        roof_name = self._config.get(CONF_ROOF_NAME)
-        
         if not device_iden:
-            if roof_name:
-                device_iden = {(DOMAIN, f"roof_{roof_name.lower().replace(' ', '_')}")}
-            else:
-                device_iden = {(DOMAIN, string_id)} 
+            device_iden = {(DOMAIN, string_id)} 
             
         self._attr_device_info = DeviceInfo(
             identifiers=device_iden
