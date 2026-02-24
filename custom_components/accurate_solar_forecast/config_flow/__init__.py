@@ -7,6 +7,7 @@ from ..databases.acurate_solar_sensor_db import AcurateSolarSensorDB
 from .flow_pv_models import PvModelsFlowMixin
 from .flow_roofs import RoofsFlowMixin
 from .flow_sensor_groups import SensorGroupsFlowMixin
+from .flow_strings import StringsFlowMixin
 
 class AccurateForecastCommonFlow:
     """Common methods for both ConfigFlow and OptionsFlow."""
@@ -156,7 +157,7 @@ class AccurateForecastCommonFlow:
             vol.Required(CONF_AZIMUTH, default=default_azimuth): vol.All(vol.Coerce(float), vol.Range(min=0, max=360)),
         })
 
-class AccurateForecastFlow(AccurateForecastCommonFlow, PvModelsFlowMixin, RoofsFlowMixin, SensorGroupsFlowMixin, config_entries.ConfigFlow, domain=DOMAIN):
+class AccurateForecastFlow(AccurateForecastCommonFlow, PvModelsFlowMixin, RoofsFlowMixin, SensorGroupsFlowMixin, StringsFlowMixin, config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
     
     @staticmethod
@@ -212,96 +213,6 @@ class AccurateForecastFlow(AccurateForecastCommonFlow, PvModelsFlowMixin, RoofsF
 
     # =================================================================================
     # BRANCH 3: STRINGS (Integraciones - Create & Edit Only)
-    # =================================================================================
-    # =================================================================================
-    # BRANCH 3: STRINGS (Integraciones - Create Only)
-    # =================================================================================
-
-
-    # 3.1 CREATE STRING - Step A: Select Brand & Group
-    async def async_step_string_create_select_relations(self, user_input=None):
-         if user_input is not None:
-            self.temp_data.update(user_input)
-            
-            # If the optional field is cleared by the user, remove it from temp_data
-            if CONF_REAL_PRODUCTION_SENSOR not in user_input:
-                self.temp_data.pop(CONF_REAL_PRODUCTION_SENSOR, None)
-                
-            return await self.async_step_string_create_details()
-
-         schema = self._get_string_select_relations_schema()
-         if schema is None:
-             return self.async_abort(reason="no_sensor_groups_available")
-             
-         return self.async_show_form(step_id="string_create_select_relations", data_schema=schema)
-
-    # 3.1.1 CREATE ROOF (Intermediate Step)
-    async def async_step_roof_create(self, user_input=None):
-        if user_input is not None:
-            name = user_input["name"]
-            tilt = user_input[CONF_TILT]
-            azimuth = user_input[CONF_AZIMUTH]
-            
-            # Save Roof
-            await self._db.add_roof(name, tilt, azimuth)
-            
-            # Update temp_data specific roof name (replace "Nuevo tejado")
-            self.temp_data[CONF_ROOF_NAME] = name
-            
-            return await self.async_step_string_create_select_relations()
-            
-        schema = self._get_roof_create_schema()
-        return self.async_show_form(step_id="roof_create", data_schema=schema)
-
-    # 3.1 CREATE STRING - Step B: Details
-    async def async_step_string_create_details(self, user_input=None):
-        if user_input is not None:
-             final_data = {**self.temp_data, **user_input}
-             
-             # Always save string to DB under the current Roof
-             roof_name = final_data.get(CONF_ROOF_NAME)
-             roof_id = roof_name.lower().replace(" ", "_") if roof_name else "default"
-             string_name = final_data[CONF_STRING_NAME]
-             string_id = string_name.lower().replace(" ", "_")
-             
-             string_data = {
-                 CONF_STRING_NAME: string_name,
-                 "selected_sensor_group": final_data.get("selected_sensor_group"),
-                 CONF_BRAND: final_data.get(CONF_BRAND),
-                 CONF_REAL_PRODUCTION_SENSOR: final_data.get(CONF_REAL_PRODUCTION_SENSOR),
-                 CONF_PANEL_MODEL: final_data.get(CONF_PANEL_MODEL),
-                 CONF_NUM_PANELS: final_data.get(CONF_NUM_PANELS),
-                 CONF_NUM_STRINGS: final_data.get(CONF_NUM_STRINGS),
-                 CONF_TILT: final_data.get(CONF_TILT),
-                 CONF_AZIMUTH: final_data.get(CONF_AZIMUTH)
-             }
-             
-             await self._db.add_string_to_roof(roof_id, string_id, string_data)
-             
-             # Clear string specifics for the next potential string iteration
-             self.temp_data.pop(CONF_STRING_NAME, None)
-             self.temp_data.pop(CONF_REAL_PRODUCTION_SENSOR, None)
-             
-             if getattr(self, "reconfigure_entry", None):
-                 return self.async_update_reload_and_abort(self.reconfigure_entry)
-                 
-             return await self.async_step_string_add_another()
-            
-        schema = self._get_string_details_schema()
-        return self.async_show_form(step_id="string_create_details", data_schema=schema)
-
-    async def async_step_string_add_another(self, user_input=None):
-        return self.async_show_menu(
-            step_id="string_add_another",
-            menu_options=["string_create_select_relations", "roof_finish"]
-        )
-
-    async def async_step_roof_finish(self, user_input=None):
-        roof_name = self.temp_data.get(CONF_ROOF_NAME, "Tejado")
-        return self.async_create_entry(
-            title=roof_name, 
-            data={CONF_ROOF_NAME: roof_name}
-        )
 
 
     # =================================================================================
@@ -368,7 +279,7 @@ class AccurateForecastFlow(AccurateForecastCommonFlow, PvModelsFlowMixin, RoofsF
         self.temp_data = dict(self.reconfigure_entry.data)
         return await self.async_step_string_create_select_relations()
 
-class AccurateForecastOptionsFlowHandler(AccurateForecastCommonFlow, config_entries.OptionsFlow):
+class AccurateForecastOptionsFlowHandler(AccurateForecastCommonFlow, PvModelsFlowMixin, RoofsFlowMixin, SensorGroupsFlowMixin, StringsFlowMixin, config_entries.OptionsFlow):
     def __init__(self, config_entry):
         self.config_entry = config_entry
         self.temp_data = dict(config_entry.data)
@@ -386,6 +297,11 @@ class AccurateForecastOptionsFlowHandler(AccurateForecastCommonFlow, config_entr
         if CONF_SENSOR_GROUP_NAME in self.config_entry.data:
             return await self.async_step_sensor_group()
         elif CONF_STRING_NAME in self.config_entry.data:
+            return await self.async_step_string_select_relations()
+        elif CONF_ROOF_NAME in self.config_entry.data:
+            # For a roof entry, we want to allow editing the strings in that roof
+            # We set the roof name in temp_data so the string steps know which roof we are in
+            self.temp_data[CONF_ROOF_NAME] = self.config_entry.data[CONF_ROOF_NAME]
             return await self.async_step_string_select_relations()
             
         return self.async_abort(reason="not_supported")

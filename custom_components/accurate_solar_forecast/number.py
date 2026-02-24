@@ -2,7 +2,7 @@ import logging
 from homeassistant.components.number import NumberEntity, NumberDeviceClass, NumberMode
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity import DeviceInfo
-from .variables.const import DOMAIN, CONF_STRING_NAME, CONF_TILT, CONF_AZIMUTH, CONF_SENSOR_GROUP_NAME, CONF_ROOF_NAME
+from .variables.const import DOMAIN, CONF_STRING_NAME, CONF_TILT, CONF_AZIMUTH, CONF_SENSOR_GROUP_NAME, CONF_ROOF_NAME, CONF_REAL_PRODUCTION_SENSOR
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -19,8 +19,12 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         for string_id, string_data in roof_strings.items():
             combined_data = dict(string_data)
             combined_data[CONF_ROOF_NAME] = roof_name
-            entities.append(SolarStringTiltNumber(hass, combined_data, db, config_entry, string_id, roof_id))
-            entities.append(SolarStringAzimuthNumber(hass, combined_data, db, config_entry, string_id, roof_id))
+            
+            group_name = string_data.get("selected_sensor_group")
+            sensor_group_data = db.get_sensor_group(group_name)
+            
+            entities.append(SolarStringTiltNumber(hass, combined_data, db, config_entry, string_id, roof_id, sensor_group_data))
+            entities.append(SolarStringAzimuthNumber(hass, combined_data, db, config_entry, string_id, roof_id, sensor_group_data))
             
         if entities:
             async_add_entities(entities)
@@ -28,15 +32,25 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 class SolarStringNumberEntity(NumberEntity):
     """Base class for Solar String numbers."""
     
-    def __init__(self, hass, string_data, db, config_entry, string_id, roof_id):
+    def __init__(self, hass, string_data, db, config_entry, string_id, roof_id, sensor_group_data):
         self.hass = hass
         self._data = string_data
         self._db = db
         self._config_entry = config_entry
         self._string_id = string_id
         self._roof_id = roof_id
+        self._sensor_group = sensor_group_data
         self._string_name = self._data.get(CONF_STRING_NAME)
         self._attr_has_entity_name = True
+
+        # Recuperar datos del modelo
+        model_name = self._data.get(CONF_PANEL_MODEL)
+        self._panel_data = {}
+        if db and db.data:
+            for v in db.data.values():
+                if v.get("name") == model_name:
+                    self._panel_data = v
+                    break
 
     @property
     def device_info(self):
@@ -46,7 +60,7 @@ class SolarStringNumberEntity(NumberEntity):
         device_identifiers = {(DOMAIN, string_id)}
         
         # Try to link to Real Production Sensor's device if configured
-        from .const import CONF_REAL_PRODUCTION_SENSOR
+
         from homeassistant.helpers import device_registry as dr, entity_registry as er
         real_sensor_id = self._data.get(CONF_REAL_PRODUCTION_SENSOR)
         self.found_device = False
@@ -58,14 +72,18 @@ class SolarStringNumberEntity(NumberEntity):
                  device = dev_reg.async_get(entity_entry.device_id)
                  if device:
                      device_identifiers = device.identifiers
-                     found_device = True
+                     self.found_device = True
 
-        if getattr(self, "found_device", False):
+        if self.found_device:
             # No fallback to roof since we want a device per string
             pass
 
         return DeviceInfo(
-            identifiers=device_identifiers
+            identifiers=device_identifiers,
+            name=self._string_name if not self.found_device else None,
+            manufacturer=self._panel_data.get("brand", "Generic") if not self.found_device else None,
+            model=self._panel_data.get(CONF_PANEL_MODEL) if not self.found_device else None,
+            via_device=(DOMAIN, self._sensor_group.get(CONF_SENSOR_GROUP_NAME)) if (not self.found_device and self._sensor_group) else None
         )
 
 class SolarStringTiltNumber(SolarStringNumberEntity):
@@ -76,8 +94,8 @@ class SolarStringTiltNumber(SolarStringNumberEntity):
     _attr_mode = NumberMode.BOX
     _attr_icon = "mdi:angle-acute"
 
-    def __init__(self, hass, string_data, db, config_entry, string_id, roof_id):
-        super().__init__(hass, string_data, db, config_entry, string_id, roof_id)
+    def __init__(self, hass, string_data, db, config_entry, string_id, roof_id, sensor_group_data):
+        super().__init__(hass, string_data, db, config_entry, string_id, roof_id, sensor_group_data)
         self._attr_name = f"{self._string_name} Inclinación"
         self._attr_unique_id = f"str_{self._string_id}_tilt"
         self._attr_native_value = self._data.get(CONF_TILT, 0)
@@ -101,8 +119,8 @@ class SolarStringAzimuthNumber(SolarStringNumberEntity):
     _attr_mode = NumberMode.BOX
     _attr_icon = "mdi:compass"
 
-    def __init__(self, hass, string_data, db, config_entry, string_id, roof_id):
-        super().__init__(hass, string_data, db, config_entry, string_id, roof_id)
+    def __init__(self, hass, string_data, db, config_entry, string_id, roof_id, sensor_group_data):
+        super().__init__(hass, string_data, db, config_entry, string_id, roof_id, sensor_group_data)
         self._attr_name = f"{self._string_name} Orientación"
         self._attr_unique_id = f"str_{self._string_id}_azimuth"
         self._attr_native_value = self._data.get(CONF_AZIMUTH, 180)

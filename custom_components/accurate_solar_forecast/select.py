@@ -2,14 +2,26 @@ import logging
 from homeassistant.components.select import SelectEntity
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo
-from .variables.const import DOMAIN, CONF_STRING_NAME, CONF_TILT, CONF_AZIMUTH, CONF_ROOF_NAME
+from .variables.const import DOMAIN, CONF_STRING_NAME, CONF_TILT, CONF_AZIMUTH, CONF_ROOF_NAME, CONF_REAL_PRODUCTION_SENSOR
 
 _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entities):
     """Set up the Accurate Solar Forecast select entities."""
-    if False:
-        pass
+    if CONF_ROOF_NAME in config_entry.data:
+        db = hass.data[DOMAIN]["db"]
+        roof_name = config_entry.data.get(CONF_ROOF_NAME)
+        roof_id = roof_name.lower().replace(" ", "_") if roof_name else "default"
+        roof_strings = db.get_roof_strings(roof_id)
+        
+        entities = []
+        for string_id, string_data in roof_strings.items():
+            combined_data = dict(string_data)
+            combined_data[CONF_ROOF_NAME] = roof_name
+            entities.append(SolarStringRoofSelect(hass, combined_data, db, config_entry, string_id, roof_id))
+            
+        if entities:
+            async_add_entities(entities)
 
 
 class SolarStringRoofSelect(SelectEntity):
@@ -19,15 +31,26 @@ class SolarStringRoofSelect(SelectEntity):
     _attr_translation_key = "roof"
     _attr_icon = "mdi:home-roof"
 
-    def __init__(self, hass, config_entry):
+    def __init__(self, hass, string_data, db, config_entry, string_id, roof_id):
         self.hass = hass
         self._config_entry = config_entry
-        self._data = config_entry.data
+        self._data = string_data
+        self._string_id = string_id
+        self._roof_id = roof_id
         self._string_name = self._data.get(CONF_STRING_NAME)
-        self._attr_unique_id = f"{self._string_name.lower().replace(' ', '_')}_roof"
-        
-        # Access DB
-        self._db = hass.data[DOMAIN]["db"]
+        self._attr_unique_id = f"str_{self._string_id}_roof_select"
+        self._db = db
+        self._sensor_group = db.get_sensor_group(self._data.get("selected_sensor_group"))
+
+        # Recuperar datos del modelo
+        model_name = self._data.get("panel_model")
+        self._panel_data = {}
+        if db and db.data:
+            for v in db.data.values():
+                if v.get("name") == model_name:
+                    self._panel_data = v
+                    break
+        self.found_device = False
 
     @property
     def options(self):
@@ -46,7 +69,7 @@ class SolarStringRoofSelect(SelectEntity):
         device_identifiers = {(DOMAIN, string_id)}
         
         # Try to link to Real Production Sensor's device if configured
-        from .const import CONF_REAL_PRODUCTION_SENSOR
+
         from homeassistant.helpers import device_registry as dr, entity_registry as er
         
         real_sensor_id = self._data.get(CONF_REAL_PRODUCTION_SENSOR)
@@ -61,15 +84,15 @@ class SolarStringRoofSelect(SelectEntity):
                      device_identifiers = device.identifiers
                      found_device = True
 
-        roof_name = self._data.get(CONF_ROOF_NAME)
-        if not found_device and roof_name:
-             device_identifiers = {(DOMAIN, f"roof_{roof_name.lower().replace(' ', '_')}")}
+        if not found_device:
+             device_identifiers = {(DOMAIN, f"str_{self._string_id}")}
 
         return DeviceInfo(
             identifiers=device_identifiers,
-            name=roof_name if (not found_device and roof_name) else (self._string_name if not found_device else None),
-            manufacturer=self._data.get("brand") if not found_device else None,
-            model=self._data.get("panel_model") if not found_device else None,
+            name=self._string_name if not found_device else None,
+            manufacturer=self._panel_data.get("brand", "Generic") if not found_device else None,
+            model=self._panel_data.get("panel_model") if not found_device else None,
+            via_device=(DOMAIN, self._sensor_group.get(CONF_SENSOR_GROUP_NAME)) if (not found_device and self._sensor_group) else None
         )
 
     async def async_select_option(self, option: str) -> None:
