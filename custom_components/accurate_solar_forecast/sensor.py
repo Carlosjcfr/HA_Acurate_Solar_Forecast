@@ -214,39 +214,58 @@ class SolarStringSensor(SensorEntity):
         # Transposición de Irradiancia
         # Transposición de Irradiancia (Modelo Híbrido: Directa + Difusa)
         
-        # 1. Obtener Cloud Coverage (0-100%)
-        # Intentamos obtenerlo del sensor group data (que actualiza el virtual sensor)
-        # O lo leemos directamente de la entidad weather configurada
-        weather_entity = self._sensor_group.get(CONF_WEATHER_ENTITY)
+        # 1. Obtener Factor de Transmisión (Kt) y Nubosidad
+        kt = 1.0
+        cloud_source = "None"
         cloud_coverage = 0.0
         
-        if weather_entity:
-            w_state = self.hass.states.get(weather_entity)
-            if w_state and w_state.state not in ["unavailable", "unknown"]:
-                # Caso A: Es un sensor numérico (unit %)
-                if w_state.domain == "sensor":
-                    try:
-                        cloud_coverage = float(w_state.state)
-                    except: pass
-                # Caso B: Es una entidad weather (attribute cloud_coverage)
-                elif w_state.domain == "weather":
-                    c = w_state.attributes.get("cloud_coverage")
-                    if c is not None:
-                       try:
-                           cloud_coverage = float(c)
-                       except: pass
-                    else:
-                        # Fallback: Estimar por estado texto
-                        condition = w_state.state
-                        if condition in ["sunny", "clear-night"]: cloud_coverage = 0
-                        elif condition in ["partlycloudy", "cloudy"]: cloud_coverage = 50
-                        elif condition in ["fog", "hail", "lightning", "lightning-rainy", "pouring", "rainy", "snowy", "snowy-rainy"]: cloud_coverage = 100
+        # PRIORIDAD 1: Sensor de Luxes (Iluminancia)
+        ill_sensor = self._sensor_group.get(CONF_ILLUMINANCE_SENSOR)
+        lux_real = -1
+        if ill_sensor:
+            lux_real = self.get_float_state(ill_sensor, -1)
+            
+        if lux_real >= 0 and sun_el > 2:
+            # Iluminancia teórica (120k lx es una constante razonable para cielo despejado)
+            lux_teo = 120000 * math.sin(math.radians(sun_el))
+            if lux_teo > 10:
+                kt = max(0.05, min(1.2, lux_real / lux_teo))
+                cloud_coverage = max(0, min(100, 100 * (1 - kt)))
+                cloud_source = "Lux Sensor"
+            else:
+                cloud_source = "Low Elevation"
         
-        # 2. Calcular Factor de Difusión (k)
-        # 0% nubes -> k=0.1 (10% difusa, 90% directa)
-        # 100% nubes -> k=0.9 (90% difusa, 10% directa)
-        # Interpolación lineal simple
+        # PRIORIDAD 2: Weather Entity (Si luxes fallan o no existen)
+        if cloud_source in ["None", "Low Elevation"]:
+            weather_entity = self._sensor_group.get(CONF_WEATHER_ENTITY)
+            if weather_entity:
+                w_state = self.hass.states.get(weather_entity)
+                if w_state and w_state.state not in ["unavailable", "unknown"]:
+                    # Caso A: Es un sensor numérico (unit %)
+                    if w_state.domain == "sensor":
+                        try: cloud_coverage = float(w_state.state)
+                        except: pass
+                    # Caso B: Es una entidad weather (attribute cloud_coverage)
+                    elif w_state.domain == "weather":
+                        c = w_state.attributes.get("cloud_coverage")
+                        if c is not None:
+                           try: cloud_coverage = float(c)
+                           except: pass
+                        else:
+                            # Fallback: Estimar por estado texto
+                            condition = w_state.state
+                            if condition in ["sunny", "clear-night"]: cloud_coverage = 0
+                            elif condition in ["partlycloudy"]: cloud_coverage = 40
+                            elif condition in ["cloudy"]: cloud_coverage = 90
+                            elif condition in ["fog", "hail", "lightning", "lightning-rainy", "pouring", "rainy", "snowy", "snowy-rainy"]: cloud_coverage = 100
+                    
+                    kt = 1.0 - (cloud_coverage / 100.0)
+                    cloud_source = "Weather Entity"
+        
+        # 2. Calcular Factor de Difusión (k) (Reparto Directa vs Difusa)
+        # k=0.1 (10% difusa) en despejado, k=0.9 (90% difusa) en muy nublado
         k = 0.1 + (0.8 * (cloud_coverage / 100.0))
+        k = max(0.1, min(0.95, k))
         
         # 3. Aplicar Factores
         # Directa: Afectada por geometría
@@ -305,7 +324,10 @@ class SolarStringSensor(SensorEntity):
             "temperatura_celula": round(t_cell, 1),
             "temperatura_ambiente": round(t_amb, 1),
             "voltaje_total_estimado": round(v_string, 1),
-            "corriente_total_estimada": round(i_total, 2)
+            "corriente_total_estimada": round(i_total, 2),
+            "cloud_transmission_factor": round(kt, 3),
+            "cloud_coverage_estimated": round(cloud_coverage, 1),
+            "cloud_source": cloud_source
         }
         self.async_write_ha_state()
 
@@ -316,9 +338,11 @@ class SolarStringSensor(SensorEntity):
         if self._sensor_group.get(CONF_WIND_SENSOR):
             entities.append(self._sensor_group.get(CONF_WIND_SENSOR))
         
-        # Track weather entity if available in group
+        # Track weather / illuminance
         if self._sensor_group.get(CONF_WEATHER_ENTITY):
              entities.append(self._sensor_group.get(CONF_WEATHER_ENTITY))
+        if self._sensor_group.get(CONF_ILLUMINANCE_SENSOR):
+             entities.append(self._sensor_group.get(CONF_ILLUMINANCE_SENSOR))
             
         self.async_on_remove(
             async_track_state_change_event(self.hass, entities, self._update_logic)
@@ -364,6 +388,7 @@ class SensorGroupVirtualSensor(SensorEntity):
         if self._config.get(CONF_TEMP_PANEL_SENSOR): sensors_to_track.append(self._config[CONF_TEMP_PANEL_SENSOR])
         if self._config.get(CONF_WIND_SENSOR): sensors_to_track.append(self._config[CONF_WIND_SENSOR])
         if self._config.get(CONF_WEATHER_ENTITY): sensors_to_track.append(self._config[CONF_WEATHER_ENTITY])
+        if self._config.get(CONF_ILLUMINANCE_SENSOR): sensors_to_track.append(self._config[CONF_ILLUMINANCE_SENSOR])
         
         self.async_on_remove(
             async_track_state_change_event(self.hass, sensors_to_track, self._update_state)
@@ -403,6 +428,7 @@ class SensorGroupVirtualSensor(SensorEntity):
         s3 = get_val(CONF_TEMP_PANEL_SENSOR, "panel_temperature")
         s3 = get_val(CONF_TEMP_PANEL_SENSOR, "panel_temperature")
         s4 = get_val(CONF_WIND_SENSOR, "wind_speed")
+        s5 = get_val(CONF_ILLUMINANCE_SENSOR, "illuminance")
         
         # Weather / Cloud Coverage Special Handling
         w_ent = self._config.get(CONF_WEATHER_ENTITY)
@@ -418,8 +444,8 @@ class SensorGroupVirtualSensor(SensorEntity):
             else:
                 attributes["cloud_coverage"] = "unavailable"
         
-        if "Error" in [s1, s2, s3, s4]: status = "Error"
-        elif "Partial" in [s1, s2, s3, s4]: status = "Partial"
+        if "Error" in [s1, s2, s3, s4, s5]: status = "Error"
+        elif "Partial" in [s1, s2, s3, s4, s5]: status = "Partial"
         
         # Store configuration in attributes too
         attributes["ref_tilt"] = self._config.get(CONF_REF_TILT)
