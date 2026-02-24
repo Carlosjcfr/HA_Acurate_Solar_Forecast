@@ -254,24 +254,27 @@ class SolarStringSensor(SensorEntity):
         cloud_source = "None"
         cloud_coverage = 0.0
         
-        # PRIORIDAD 1: Sensor de Luxes (Iluminancia)
-        ill_sensor = self._sensor_group.get(CONF_ILLUMINANCE_SENSOR)
-        lux_real = -1
-        if ill_sensor:
-            lux_real = self.get_float_state(ill_sensor, -1)
-            
-        if lux_real >= 0 and sun_el > 2:
-            # Iluminancia teórica (120k lx es una constante razonable para cielo despejado)
-            lux_teo = 120000 * math.sin(math.radians(sun_el))
-            if lux_teo > 10:
-                kt = max(0.05, min(1.2, lux_real / lux_teo))
-                cloud_coverage = max(0, min(100, 100 * (1 - kt)))
-                cloud_source = "Lux Sensor"
-            else:
-                cloud_source = "Low Elevation"
+        # PRIORIDAD 1: Sensor de Luxes (Iluminancia) - Solo si el sol está arriba
+        if sun_el > 0:
+            ill_sensor = self._sensor_group.get(CONF_ILLUMINANCE_SENSOR)
+            lux_real = -1
+            if ill_sensor:
+                lux_real = get_converted_value(self.hass, ill_sensor, "illuminance", -1)
+                
+            if lux_real >= 0 and sun_el > 2:
+                # Iluminancia teórica (120k lx es una constante razonable para cielo despejado)
+                lux_teo = 120000 * math.sin(math.radians(sun_el))
+                if lux_teo > 10:
+                    kt = max(0.05, min(1.2, lux_real / lux_teo))
+                    cloud_coverage = max(0, min(100, 100 * (1 - kt)))
+                    cloud_source = "Lux Sensor"
+                else:
+                    cloud_source = "Low Elevation"
+        else:
+            cloud_source = "Night"
         
-        # PRIORIDAD 2: Weather Entity (Si luxes fallan o no existen)
-        if cloud_source in ["None", "Low Elevation"]:
+        # PRIORIDAD 2: Weather Entity (Si luxes fallan / no existen / es de noche)
+        if cloud_source in ["None", "Low Elevation", "Night"]:
             weather_entity = self._sensor_group.get(CONF_WEATHER_ENTITY)
             if weather_entity:
                 w_state = self.hass.states.get(weather_entity)
@@ -548,24 +551,27 @@ class SensorGroupCloudinessSensor(SensorEntity):
         cloud_coverage = 0.0
         cloud_source = "None"
         
-        # Priority 1: Illuminance (Luxes)
-        ill_sensor = self._config.get(CONF_ILLUMINANCE_SENSOR)
-        lux_real = -1
-        if ill_sensor:
-            lux_real = get_converted_value(self.hass, ill_sensor, "illuminance", -1)
-            
-        if lux_real >= 0 and sun_el > 2:
-            # Theoretical Illuminance (120k lx is clear sky max)
-            lux_teo = 120000 * math.sin(math.radians(sun_el))
-            if lux_teo > 10:
-                kt = max(0.05, min(1.2, lux_real / lux_teo))
-                cloud_coverage = max(0, min(100, 100 * (1 - kt)))
-                cloud_source = "Lux Sensor"
-            else:
-                cloud_source = "Low Elevation"
+        # Priority 1: Illuminance (Luxes) - ONLY DURING DAYTIME
+        if sun_el > 0:
+            ill_sensor = self._config.get(CONF_ILLUMINANCE_SENSOR)
+            lux_real = -1
+            if ill_sensor:
+                lux_real = get_converted_value(self.hass, ill_sensor, "illuminance", -1)
+                
+            if lux_real >= 0 and sun_el > 2:
+                # Theoretical Illuminance (120k lx is clear sky max)
+                lux_teo = 120000 * math.sin(math.radians(sun_el))
+                if lux_teo > 10:
+                    kt = max(0.05, min(1.2, lux_real / lux_teo))
+                    cloud_coverage = max(0, min(100, 100 * (1 - kt)))
+                    cloud_source = "Lux Sensor"
+                else:
+                    cloud_source = "Low Elevation"
+        else:
+            cloud_source = "Night"
                 
         # Priority 2: Weather Entity
-        if cloud_source in ["None", "Low Elevation"]:
+        if cloud_source in ["None", "Low Elevation", "Night"]:
             weather_entity = self._config.get(CONF_WEATHER_ENTITY)
             if weather_entity:
                 w_state = self.hass.states.get(weather_entity)
