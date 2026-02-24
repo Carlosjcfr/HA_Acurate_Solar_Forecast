@@ -2,8 +2,8 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.helpers import selector
-from .const import *
-from .acurate_solar_sensor_db import AcurateSolarSensorDB
+from ..variables.const import *
+from ..databases.acurate_solar_sensor_db import AcurateSolarSensorDB
 from .flow_pv_models import PvModelsFlowMixin
 from .flow_roofs import RoofsFlowMixin
 from .flow_sensor_groups import SensorGroupsFlowMixin

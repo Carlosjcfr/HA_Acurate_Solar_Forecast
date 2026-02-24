@@ -1,8 +1,8 @@
 from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.device_registry import DeviceEntry
-from .const import DOMAIN, CONF_SENSOR_GROUP_NAME, CONF_ROOF_NAME
-from .acurate_solar_sensor_db import AcurateSolarSensorDB
+from .variables.const import DOMAIN, CONF_SENSOR_GROUP_NAME, CONF_ROOF_NAME
+from .databases.acurate_solar_sensor_db import AcurateSolarSensorDB
 import logging
 
 _LOGGER = logging.getLogger(__name__)

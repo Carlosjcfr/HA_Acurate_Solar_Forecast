@@ -2,7 +2,7 @@ import logging
 from homeassistant.components.select import SelectEntity
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo
-from .const import DOMAIN, CONF_STRING_NAME, CONF_TILT, CONF_AZIMUTH, CONF_ROOF_NAME
+from .variables.const import DOMAIN, CONF_STRING_NAME, CONF_TILT, CONF_AZIMUTH, CONF_ROOF_NAME
 
 _LOGGER = logging.getLogger(__name__)
 

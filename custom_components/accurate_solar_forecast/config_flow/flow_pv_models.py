@@ -1,6 +1,6 @@
 import voluptuous as vol
 from homeassistant.helpers import selector
-from .const import CONF_BRAND, CONF_VOC, CONF_ISC, CONF_VMP, CONF_IMP
+from ..variables.const import CONF_BRAND, CONF_VOC, CONF_ISC, CONF_VMP, CONF_IMP
 
 class PvModelsFlowMixin:
     async def async_step_menu_pv_models(self, user_input=None):

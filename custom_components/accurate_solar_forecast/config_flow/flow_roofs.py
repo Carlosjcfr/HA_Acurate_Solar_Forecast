@@ -1,6 +1,6 @@
 import voluptuous as vol
 from homeassistant.helpers import selector
-from .const import CONF_TILT, CONF_AZIMUTH
+from ..variables.const import CONF_TILT, CONF_AZIMUTH
 
 class RoofsFlowMixin:
     # =================================================================================
