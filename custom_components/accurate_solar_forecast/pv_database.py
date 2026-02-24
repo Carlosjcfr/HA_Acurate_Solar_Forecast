@@ -132,7 +132,7 @@ class AcurateSolarSensorDB:
         """Devuelve dict {id: nombre} para el selector."""
         return {k: v["name"] for k, v in self.data.items()}
 
-    # --- SENSOR GROUP METHODS ---
+    # --- SENSOR GRO UP METHODS ---
     def add_sensor_group(self, name, irradiance_sensor, temp_sensor, temp_panel_sensor, wind_sensor, ref_tilt, ref_orientation, weather_entity=None):
         group_id = name.lower().replace(" ", "_")
         self.sensor_groups[group_id] = {

@@ -41,28 +41,30 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
             SensorGroupVirtualSensor(hass, config_entry, device_identifiers)
         ])
 
-    # CASE 2: SOLAR STRING (POWER PREDICTION)
-    elif CONF_STRING_NAME in config_entry.data:
-        # We need to look up the Sensor Group data!
-        # The string entry has 'selected_sensor_group' (which is the name/ID in DB)
-        # However, to be robust, we should probably look up the CONFIG ENTRY of the sensor group?
-        # OR just use the DB since the sensors are entities in HA anyway.
-        # Let's use the DB to get the entity IDs associated with that group name.
+    # CASE 2: ROOF (CONTAINS SOLAR STRINGS)
+    elif CONF_ROOF_NAME in config_entry.data:
+        roof_name = config_entry.data.get(CONF_ROOF_NAME)
+        roof_id = roof_name.lower().replace(" ", "_") if roof_name else "default"
+        roof_strings = db.get_roof_strings(roof_id)
         
-        group_name = config_entry.data.get("selected_sensor_group")
-        # In this implementation, the value stored was the Name (key in DB dict was name-based id)
-        # But wait, config_flow list_sensor_groups returned {id: name}. SelectSelector returns the KEY (id).
-        # So group_name is actually the group_id.
-        
-        sensor_group_data = db.get_sensor_group(group_name)
-        
-        if sensor_group_data:
-            async_add_entities([
-                SolarStringSensor(hass, config_entry.data, db, sensor_group_data),
-                SolarStringPerformanceSensor(hass, config_entry.data, db, sensor_group_data)
-            ], update_before_add=True)
+        entities = []
+        for string_id, string_data in roof_strings.items():
+            # Combine data so the sensor classes get what they expect
+            combined_data = dict(string_data)
+            combined_data[CONF_ROOF_NAME] = roof_name
+            
+            group_name = string_data.get("selected_sensor_group")
+            sensor_group_data = db.get_sensor_group(group_name)
+            
+            if sensor_group_data:
+                entities.append(SolarStringSensor(hass, combined_data, db, sensor_group_data))
+                if combined_data.get(CONF_REAL_PRODUCTION_SENSOR):
+                    entities.append(SolarStringPerformanceSensor(hass, combined_data, db, sensor_group_data))
+                    
+        if entities:
+            async_add_entities(entities, update_before_add=True)
         else:
-            _LOGGER.error(f"Sensor group '{group_name}' not found in DB for string {config_entry.title}")
+            _LOGGER.error(f"No strings found for roof '{roof_name}' or sensor group data missing.")
 
     # CASE 3: PV DATABASE MONITOR (Global)
     # We can perform a check if this entry is the "main" one? 

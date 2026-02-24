@@ -66,18 +66,37 @@ class AcurateSolarSensorDB:
         await self._store.async_save(save_data)
 
     # --- ROOF METHODS ---
-    def add_roof(self, name, tilt=None, azimuth=None):
+    def add_roof(self, name, tilt=None, azimuth=None, strings=None):
         """Adds a roof to the database."""
         roof_id = name.lower().replace(" ", "_")
         
-        # If updating or creating, we want to store the data
-        # If it exists, we update it.
+        existing = self.roofs.get(roof_id, {})
+        
         self.roofs[roof_id] = {
             "name": name,
             "tilt": tilt,
-            "azimuth": azimuth
+            "azimuth": azimuth,
+            "strings": strings if strings is not None else existing.get("strings", {})
         }
         return self.async_save()
+
+    def add_string_to_roof(self, roof_id, string_id, string_data):
+        if roof_id in self.roofs:
+            if "strings" not in self.roofs[roof_id]:
+                self.roofs[roof_id]["strings"] = {}
+            self.roofs[roof_id]["strings"][string_id] = string_data
+            return self.async_save()
+        return False
+        
+    def delete_string_from_roof(self, roof_id, string_id):
+        if roof_id in self.roofs and "strings" in self.roofs[roof_id]:
+            if string_id in self.roofs[roof_id]["strings"]:
+                del self.roofs[roof_id]["strings"][string_id]
+                return self.async_save()
+        return False
+        
+    def get_roof_strings(self, roof_id):
+        return self.roofs.get(roof_id, {}).get("strings", {})
 
     def list_roofs(self):
         """Returns a dict {id: name} of roofs."""

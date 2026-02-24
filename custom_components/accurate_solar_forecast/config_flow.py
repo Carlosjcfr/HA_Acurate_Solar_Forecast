@@ -98,16 +98,7 @@ class AccurateForecastCommonFlow:
                  selector.EntitySelectorConfig(domain="sensor", device_class="power")
              )
              
-         roof_default = self.temp_data.get(CONF_ROOF_NAME)
-         if roof_default and roof_default in roof_options:
-              schema_dict[vol.Optional(CONF_ROOF_NAME, default=roof_default)] = selector.SelectSelector(
-                  selector.SelectSelectorConfig(options=roof_options, mode="dropdown", custom_value=False)
-              )
-         else:
-              schema_dict[vol.Optional(CONF_ROOF_NAME)] = selector.SelectSelector(
-                  selector.SelectSelectorConfig(options=roof_options, mode="dropdown", custom_value=False)
-              )
-              
+         # Remove roof selection because we are already in the context of a roof.
          return vol.Schema(schema_dict)
 
     def _get_roof_create_schema(self):
@@ -196,11 +187,7 @@ class AccurateForecastFlow(AccurateForecastCommonFlow, config_entries.ConfigFlow
         
         menu_options = ["menu_pv_models", "menu_roofs"]
         
-        # Strings require a sensor group to be associated with
-        if self._db.list_sensor_groups() and len(self._db.list_sensor_groups()) > 0:
-            menu_options.append("string_create_select_relations")
-            
-        menu_options.append("menu_sensor_groups")
+        menu_options = ["menu_pv_models", "menu_roofs", "menu_sensor_groups"]
         
         return self.async_show_menu(
             step_id="user",
@@ -523,11 +510,6 @@ class AccurateForecastFlow(AccurateForecastCommonFlow, config_entries.ConfigFlow
     async def async_step_string_create_select_relations(self, user_input=None):
          if user_input is not None:
             self.temp_data.update(user_input)
-            
-            # Check for "Nuevo tejado"
-            if self.temp_data.get(CONF_ROOF_NAME) == "Nuevo tejado":
-                return await self.async_step_roof_create()
-                
             return await self.async_step_string_create_details()
 
          schema = self._get_string_select_relations_schema()
@@ -558,18 +540,47 @@ class AccurateForecastFlow(AccurateForecastCommonFlow, config_entries.ConfigFlow
     async def async_step_string_create_details(self, user_input=None):
         if user_input is not None:
              final_data = {**self.temp_data, **user_input}
+             
+             # Always save string to DB under the current Roof
+             roof_name = final_data.get(CONF_ROOF_NAME)
+             roof_id = roof_name.lower().replace(" ", "_") if roof_name else "default"
+             string_name = final_data[CONF_STRING_NAME]
+             string_id = string_name.lower().replace(" ", "_")
+             
+             string_data = {
+                 CONF_STRING_NAME: string_name,
+                 "selected_sensor_group": final_data.get("selected_sensor_group"),
+                 CONF_BRAND: final_data.get(CONF_BRAND),
+                 CONF_REAL_PRODUCTION_SENSOR: final_data.get(CONF_REAL_PRODUCTION_SENSOR),
+                 CONF_PANEL_MODEL: final_data.get(CONF_PANEL_MODEL),
+                 CONF_NUM_PANELS: final_data.get(CONF_NUM_PANELS),
+                 CONF_NUM_STRINGS: final_data.get(CONF_NUM_STRINGS),
+                 CONF_TILT: final_data.get(CONF_TILT),
+                 CONF_AZIMUTH: final_data.get(CONF_AZIMUTH)
+             }
+             
+             await self._db.add_string_to_roof(roof_id, string_id, string_data)
+             
              if getattr(self, "reconfigure_entry", None):
-                 self.hass.config_entries.async_update_entry(self.reconfigure_entry, data=final_data)
                  return self.async_update_reload_and_abort(self.reconfigure_entry)
-             else:
-                 title = final_data.get(CONF_ROOF_NAME) or final_data.get(CONF_STRING_NAME)
-                 return self.async_create_entry(
-                    title=title, 
-                    data=final_data
-                )
+                 
+             return await self.async_step_string_add_another()
             
         schema = self._get_string_details_schema()
         return self.async_show_form(step_id="string_create_details", data_schema=schema)
+
+    async def async_step_string_add_another(self, user_input=None):
+        return self.async_show_menu(
+            step_id="string_add_another",
+            menu_options=["string_create_select_relations", "roof_finish"]
+        )
+
+    async def async_step_roof_finish(self, user_input=None):
+        roof_name = self.temp_data.get(CONF_ROOF_NAME, "Tejado")
+        return self.async_create_entry(
+            title=roof_name, 
+            data={CONF_ROOF_NAME: roof_name}
+        )
 
 
     # =================================================================================

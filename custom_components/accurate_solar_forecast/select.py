@@ -8,8 +8,8 @@ _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entities):
     """Set up the Accurate Solar Forecast select entities."""
-    if CONF_STRING_NAME in config_entry.data:
-        async_add_entities([SolarStringRoofSelect(hass, config_entry)])
+    if False:
+        pass
 
 
 class SolarStringRoofSelect(SelectEntity):
@@ -67,7 +67,7 @@ class SolarStringRoofSelect(SelectEntity):
 
         return DeviceInfo(
             identifiers=device_identifiers,
-            name=self._string_name if not found_device else None,
+            name=roof_name if (not found_device and roof_name) else (self._string_name if not found_device else None),
             manufacturer=self._data.get("brand") if not found_device else None,
             model=self._data.get("panel_model") if not found_device else None,
         )
