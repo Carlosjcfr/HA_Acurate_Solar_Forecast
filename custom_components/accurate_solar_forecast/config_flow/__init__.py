@@ -19,20 +19,23 @@ class AccurateForecastCommonFlow:
         valid_temperature_sensors = []
         for state in self.hass.states.async_all("sensor"):
             attributes = state.attributes
-            if (attributes.get("device_class") == "irradiance" or 
-                (attributes.get("unit_of_measurement") and attributes.get("unit_of_measurement") in ["W/m²", "W/m2"])):
+            uom_lower = (attributes.get("unit_of_measurement") or "").lower()
+            device_class = attributes.get("device_class")
+
+            if (device_class == "irradiance" or 
+                uom_lower in ["w/m²", "w/m2"]):
                 valid_irradiance_sensors.append(state.entity_id)
                 
-            if (attributes.get("device_class") == "wind_speed" or 
-                (attributes.get("unit_of_measurement") and attributes.get("unit_of_measurement") in ["m/s", "km/h"])):
+            if (device_class == "wind_speed" or 
+                uom_lower in ["m/s", "km/h", "mph", "kn", "ft/s", "bft"]):
                 valid_wind_sensors.append(state.entity_id)
 
-            if (attributes.get("device_class") == "illuminance" or 
-                (attributes.get("unit_of_measurement") and attributes.get("unit_of_measurement").lower() in ["lx", "lux"])):
+            if (device_class == "illuminance" or 
+                uom_lower in ["lx", "lux"]):
                 valid_illuminance_sensors.append(state.entity_id)
 
-            if (attributes.get("device_class") == "temperature" or 
-                (attributes.get("unit_of_measurement") and attributes.get("unit_of_measurement") in ["°C", "°F", "K"])):
+            if (device_class == "temperature" or 
+                uom_lower in ["°c", "°f", "k"]):
                 valid_temperature_sensors.append(state.entity_id)
                 
         valid_irradiance_sensors.sort()

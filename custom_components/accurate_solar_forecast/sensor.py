@@ -10,6 +10,53 @@ from .variables.const import *
 
 _LOGGER = logging.getLogger(__name__)
 
+def get_converted_value(hass, entity_id, target_type, default=0.0):
+    """Fetch state and convert to target internal units (Celsius, m/s, W/m2)."""
+    if not entity_id:
+        return default
+    state = hass.states.get(entity_id)
+    if not state or state.state in ["unavailable", "unknown"]:
+        return default
+        
+    try:
+        val = float(state.state)
+        unit = (state.attributes.get("unit_of_measurement") or "").lower().strip()
+        
+        # 1. TEMPERATURE (Target: Celsius)
+        if target_type == "temperature":
+            if unit in ["°f", "f"]: 
+                return (val - 32) * 5 / 9
+            if unit == "k": 
+                return val - 273.15
+            return val 
+            
+        # 2. SPEED (Target: m/s)
+        if target_type == "speed":
+            if unit == "km/h": return val / 3.6
+            if unit == "mph": return val / 2.23694
+            if unit == "kn": return val / 1.94384
+            if unit == "ft/s": return val / 3.28084
+            if unit == "bft":
+                # Beaufort table (mid-points)
+                bft_map = [0, 0.45, 2.45, 4.4, 6.7, 9.35, 12.3, 15.5, 18.95, 22.6, 26.45, 30.55, 32.7]
+                idx = int(min(max(0, val), 12))
+                return bft_map[idx]
+            return val
+            
+        # 3. IRRADIANCE (Target: W/m²)
+        if target_type == "irradiance":
+            if "kw/m" in unit: return val * 1000.0
+            return val
+
+        # 4. ILLUMINANCE (Target: lux)
+        if target_type == "illuminance":
+            return val
+            
+        return val
+    except:
+        return default
+
+
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up the Accurate Solar Forecast sensors from a config entry."""
     db = hass.data[DOMAIN]["db"] # DB is assumed to be loaded in __init__
@@ -141,17 +188,6 @@ class SolarStringSensor(SensorEntity):
     def check_config(self):
         return self._panel_data is not None and self._sensor_group is not None
 
-    def get_float_state(self, entity_id, default=0.0):
-        if not entity_id:
-            return default
-        state = self.hass.states.get(entity_id)
-        if state and state.state not in ["unavailable", "unknown"]:
-            try:
-                return float(state.state)
-            except ValueError:
-                pass
-        return default
-
     def calculate_cos_incidence(self, sun_az, sun_el, panel_az, panel_tilt):
         """Calcula el coseno del ángulo de incidencia."""
         sol_zenith_rad = math.radians(90 - sun_el)
@@ -188,16 +224,14 @@ class SolarStringSensor(SensorEntity):
 
         # 2. Datos del Sensor de Referencia (DESDE EL GRUPO DE SENSORES)
         ref_sensor = self._sensor_group.get(CONF_REF_SENSOR)
-        irr_ref = self.get_float_state(ref_sensor, 0.0)
+        irr_ref = get_converted_value(self.hass, ref_sensor, "irradiance", 0.0)
         
         # 3. Datos Ambientales (DESDE EL GRUPO DE SENSORES)
         temp_sensor = self._sensor_group.get(CONF_TEMP_SENSOR)
-        t_amb = self.get_float_state(temp_sensor, 25.0)
+        t_amb = get_converted_value(self.hass, temp_sensor, "temperature", 25.0)
         
         wind_sensor = self._sensor_group.get(CONF_WIND_SENSOR)
-        wind_speed = 1.0 
-        if wind_sensor:
-            wind_speed = self.get_float_state(wind_sensor, 1.0)
+        wind_speed = get_converted_value(self.hass, wind_sensor, "speed", 1.0)
             
         # Panel Temp (Si existe en el grupo)
         # ... logic not implemented fully in previous version but ready here
@@ -502,17 +536,6 @@ class SensorGroupCloudinessSensor(SensorEntity):
         )
         self._update_logic()
 
-    def get_float_state(self, entity_id, default=0.0):
-        if not entity_id:
-            return default
-        state = self.hass.states.get(entity_id)
-        if state and state.state not in ["unavailable", "unknown"]:
-            try:
-                return float(state.state)
-            except ValueError:
-                pass
-        return default
-
     @callback
     def _update_logic(self, event=None):
         """Estimate cloud coverage."""
@@ -529,7 +552,7 @@ class SensorGroupCloudinessSensor(SensorEntity):
         ill_sensor = self._config.get(CONF_ILLUMINANCE_SENSOR)
         lux_real = -1
         if ill_sensor:
-            lux_real = self.get_float_state(ill_sensor, -1)
+            lux_real = get_converted_value(self.hass, ill_sensor, "illuminance", -1)
             
         if lux_real >= 0 and sun_el > 2:
             # Theoretical Illuminance (120k lx is clear sky max)
