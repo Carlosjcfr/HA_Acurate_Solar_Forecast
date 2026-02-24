@@ -531,7 +531,7 @@ class AccurateForecastFlow(AccurateForecastCommonFlow, config_entries.ConfigFlow
             # Update temp_data specific roof name (replace "Nuevo tejado")
             self.temp_data[CONF_ROOF_NAME] = name
             
-            return await self.async_step_string_create_details()
+            return await self.async_step_string_create_select_relations()
             
         schema = self._get_roof_create_schema()
         return self.async_show_form(step_id="roof_create", data_schema=schema)
