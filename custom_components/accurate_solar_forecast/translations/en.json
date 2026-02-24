@@ -223,7 +223,7 @@
         },
         "abort": {
             "already_configured": "Device is already configured",
-            "pv_models_saved": "PV Modules list updated!",
+            "list_updated": "List updated!",
             "reconfigure_successful": "Configuration successfully updated!"
         }
     },
