@@ -15,18 +15,30 @@ class AccurateForecastCommonFlow:
     def _get_sensor_group_schema(self, default_data):
         valid_irradiance_sensors = []
         valid_wind_sensors = []
+        valid_illuminance_sensors = []
+        valid_temperature_sensors = []
         for state in self.hass.states.async_all("sensor"):
             attributes = state.attributes
             if (attributes.get("device_class") == "irradiance" or 
-                attributes.get("unit_of_measurement") in ["W/m²", "W/m2"]):
+                (attributes.get("unit_of_measurement") and attributes.get("unit_of_measurement") in ["W/m²", "W/m2"])):
                 valid_irradiance_sensors.append(state.entity_id)
                 
             if (attributes.get("device_class") == "wind_speed" or 
-                attributes.get("unit_of_measurement") in ["m/s", "km/h"]):
+                (attributes.get("unit_of_measurement") and attributes.get("unit_of_measurement") in ["m/s", "km/h"])):
                 valid_wind_sensors.append(state.entity_id)
+
+            if (attributes.get("device_class") == "illuminance" or 
+                (attributes.get("unit_of_measurement") and attributes.get("unit_of_measurement").lower() in ["lx", "lux"])):
+                valid_illuminance_sensors.append(state.entity_id)
+
+            if (attributes.get("device_class") == "temperature" or 
+                (attributes.get("unit_of_measurement") and attributes.get("unit_of_measurement") in ["°C", "°F", "K"])):
+                valid_temperature_sensors.append(state.entity_id)
                 
         valid_irradiance_sensors.sort()
         valid_wind_sensors.sort()
+        valid_illuminance_sensors.sort()
+        valid_temperature_sensors.sort()
 
         def get_default(key, fallback=vol.UNDEFINED):
             val = default_data.get(key)
@@ -42,24 +54,36 @@ class AccurateForecastCommonFlow:
              # Ensure the old valid sensor is temporarily allowed so the form doesn't crash
              valid_wind_sensors.append(wind_default)
 
+        illu_default = get_default(CONF_ILLUMINANCE_SENSOR)
+        if illu_default is not vol.UNDEFINED and illu_default not in valid_illuminance_sensors:
+             valid_illuminance_sensors.append(illu_default)
+
+        temp_default = get_default(CONF_TEMP_SENSOR)
+        if temp_default is not vol.UNDEFINED and temp_default not in valid_temperature_sensors:
+             valid_temperature_sensors.append(temp_default)
+
+        temp_panel_default = get_default(CONF_TEMP_PANEL_SENSOR)
+        if temp_panel_default is not vol.UNDEFINED and temp_panel_default not in valid_temperature_sensors:
+             valid_temperature_sensors.append(temp_panel_default)
+
         return vol.Schema({
             vol.Required(CONF_SENSOR_GROUP_NAME, default=get_default(CONF_SENSOR_GROUP_NAME, "")): str,
             vol.Optional(CONF_WEATHER_ENTITY, default=get_default(CONF_WEATHER_ENTITY)): selector.EntitySelector(
                 selector.EntitySelectorConfig(domain="weather")
             ),
-            vol.Optional(CONF_ILLUMINANCE_SENSOR, default=get_default(CONF_ILLUMINANCE_SENSOR)): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain="sensor", device_class="illuminance")
+            vol.Optional(CONF_ILLUMINANCE_SENSOR, default=illu_default): selector.EntitySelector(
+                selector.EntitySelectorConfig(include_entities=valid_illuminance_sensors)
             ),
             vol.Required(CONF_REF_SENSOR, default=ref_default): selector.EntitySelector(
                 selector.EntitySelectorConfig(include_entities=valid_irradiance_sensors)
             ),
             vol.Required(CONF_REF_TILT, default=get_default(CONF_REF_TILT, 0)): vol.All(vol.Coerce(float), vol.Range(min=0, max=90)),
             vol.Required(CONF_REF_ORIENTATION, default=get_default(CONF_REF_ORIENTATION, 180)): vol.All(vol.Coerce(float), vol.Range(min=0, max=360)),
-            vol.Required(CONF_TEMP_SENSOR, default=get_default(CONF_TEMP_SENSOR)): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain="sensor", device_class="temperature")
+            vol.Required(CONF_TEMP_SENSOR, default=temp_default): selector.EntitySelector(
+                selector.EntitySelectorConfig(include_entities=valid_temperature_sensors)
             ),
-            vol.Optional(CONF_TEMP_PANEL_SENSOR, default=get_default(CONF_TEMP_PANEL_SENSOR)): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain="sensor", device_class="temperature")
+            vol.Optional(CONF_TEMP_PANEL_SENSOR, default=temp_panel_default): selector.EntitySelector(
+                selector.EntitySelectorConfig(include_entities=valid_temperature_sensors)
             ),
             vol.Optional(CONF_WIND_SENSOR, default=wind_default): selector.EntitySelector(
                 selector.EntitySelectorConfig(include_entities=valid_wind_sensors)
@@ -70,6 +94,14 @@ class AccurateForecastCommonFlow:
          brands_list = self._db.list_brands()
          sensor_groups = self._db.list_sensor_groups()
          if not sensor_groups: return None # Indicate abort condition
+
+         valid_power_sensors = []
+         for state in self.hass.states.async_all("sensor"):
+             attributes = state.attributes
+             if (attributes.get("device_class") == "power" or 
+                 (attributes.get("unit_of_measurement") and attributes.get("unit_of_measurement") in ["W", "kW"])):
+                 valid_power_sensors.append(state.entity_id)
+         valid_power_sensors.sort()
          
          group_options = list(sensor_groups.keys())
          roof_options = ["Nuevo tejado"] + list(self._db.list_roofs().values())
@@ -96,14 +128,13 @@ class AccurateForecastCommonFlow:
             ),
          }
          
-         if self.temp_data.get(CONF_REAL_PRODUCTION_SENSOR):
-             schema_dict[vol.Optional(CONF_REAL_PRODUCTION_SENSOR, default=self.temp_data.get(CONF_REAL_PRODUCTION_SENSOR))] = selector.EntitySelector(
-                 selector.EntitySelectorConfig(domain="sensor", device_class="power")
-             )
-         else:
-             schema_dict[vol.Optional(CONF_REAL_PRODUCTION_SENSOR)] = selector.EntitySelector(
-                 selector.EntitySelectorConfig(domain="sensor", device_class="power")
-             )
+         real_prod_default = self.temp_data.get(CONF_REAL_PRODUCTION_SENSOR)
+         if real_prod_default and real_prod_default not in valid_power_sensors:
+             valid_power_sensors.append(real_prod_default)
+
+         schema_dict[vol.Optional(CONF_REAL_PRODUCTION_SENSOR, default=real_prod_default or vol.UNDEFINED)] = selector.EntitySelector(
+             selector.EntitySelectorConfig(include_entities=valid_power_sensors)
+         )
              
          # Remove roof selection because we are already in the context of a roof.
          return vol.Schema(schema_dict)
