@@ -1,4 +1,5 @@
 import voluptuous as vol
+import logging
 from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.helpers import selector
@@ -8,6 +9,8 @@ from .flow_pv_models import PvModelsFlowMixin
 from .flow_roofs import RoofsFlowMixin
 from .flow_sensor_groups import SensorGroupsFlowMixin
 from .flow_strings import StringsFlowMixin
+
+_LOGGER = logging.getLogger(__name__)
 
 class AccurateForecastCommonFlow:
     """Common methods for both ConfigFlow and OptionsFlow."""
@@ -49,12 +52,10 @@ class AccurateForecastCommonFlow:
 
         ref_default = get_default(CONF_REF_SENSOR)
         if ref_default is not vol.UNDEFINED and ref_default not in valid_irradiance_sensors:
-             # Ensure the old valid sensor is temporarily allowed so the form doesn't crash
              valid_irradiance_sensors.append(ref_default)
              
         wind_default = get_default(CONF_WIND_SENSOR)
         if wind_default is not vol.UNDEFINED and wind_default not in valid_wind_sensors:
-             # Ensure the old valid sensor is temporarily allowed so the form doesn't crash
              valid_wind_sensors.append(wind_default)
 
         illu_default = get_default(CONF_ILLUMINANCE_SENSOR)
@@ -72,18 +73,18 @@ class AccurateForecastCommonFlow:
         return vol.Schema({
             vol.Required(CONF_SENSOR_GROUP_NAME, default=get_default(CONF_SENSOR_GROUP_NAME, "")): str,
             vol.Optional(CONF_WEATHER_ENTITY, default=get_default(CONF_WEATHER_ENTITY)): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain="weather")
+                selector.SelectSelectorConfig(domain="weather")
             ),
             vol.Optional(CONF_ILLUMINANCE_SENSOR, default=illu_default): selector.EntitySelector(
-                selector.EntitySelectorConfig(include_entities=valid_illuminance_sensors)
+                selector.SelectSelectorConfig(include_entities=valid_illuminance_sensors)
             ),
             vol.Required(CONF_REF_SENSOR, default=ref_default): selector.EntitySelector(
-                selector.EntitySelectorConfig(include_entities=valid_irradiance_sensors)
+                selector.SelectSelectorConfig(include_entities=valid_irradiance_sensors)
             ),
             vol.Required(CONF_REF_TILT, default=get_default(CONF_REF_TILT, 0)): vol.All(vol.Coerce(float), vol.Range(min=0, max=90)),
             vol.Required(CONF_REF_ORIENTATION, default=get_default(CONF_REF_ORIENTATION, 180)): vol.All(vol.Coerce(float), vol.Range(min=0, max=360)),
             vol.Required(CONF_TEMP_SENSOR, default=temp_default): selector.EntitySelector(
-                selector.EntitySelectorConfig(include_entities=valid_temperature_sensors)
+                selector.SelectSelectorConfig(include_entities=valid_temperature_sensors)
             ),
             vol.Optional(CONF_TEMP_PANEL_SENSOR, default=temp_panel_default): selector.EntitySelector(
                 selector.EntitySelectorConfig(include_entities=valid_temperature_sensors)
@@ -96,7 +97,7 @@ class AccurateForecastCommonFlow:
     def _get_string_select_relations_schema(self):
          brands_list = self._db.list_brands()
          sensor_groups = self._db.list_sensor_groups()
-         if not sensor_groups: return None # Indicate abort condition
+         if not sensor_groups: return None 
 
          valid_power_sensors = []
          for state in self.hass.states.async_all("sensor"):
@@ -107,7 +108,6 @@ class AccurateForecastCommonFlow:
          valid_power_sensors.sort()
          
          group_options = list(sensor_groups.keys())
-         roof_options = ["Nuevo tejado"] + list(self._db.list_roofs().values())
 
          def get_default(key, fallback=vol.UNDEFINED):
              val = self.temp_data.get(key)
@@ -138,8 +138,6 @@ class AccurateForecastCommonFlow:
          schema_dict[vol.Optional(CONF_REAL_PRODUCTION_SENSOR, default=real_prod_default or vol.UNDEFINED)] = selector.EntitySelector(
              selector.EntitySelectorConfig(include_entities=valid_power_sensors)
          )
-             
-         # Remove roof selection because we are already in the context of a roof.
          return vol.Schema(schema_dict)
 
     def _get_roof_create_schema(self):
@@ -171,7 +169,7 @@ class AccurateForecastCommonFlow:
              if roof_id:
                  roof_data = self._db.get_roof(roof_id)
                  if roof_data:
-                     if CONF_TILT not in self.temp_data:  # If not reconfiguring existing tilt
+                     if CONF_TILT not in self.temp_data: 
                          default_tilt = roof_data.get("tilt") or 30
                      if CONF_AZIMUTH not in self.temp_data:
                          default_azimuth = roof_data.get("azimuth") or 180
@@ -191,9 +189,41 @@ class AccurateForecastCommonFlow:
             vol.Required(CONF_AZIMUTH, default=default_azimuth): vol.All(vol.Coerce(float), vol.Range(min=0, max=360)),
         })
 
+    # MENU STEPS
+    async def async_step_user(self, user_input=None):
+        """Menú Principal: Acciones rápidas estilo píldoras."""
+        self.hass.data.setdefault(DOMAIN, {})
+        self.temp_data = {}
+        if "db" not in self.hass.data[DOMAIN]:
+            self._db = AcurateSolarSensorDB(self.hass)
+            await self._db.async_load()
+            self.hass.data[DOMAIN]["db"] = self._db
+        else:
+            self._db = self.hass.data[DOMAIN]["db"]
+        
+        menu_options = ["pv_model_create", "roof_create", "sensor_group_create"]
+        if len(self._db.list_models()) > 0 and len(self._db.list_sensor_groups()) > 0:
+            menu_options.append("string_create_select_relations")
+        menu_options.append("menu_management")
+        
+        return self.async_show_menu(step_id="user", menu_options=menu_options)
+
+    async def async_step_menu_management(self, user_input=None):
+        """Submenú para gestionar (editar/borrar) elementos existentes."""
+        return self.async_show_menu(step_id="menu_management", menu_options=["menu_pv_models", "menu_roofs", "menu_sensor_groups"])
+
+    async def async_step_flow_success(self, user_input=None):
+        """Menú de éxito para permitir bucles o finalizar."""
+        return self.async_show_menu(step_id="flow_success", menu_options=["user", "finish"])
+
+    async def async_step_finish(self, user_input=None):
+        """Finalizar el flujo."""
+        if hasattr(self, "config_entry") and self.config_entry:
+             return self.async_create_entry(title="", data={})
+        return self.async_abort(reason="list_updated")
+
 class AccurateForecastFlow(AccurateForecastCommonFlow, PvModelsFlowMixin, RoofsFlowMixin, SensorGroupsFlowMixin, StringsFlowMixin, config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
-    
     @staticmethod
     @callback
     def async_get_options_flow(config_entry):
@@ -201,231 +231,15 @@ class AccurateForecastFlow(AccurateForecastCommonFlow, PvModelsFlowMixin, RoofsF
 
     def __init__(self):
         self._db = None
-        
-        # State Management
-        self.selected_item_id = None     # ID of the item being edited/deleted
-        self.temp_data = {}              # Temporary storage for multi-step flows
-        
-        # Branch Handling
-        # Branch 1: PV Models
-        # Branch 2: Strings
-        # Branch 3: Sensor Groups
-        
-    async def async_step_user(self, user_input=None):
-        """Menú Principal: Acciones rápidas estilo píldoras."""
-        # Asegurar que DOMAIN existe en hass.data
-        self.hass.data.setdefault(DOMAIN, {})
-        # Reset generic temporary data to ensure clean state
+        self.selected_item_id = None
         self.temp_data = {}
-
-        # Inicializar la base de datos si no existe
-        if "db" not in self.hass.data[DOMAIN]:
-            self._db = AcurateSolarSensorDB(self.hass)
-            await self._db.async_load()
-            self.hass.data[DOMAIN]["db"] = self._db
-        else:
-            self._db = self.hass.data[DOMAIN]["db"]
-        
-        # Opciones base de creación
-        menu_options = [
-            "pv_model_create", 
-            "roof_create", 
-            "sensor_group_create"
-        ]
-        
-        # El String Solar requiere al menos un modelo y un grupo de sensores
-        has_models = len(self._db.list_models()) > 0
-        has_groups = len(self._db.list_sensor_groups()) > 0
-        
-        if has_models and has_groups:
-            menu_options.append("string_create_select_relations")
-            
-        # Siempre mostramos la opción de gestión al final
-        menu_options.append("menu_management")
-        
-        return self.async_show_menu(
-            step_id="user",
-            menu_options=menu_options
-        )
-
-    async def async_step_menu_management(self, user_input=None):
-        """Submenú para gestionar (editar/borrar) elementos existentes."""
-        menu_options = ["menu_pv_models", "menu_roofs", "menu_sensor_groups"]
-        
-        return self.async_show_menu(
-            step_id="menu_management",
-            menu_options=menu_options
-        )
-
-    async def async_step_flow_success(self, user_input=None):
-        """Menú de éxito para permitir bucles o finalizar."""
-        return self.async_show_menu(
-            step_id="flow_success",
-            menu_options=["user", "finish"]
-        )
-
-    async def async_step_finish(self, user_input=None):
-        """Finalizar el flujo de configuración."""
-        return self.async_create_entry(title="Actualizado", data={})
-
-
-
-
-
-
-
-    # =================================================================================
-    # BRANCH 3: STRINGS (Integraciones - Create & Edit Only)
-
-
-    # =================================================================================
-    # RECONFIGURE FLOW (Native "Configure" button support)
-    # =================================================================================
-    async def async_step_reconfigure(self, user_input=None):
-        """Handle reconfiguration of an existing entry."""
-        # Ensure DB is loaded (as async_step_user is not called here)
-        self.hass.data.setdefault(DOMAIN, {})
-        if "db" not in self.hass.data[DOMAIN]:
-            self._db = AcurateSolarSensorDB(self.hass)
-            await self._db.async_load()
-            self.hass.data[DOMAIN]["db"] = self._db
-        else:
-            self._db = self.hass.data[DOMAIN]["db"]
-            
-        self.reconfigure_entry = self._get_reconfigure_entry()
-        
-        if CONF_SENSOR_GROUP_NAME in self.reconfigure_entry.data:
-            return await self.async_step_reconfigure_sensor_group()
-        elif CONF_STRING_NAME in self.reconfigure_entry.data:
-            return await self.async_step_reconfigure_string()
-            
-        return self.async_abort(reason="not_supported")
-
-    async def async_step_reconfigure_sensor_group(self, user_input=None):
-        """Handle reconfiguration of a Sensor Group."""
-        if user_input is not None:
-             old_name = self.reconfigure_entry.data[CONF_SENSOR_GROUP_NAME]
-             new_name = user_input[CONF_SENSOR_GROUP_NAME]
-             
-             # Update DB
-             # If name changed, delete old DB entry (derived from old name)
-             if old_name != new_name:
-                 old_id = old_name.lower().replace(" ", "_")
-                 # We try to delete, but simple delete_sensor_group might suffice
-                 await self._db.delete_sensor_group(old_id)
-                 
-             await self._db.add_sensor_group(
-                new_name,
-                user_input[CONF_REF_SENSOR],
-                user_input[CONF_TEMP_SENSOR],
-                user_input.get(CONF_TEMP_PANEL_SENSOR),
-                user_input.get(CONF_WIND_SENSOR),
-                user_input[CONF_REF_TILT],
-                user_input[CONF_REF_ORIENTATION],
-                user_input.get(CONF_WEATHER_ENTITY),
-                user_input.get(CONF_ILLUMINANCE_SENSOR)
-             )
-             
-             # Update Config Entry
-             self.hass.config_entries.async_update_entry(
-                 self.reconfigure_entry, 
-                 data=user_input, 
-                 title="Modulos y Sensores"
-             )
-             return self.async_update_reload_and_abort(self.reconfigure_entry)
-             
-        schema = self._get_sensor_group_schema(self.reconfigure_entry.data)
-        return self.async_show_form(step_id="reconfigure_sensor_group", data_schema=schema)
-
-    async def async_step_reconfigure_string(self, user_input=None):
-        """Handle reconfiguration of a String by reusing the creation flow."""
-        self.temp_data = dict(self.reconfigure_entry.data)
-        return await self.async_step_string_create_select_relations()
 
 class AccurateForecastOptionsFlowHandler(AccurateForecastCommonFlow, PvModelsFlowMixin, RoofsFlowMixin, SensorGroupsFlowMixin, StringsFlowMixin, config_entries.OptionsFlow):
     def __init__(self, config_entry):
         self.config_entry = config_entry
         self.temp_data = dict(config_entry.data)
         self._db = None
+        self.selected_item_id = None
 
     async def async_step_init(self, user_input=None):
-        self.hass.data.setdefault(DOMAIN, {})
-        if "db" not in self.hass.data[DOMAIN]:
-            self._db = AcurateSolarSensorDB(self.hass)
-            await self._db.async_load()
-            self.hass.data[DOMAIN]["db"] = self._db
-        else:
-            self._db = self.hass.data[DOMAIN]["db"]
-            
-        if CONF_SENSOR_GROUP_NAME in self.config_entry.data:
-            return await self.async_step_sensor_group()
-        elif CONF_STRING_NAME in self.config_entry.data:
-            return await self.async_step_string_select_relations()
-        elif CONF_ROOF_NAME in self.config_entry.data:
-            # For a roof entry, we want to allow editing the strings in that roof
-            # We set the roof name in temp_data so the string steps know which roof we are in
-            self.temp_data[CONF_ROOF_NAME] = self.config_entry.data[CONF_ROOF_NAME]
-            return await self.async_step_string_select_relations()
-            
-        return self.async_abort(reason="not_supported")
-
-    async def async_step_sensor_group(self, user_input=None):
-        if user_input is not None:
-             old_name = self.config_entry.data[CONF_SENSOR_GROUP_NAME]
-             new_name = user_input[CONF_SENSOR_GROUP_NAME]
-             
-             if old_name != new_name:
-                 old_id = old_name.lower().replace(" ", "_")
-                 await self._db.delete_sensor_group(old_id)
-                 
-             await self._db.add_sensor_group(
-                new_name,
-                user_input[CONF_REF_SENSOR],
-                user_input[CONF_TEMP_SENSOR],
-                user_input.get(CONF_TEMP_PANEL_SENSOR),
-                user_input.get(CONF_WIND_SENSOR),
-                user_input[CONF_REF_TILT],
-                user_input[CONF_REF_ORIENTATION],
-                user_input.get(CONF_WEATHER_ENTITY),
-                user_input.get(CONF_ILLUMINANCE_SENSOR)
-             )
-             
-             self.hass.config_entries.async_update_entry(self.config_entry, data=user_input)
-             return self.async_create_entry(title="", data={})
-             
-        schema = self._get_sensor_group_schema(self.config_entry.data)
-        return self.async_show_form(step_id="sensor_group", data_schema=schema)
-
-    async def async_step_string_select_relations(self, user_input=None):
-         if user_input is not None:
-            self.temp_data.update(user_input)
-            if self.temp_data.get(CONF_ROOF_NAME) == "Nuevo tejado":
-                return await self.async_step_roof_create()
-            return await self.async_step_string_details()
-
-         schema = self._get_string_select_relations_schema()
-         if schema is None:
-             return self.async_abort(reason="no_sensor_groups_available")
-             
-         return self.async_show_form(step_id="string_select_relations", data_schema=schema)
-
-    async def async_step_roof_create(self, user_input=None):
-        if user_input is not None:
-            name = user_input["name"]
-            tilt = user_input[CONF_TILT]
-            azimuth = user_input[CONF_AZIMUTH]
-            await self._db.add_roof(name, tilt, azimuth)
-            self.temp_data[CONF_ROOF_NAME] = name
-            return await self.async_step_string_details()
-            
-        schema = self._get_roof_create_schema()
-        return self.async_show_form(step_id="roof_create", data_schema=schema)
-
-    async def async_step_string_details(self, user_input=None):
-        if user_input is not None:
-             final_data = {**self.temp_data, **user_input}
-             self.hass.config_entries.async_update_entry(self.config_entry, data=final_data)
-             return await self.async_step_flow_success()
-            
-        schema = self._get_string_details_schema()
-        return self.async_show_form(step_id="string_details", data_schema=schema)
+        return await self.async_step_user()
