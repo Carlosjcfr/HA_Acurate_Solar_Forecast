@@ -38,7 +38,8 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
                 _LOGGER.warning(f"Could not link to existing device: {e}")
 
         async_add_entities([
-            SensorGroupVirtualSensor(hass, config_entry, device_identifiers)
+            SensorGroupVirtualSensor(hass, config_entry, device_identifiers),
+            SensorGroupCloudinessSensor(hass, config_entry, device_identifiers)
         ])
 
     # CASE 2: ROOF (CONTAINS SOLAR STRINGS)
@@ -457,6 +458,116 @@ class SensorGroupVirtualSensor(SensorEntity):
             
         self._attr_native_value = status
         self._attr_extra_state_attributes = attributes
+        self.async_write_ha_state()
+
+class SensorGroupCloudinessSensor(SensorEntity):
+    """Sensor that estimates cloudiness for a Sensor Group."""
+    
+    _attr_has_entity_name = True
+    _attr_translation_key = "cloud_coverage"
+    _attr_native_unit_of_measurement = "%"
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_icon = "mdi:cloud-percent"
+
+    def __init__(self, hass, config_entry, target_device_identifiers=None):
+        self.hass = hass
+        self._config = config_entry.data
+        self._name = self._config.get(CONF_SENSOR_GROUP_NAME)
+        
+        self._attr_unique_id = f"sg_{self._name.lower().replace(' ', '_')}_cloudiness"
+        
+        if target_device_identifiers:
+            self._attr_device_info = DeviceInfo(
+                identifiers=target_device_identifiers
+            )
+        else:
+            self._attr_device_info = DeviceInfo(
+                identifiers={(DOMAIN, config_entry.entry_id)},
+                name=self._name,
+                manufacturer="Accurate Solar Forecast",
+                model="Sensor Group",
+                entry_type=dr.DeviceEntryType.SERVICE
+            )
+
+    async def async_added_to_hass(self):
+        """Track sensors for cloudiness estimation."""
+        entities = ["sun.sun"]
+        if self._config.get(CONF_ILLUMINANCE_SENSOR):
+            entities.append(self._config[CONF_ILLUMINANCE_SENSOR])
+        if self._config.get(CONF_WEATHER_ENTITY):
+            entities.append(self._config[CONF_WEATHER_ENTITY])
+            
+        self.async_on_remove(
+            async_track_state_change_event(self.hass, entities, self._update_logic)
+        )
+        self._update_logic()
+
+    def get_float_state(self, entity_id, default=0.0):
+        if not entity_id:
+            return default
+        state = self.hass.states.get(entity_id)
+        if state and state.state not in ["unavailable", "unknown"]:
+            try:
+                return float(state.state)
+            except ValueError:
+                pass
+        return default
+
+    @callback
+    def _update_logic(self, event=None):
+        """Estimate cloud coverage."""
+        sun_state = self.hass.states.get("sun.sun")
+        if not sun_state:
+            return
+
+        sun_el = float(sun_state.attributes.get("elevation", 0))
+        
+        cloud_coverage = 0.0
+        cloud_source = "None"
+        
+        # Priority 1: Illuminance (Luxes)
+        ill_sensor = self._config.get(CONF_ILLUMINANCE_SENSOR)
+        lux_real = -1
+        if ill_sensor:
+            lux_real = self.get_float_state(ill_sensor, -1)
+            
+        if lux_real >= 0 and sun_el > 2:
+            # Theoretical Illuminance (120k lx is clear sky max)
+            lux_teo = 120000 * math.sin(math.radians(sun_el))
+            if lux_teo > 10:
+                kt = max(0.05, min(1.2, lux_real / lux_teo))
+                cloud_coverage = max(0, min(100, 100 * (1 - kt)))
+                cloud_source = "Lux Sensor"
+            else:
+                cloud_source = "Low Elevation"
+                
+        # Priority 2: Weather Entity
+        if cloud_source in ["None", "Low Elevation"]:
+            weather_entity = self._config.get(CONF_WEATHER_ENTITY)
+            if weather_entity:
+                w_state = self.hass.states.get(weather_entity)
+                if w_state and w_state.state not in ["unavailable", "unknown"]:
+                    if w_state.domain == "sensor":
+                        try: cloud_coverage = float(w_state.state)
+                        except: pass
+                    elif w_state.domain == "weather":
+                        c = w_state.attributes.get("cloud_coverage")
+                        if c is not None:
+                            try: cloud_coverage = float(c)
+                            except: pass
+                        else:
+                            # Fallback from text
+                            condition = w_state.state
+                            if condition in ["sunny", "clear-night"]: cloud_coverage = 0
+                            elif condition in ["partlycloudy"]: cloud_coverage = 40
+                            elif condition in ["cloudy"]: cloud_coverage = 90
+                            elif condition in ["fog", "hail", "lightning", "lightning-rainy", "pouring", "rainy", "snowy", "snowy-rainy"]: cloud_coverage = 100
+                    cloud_source = "Weather Entity"
+
+        self._attr_native_value = round(cloud_coverage, 1)
+        self._attr_extra_state_attributes = {
+            "cloud_source": cloud_source
+        }
         self.async_write_ha_state()
 
 class SolarStringPerformanceSensor(SensorEntity):

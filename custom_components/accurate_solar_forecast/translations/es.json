@@ -91,7 +91,7 @@
                     "ref_tilt": "Inclinación sensor de irrad (º)",
                     "ref_orientation": "Orientación sensor de irrad (180º=S)",
                     "weather_entity": "Pronostico del tiempo",
-                    "illuminance_sensor": "Iluminancia (lm)"
+                    "illuminance_sensor": "Iluminancia"
                 }
             },
             "sensor_group_edit_select": {
@@ -113,7 +113,7 @@
                     "ref_tilt": "Inclinación sensor de irrad (º)",
                     "ref_orientation": "Orientación sensor de irrad (180º=S)",
                     "weather_entity": "Pronostico del tiempo",
-                    "illuminance_sensor": "Iluminancia (lm)"
+                    "illuminance_sensor": "Iluminancia"
                 }
             },
             "string_create_select_relations": {
@@ -200,7 +200,7 @@
                     "ref_tilt": "Inclinación sensor de irrad (º)",
                     "ref_orientation": "Orientación sensor de irrad (180º=S)",
                     "weather_entity": "Pronostico del tiempo",
-                    "illuminance_sensor": "Iluminancia (lm)"
+                    "illuminance_sensor": "Iluminancia"
                 }
             },
             "reconfigure_string": {
@@ -251,6 +251,9 @@
             },
             "performance": {
                 "name": "Rendimiento"
+            },
+            "cloud_coverage": {
+                "name": "Nubosidad"
             }
         }
     }

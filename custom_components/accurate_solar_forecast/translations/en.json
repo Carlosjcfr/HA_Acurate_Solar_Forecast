@@ -91,7 +91,7 @@
                     "ref_tilt": "Irrad. Sensor Tilt (°)",
                     "ref_orientation": "Irrad. Sensor Orientation (180°=S)",
                     "weather_entity": "Weather forecast",
-                    "illuminance_sensor": "Illuminance (lm)"
+                    "illuminance_sensor": "Illuminance"
                 }
             },
             "sensor_group_edit_select": {
@@ -113,7 +113,7 @@
                     "ref_tilt": "Irrad. Sensor Tilt (°)",
                     "ref_orientation": "Irrad. Sensor Orientation (180°=S)",
                     "weather_entity": "Weather forecast",
-                    "illuminance_sensor": "Illuminance (lm)"
+                    "illuminance_sensor": "Illuminance"
                 }
             },
             "string_create_select_relations": {
@@ -200,7 +200,7 @@
                     "ref_tilt": "Irrad. Sensor Tilt (°)",
                     "ref_orientation": "Irrad. Sensor Orientation (180°=S)",
                     "weather_entity": "Weather forecast",
-                    "illuminance_sensor": "Illuminance (lm)"
+                    "illuminance_sensor": "Illuminance"
                 }
             },
             "reconfigure_string": {
@@ -251,6 +251,9 @@
             },
             "performance": {
                 "name": "Performance"
+            },
+            "cloud_coverage": {
+                "name": "Cloudiness"
             }
         }
     }
