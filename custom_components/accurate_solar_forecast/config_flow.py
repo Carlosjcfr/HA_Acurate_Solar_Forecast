@@ -322,7 +322,7 @@ class AccurateForecastFlow(AccurateForecastCommonFlow, PvModelsFlowMixin, RoofsF
         elif CONF_STRING_NAME in self.reconfigure_entry.data:
             return await self.async_step_reconfigure_string()
             
-        return self.async_abort(reason="unknown_entry_type")
+        return self.async_abort(reason="not_supported")
 
     async def async_step_reconfigure_sensor_group(self, user_input=None):
         """Handle reconfiguration of a Sensor Group."""
@@ -384,7 +384,7 @@ class AccurateForecastOptionsFlowHandler(AccurateForecastCommonFlow, config_entr
         elif CONF_STRING_NAME in self.config_entry.data:
             return await self.async_step_string_select_relations()
             
-        return self.async_abort(reason="unknown_entry_type")
+        return self.async_abort(reason="not_supported")
 
     async def async_step_sensor_group(self, user_input=None):
         if user_input is not None:

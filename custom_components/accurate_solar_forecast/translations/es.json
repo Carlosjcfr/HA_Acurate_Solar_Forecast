@@ -224,7 +224,8 @@
         "abort": {
             "already_configured": "El dispositivo ya está configurado",
             "list_updated": "¡Listado actualizado!",
-            "reconfigure_successful": "¡Configuración actualizada con éxito!"
+            "reconfigure_successful": "¡Configuración actualizada con éxito!",
+            "not_supported": "Esta entrada debe gestionarse desde Configurar en la integración principal."
         }
     },
     "entity": {

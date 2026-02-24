@@ -1,5 +1,7 @@
 from homeassistant.core import HomeAssistant
-from .const import DOMAIN, CONF_SENSOR_GROUP_NAME
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.helpers.device_registry import DeviceEntry
+from .const import DOMAIN, CONF_SENSOR_GROUP_NAME, CONF_ROOF_NAME
 from .acurate_solar_sensor_db import AcurateSolarSensorDB
 import logging
 
@@ -52,5 +54,31 @@ async def async_remove_entry(hass: HomeAssistant, entry) -> None:
             if result:
                await result
                
-        # Case B: String (Does it have a DB entry? No, strings are just ConfigEntries)
+        # Case B: String (Strings are now devices under Roof config entries, handled by async_remove_config_entry_device)
         return
+
+async def async_remove_config_entry_device(
+    hass: HomeAssistant, config_entry: ConfigEntry, device_entry: DeviceEntry
+) -> bool:
+    """Allow user to remove a device via the UI and clean up the database."""
+    if DOMAIN in hass.data and "db" in hass.data[DOMAIN]:
+        db = hass.data[DOMAIN]["db"]
+        
+        # Check if this device is part of a Roof entry
+        if CONF_ROOF_NAME in config_entry.data:
+            roof_name = config_entry.data[CONF_ROOF_NAME]
+            roof_id = roof_name.lower().replace(" ", "_") if roof_name else "default"
+            
+            # Find the string ID from the device identifiers
+            # Typically a set of tuples like {(DOMAIN, "str_mppt1")}
+            for domain, identifier in device_entry.identifiers:
+                if domain == DOMAIN and isinstance(identifier, str) and identifier.startswith("str_"):
+                    string_id = identifier[4:] # remove 'str_' prefix
+                    _LOGGER.info(f"Removing string device '{string_id}' from roof '{roof_id}'")
+                    
+                    # Delete from our custom JSON DB
+                    db.delete_string_from_roof(roof_id, string_id)
+                    return True
+                    
+    # Return True to allow Home Assistant to complete the deletion of the device entity
+    return True
