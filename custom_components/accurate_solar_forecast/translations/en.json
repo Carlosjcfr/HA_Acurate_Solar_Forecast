@@ -178,6 +178,14 @@
                     "real_production_sensor": "Real Production Sensor (W)"
                 }
             },
+            "string_add_another": {
+                "title": "String Added!",
+                "description": "Do you want to add more Strings or finish the configuration?",
+                "menu_options": {
+                    "string_create_select_relations": "Add Another String",
+                    "roof_finish": "Finish"
+                }
+            },
             "reconfigure_sensor_group": {
                 "title": "Reconfigure Sensor Group",
                 "description": "Modify group configuration.",

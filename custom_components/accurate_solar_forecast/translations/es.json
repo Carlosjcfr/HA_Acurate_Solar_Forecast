@@ -126,8 +126,8 @@
                 }
             },
             "roof_create": {
-                "title": "Crear Nuevo Tejado",
-                "description": "Introduce los detalles del nuevo tejado.",
+                "title": "Nuevo Tejado",
+                "description": "Introduce los datos",
                 "data": {
                     "name": "Nombre del Tejado",
                     "tilt": "Inclinación (º)",
@@ -175,7 +175,15 @@
                     "num_strings": "Series en paralelo",
                     "tilt": "Inclinación Paneles (º)",
                     "azimuth": "Orientación Paneles (180º=S)",
-                    "real_production_sensor": "Sensor de Producción Real (W)"
+                    "real_production_sensor": "Producción Real (W)"
+                }
+            },
+            "string_add_another": {
+                "title": "¡String añadido!",
+                "description": "¿Deseas añadir otro String o finalizar la configuración?",
+                "menu_options": {
+                    "string_create_select_relations": "Añadir otro String",
+                    "roof_finish": "Finalizar"
                 }
             },
             "reconfigure_sensor_group": {

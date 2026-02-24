@@ -514,6 +514,11 @@ class AccurateForecastFlow(AccurateForecastCommonFlow, config_entries.ConfigFlow
     async def async_step_string_create_select_relations(self, user_input=None):
          if user_input is not None:
             self.temp_data.update(user_input)
+            
+            # If the optional field is cleared by the user, remove it from temp_data
+            if CONF_REAL_PRODUCTION_SENSOR not in user_input:
+                self.temp_data.pop(CONF_REAL_PRODUCTION_SENSOR, None)
+                
             return await self.async_step_string_create_details()
 
          schema = self._get_string_select_relations_schema()
@@ -564,6 +569,10 @@ class AccurateForecastFlow(AccurateForecastCommonFlow, config_entries.ConfigFlow
              }
              
              await self._db.add_string_to_roof(roof_id, string_id, string_data)
+             
+             # Clear string specifics for the next potential string iteration
+             self.temp_data.pop(CONF_STRING_NAME, None)
+             self.temp_data.pop(CONF_REAL_PRODUCTION_SENSOR, None)
              
              if getattr(self, "reconfigure_entry", None):
                  return self.async_update_reload_and_abort(self.reconfigure_entry)
