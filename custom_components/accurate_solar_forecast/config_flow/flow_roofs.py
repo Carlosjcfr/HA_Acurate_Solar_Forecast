@@ -43,7 +43,7 @@ class RoofsFlowMixin:
                 user_input[CONF_TILT],
                 user_input[CONF_AZIMUTH]
             )
-            return self.async_abort(reason="list_updated") # Reuse similar success msg or add new
+            return await self.async_step_flow_success()
 
         # Load Data
         roof_data = self._db.get_roof(self.selected_item_id)
@@ -58,7 +58,7 @@ class RoofsFlowMixin:
         if user_input is not None:
              roof_id = user_input["selected_roof"]
              await self._db.delete_roof(roof_id)
-             return self.async_abort(reason="list_updated")
+             return await self.async_step_flow_success()
              
         roofs = self._db.list_roofs()
         if not roofs:

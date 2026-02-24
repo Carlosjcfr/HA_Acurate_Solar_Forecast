@@ -39,7 +39,7 @@ class PvModelsFlowMixin:
                 user_input[CONF_VMP],
                 user_input[CONF_IMP]
             )
-            return await self.async_step_pv_model_success()
+            return await self.async_step_flow_success()
 
         return self._show_pv_model_form("pv_model_create", errors)
 
@@ -64,23 +64,11 @@ class PvModelsFlowMixin:
                 user_input[CONF_VMP],
                 user_input[CONF_IMP]
             )
-            return await self.async_step_pv_model_success()
+            return await self.async_step_flow_success()
 
         # Load Data
         model_data = self._db.get_model(self.selected_item_id)
         return self._show_pv_model_form("pv_model_edit_form", {}, default_data=model_data)
-
-    # 1.3 SUCCESS & LOOP (Menu intermedio)
-    async def async_step_pv_model_success(self, user_input=None):
-        """Menu intermedio tras crear/editar modelo."""
-        return self.async_show_menu(
-            step_id="pv_model_success",
-            menu_options=["pv_model_create", "pv_model_finish"]
-        )
-
-    async def async_step_pv_model_finish(self, user_input=None):
-        """Finalizar el flujo de modelos (sin crear entrada en HA, solo guardando DB)."""
-        return self.async_abort(reason="list_updated")
 
 
     # Helper: Model Form

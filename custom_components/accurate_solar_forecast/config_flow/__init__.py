@@ -212,7 +212,7 @@ class AccurateForecastFlow(AccurateForecastCommonFlow, PvModelsFlowMixin, RoofsF
         # Branch 3: Sensor Groups
         
     async def async_step_user(self, user_input=None):
-        """Menú Principal: ¿Qué quieres gestionar?"""
+        """Menú Principal: Acciones rápidas estilo píldoras."""
         # Asegurar que DOMAIN existe en hass.data
         self.hass.data.setdefault(DOMAIN, {})
         # Reset generic temporary data to ensure clean state
@@ -226,18 +226,47 @@ class AccurateForecastFlow(AccurateForecastCommonFlow, PvModelsFlowMixin, RoofsF
         else:
             self._db = self.hass.data[DOMAIN]["db"]
         
-        menu_options = ["menu_pv_models"]
+        # Opciones base de creación
+        menu_options = [
+            "pv_model_create", 
+            "roof_create", 
+            "sensor_group_create"
+        ]
         
-        # Strings/Roofs require a sensor group to be associated with
-        if self._db.list_sensor_groups() and len(self._db.list_sensor_groups()) > 0:
-            menu_options.append("menu_roofs")
+        # El String Solar requiere al menos un modelo y un grupo de sensores
+        has_models = len(self._db.list_models()) > 0
+        has_groups = len(self._db.list_sensor_groups()) > 0
+        
+        if has_models and has_groups:
+            menu_options.append("string_create_select_relations")
             
-        menu_options.append("menu_sensor_groups")
+        # Siempre mostramos la opción de gestión al final
+        menu_options.append("menu_management")
         
         return self.async_show_menu(
             step_id="user",
             menu_options=menu_options
         )
+
+    async def async_step_menu_management(self, user_input=None):
+        """Submenú para gestionar (editar/borrar) elementos existentes."""
+        menu_options = ["menu_pv_models", "menu_roofs", "menu_sensor_groups"]
+        
+        return self.async_show_menu(
+            step_id="menu_management",
+            menu_options=menu_options
+        )
+
+    async def async_step_flow_success(self, user_input=None):
+        """Menú de éxito para permitir bucles o finalizar."""
+        return self.async_show_menu(
+            step_id="flow_success",
+            menu_options=["user", "finish"]
+        )
+
+    async def async_step_finish(self, user_input=None):
+        """Finalizar el flujo de configuración."""
+        return self.async_create_entry(title="Actualizado", data={})
 
 
 
@@ -396,7 +425,7 @@ class AccurateForecastOptionsFlowHandler(AccurateForecastCommonFlow, PvModelsFlo
         if user_input is not None:
              final_data = {**self.temp_data, **user_input}
              self.hass.config_entries.async_update_entry(self.config_entry, data=final_data)
-             return self.async_create_entry(title="", data={})
+             return await self.async_step_flow_success()
             
         schema = self._get_string_details_schema()
         return self.async_show_form(step_id="string_details", data_schema=schema)

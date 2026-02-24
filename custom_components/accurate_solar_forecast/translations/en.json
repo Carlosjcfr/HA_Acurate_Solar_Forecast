@@ -5,10 +5,28 @@
                 "title": "Solar Forecast Configuration",
                 "description": "What do you want to add?",
                 "menu_options": {
-                    "menu_pv_models": "Configure PV Modules",
-                    "menu_roofs": "Configure Roofs",
-                    "string_create_select_relations": "Create/Add String",
-                    "menu_sensor_groups": "Configure Sensors"
+                    "pv_model_create": "+ Add PV Module",
+                    "roof_create": "+ Add Roof",
+                    "sensor_group_create": "+ Add Sensor Group",
+                    "string_create_select_relations": "+ Add Solar String",
+                    "menu_management": "⚙️ Manage Existing (Edit/Delete)"
+                }
+            },
+            "menu_management": {
+                "title": "Integration Management",
+                "description": "Which database do you want to manage?",
+                "menu_options": {
+                    "menu_pv_models": "PV Modules",
+                    "menu_roofs": "Roofs / Orientations",
+                    "menu_sensor_groups": "Sensor Groups"
+                }
+            },
+            "flow_success": {
+                "title": "Operation Completed!",
+                "description": "Information saved successfully. What would you like to do now?",
+                "menu_options": {
+                    "user": "Go back to Main Menu",
+                    "finish": "Exit and Finish"
                 }
             },
             "menu_pv_models": {

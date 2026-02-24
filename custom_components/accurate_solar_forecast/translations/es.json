@@ -5,10 +5,28 @@
                 "title": "Accurate solar forecast",
                 "description": "¿Que quieres añadir?",
                 "menu_options": {
-                    "menu_pv_models": "Configurar Módulos Fotovoltaicos",
-                    "menu_roofs": "Configurar Tejados",
-                    "string_create_select_relations": "Crear/Añadir String",
-                    "menu_sensor_groups": "Configurar Sensores"
+                    "pv_model_create": "+ Añadir Módulo FV",
+                    "roof_create": "+ Añadir Tejado",
+                    "sensor_group_create": "+ Añadir Grupo de Sensores",
+                    "string_create_select_relations": "+ Añadir String Solar",
+                    "menu_management": "⚙️ Gestionar Existentes (Editar/Borrar)"
+                }
+            },
+            "menu_management": {
+                "title": "Gestión de la Integración",
+                "description": "¿Qué base de datos deseas gestionar?",
+                "menu_options": {
+                    "menu_pv_models": "Módulos FV",
+                    "menu_roofs": "Tejados / Orientaciones",
+                    "menu_sensor_groups": "Grupos de Sensores"
+                }
+            },
+            "flow_success": {
+                "title": "¡Operación completada!",
+                "description": "Se ha guardado correctamente. ¿Qué deseas hacer ahora?",
+                "menu_options": {
+                    "user": "Volver al menú principal",
+                    "finish": "Salir y Finalizar"
                 }
             },
             "menu_pv_models": {
