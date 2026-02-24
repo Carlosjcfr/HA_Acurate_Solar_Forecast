@@ -90,7 +90,8 @@
                     "wind_sensor": "Sensor de viento",
                     "ref_tilt": "Inclinación sensor de irrad (º)",
                     "ref_orientation": "Orientación sensor de irrad (180º=S)",
-                    "weather_entity": "Pronostico del tiempo"
+                    "weather_entity": "Pronostico del tiempo",
+                    "illuminance_sensor": "Iluminancia (lm)"
                 }
             },
             "sensor_group_edit_select": {
@@ -111,7 +112,8 @@
                     "wind_sensor": "Sensor de viento",
                     "ref_tilt": "Inclinación sensor de irrad (º)",
                     "ref_orientation": "Orientación sensor de irrad (180º=S)",
-                    "weather_entity": "Pronostico del tiempo"
+                    "weather_entity": "Pronostico del tiempo",
+                    "illuminance_sensor": "Iluminancia (lm)"
                 }
             },
             "string_create_select_relations": {
@@ -197,7 +199,8 @@
                     "wind_sensor": "Sensor de viento",
                     "ref_tilt": "Inclinación sensor de irrad (º)",
                     "ref_orientation": "Orientación sensor de irrad (180º=S)",
-                    "weather_entity": "Pronostico del tiempo"
+                    "weather_entity": "Pronostico del tiempo",
+                    "illuminance_sensor": "Iluminancia (lm)"
                 }
             },
             "reconfigure_string": {

@@ -46,6 +46,9 @@ class AccurateForecastCommonFlow:
             vol.Optional(CONF_WEATHER_ENTITY, default=get_default(CONF_WEATHER_ENTITY)): selector.EntitySelector(
                 selector.EntitySelectorConfig(domain="weather")
             ),
+            vol.Optional(CONF_ILLUMINANCE_SENSOR, default=get_default(CONF_ILLUMINANCE_SENSOR)): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain="sensor", device_class="illuminance")
+            ),
             vol.Required(CONF_REF_SENSOR, default=ref_default): selector.EntitySelector(
                 selector.EntitySelectorConfig(include_entities=valid_irradiance_sensors)
             ),
@@ -345,7 +348,8 @@ class AccurateForecastFlow(AccurateForecastCommonFlow, PvModelsFlowMixin, RoofsF
                 user_input.get(CONF_WIND_SENSOR),
                 user_input[CONF_REF_TILT],
                 user_input[CONF_REF_ORIENTATION],
-                user_input.get(CONF_WEATHER_ENTITY)
+                user_input.get(CONF_WEATHER_ENTITY),
+                user_input.get(CONF_ILLUMINANCE_SENSOR)
              )
              
              # Update Config Entry
@@ -403,7 +407,8 @@ class AccurateForecastOptionsFlowHandler(AccurateForecastCommonFlow, config_entr
                 user_input.get(CONF_WIND_SENSOR),
                 user_input[CONF_REF_TILT],
                 user_input[CONF_REF_ORIENTATION],
-                user_input.get(CONF_WEATHER_ENTITY)
+                user_input.get(CONF_WEATHER_ENTITY),
+                user_input.get(CONF_ILLUMINANCE_SENSOR)
              )
              
              self.hass.config_entries.async_update_entry(self.config_entry, data=user_input)

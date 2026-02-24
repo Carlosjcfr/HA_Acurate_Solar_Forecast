@@ -1,6 +1,6 @@
 import voluptuous as vol
 from homeassistant.helpers import selector
-from .const import CONF_SENSOR_GROUP_NAME, CONF_REF_SENSOR, CONF_REF_TILT, CONF_REF_ORIENTATION, CONF_TEMP_SENSOR, CONF_WIND_SENSOR, CONF_TEMP_PANEL_SENSOR, CONF_WEATHER_ENTITY
+from .const import CONF_SENSOR_GROUP_NAME, CONF_REF_SENSOR, CONF_REF_TILT, CONF_REF_ORIENTATION, CONF_TEMP_SENSOR, CONF_WIND_SENSOR, CONF_TEMP_PANEL_SENSOR, CONF_WEATHER_ENTITY, CONF_ILLUMINANCE_SENSOR
 
 class SensorGroupsFlowMixin:
     # =================================================================================
@@ -37,7 +37,8 @@ class SensorGroupsFlowMixin:
                 user_input.get(CONF_WIND_SENSOR),
                 user_input[CONF_REF_TILT],
                 user_input[CONF_REF_ORIENTATION],
-                user_input.get(CONF_WEATHER_ENTITY)
+                user_input.get(CONF_WEATHER_ENTITY),
+                user_input.get(CONF_ILLUMINANCE_SENSOR)
             )
             # Create HA Device
             return self.async_create_entry(title="Modulos y Sensores", data=user_input)
@@ -72,7 +73,8 @@ class SensorGroupsFlowMixin:
                 user_input.get(CONF_WIND_SENSOR),
                 user_input[CONF_REF_TILT],
                 user_input[CONF_REF_ORIENTATION],
-                user_input.get(CONF_WEATHER_ENTITY)
+                user_input.get(CONF_WEATHER_ENTITY),
+                user_input.get(CONF_ILLUMINANCE_SENSOR)
             )
              return self.async_create_entry(title=f"Updated Group: {name}", data={})
 

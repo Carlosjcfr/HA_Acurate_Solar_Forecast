@@ -1,7 +1,7 @@
 import json
 import os
 from homeassistant.helpers.storage import Store
-from .const import CONF_SENSOR_GROUP_NAME, CONF_REF_SENSOR, CONF_REF_TILT, CONF_REF_ORIENTATION, CONF_TEMP_SENSOR, CONF_WIND_SENSOR, CONF_TEMP_PANEL_SENSOR, CONF_WEATHER_ENTITY
+from .const import CONF_SENSOR_GROUP_NAME, CONF_REF_SENSOR, CONF_REF_TILT, CONF_REF_ORIENTATION, CONF_TEMP_SENSOR, CONF_WIND_SENSOR, CONF_TEMP_PANEL_SENSOR, CONF_WEATHER_ENTITY, CONF_ILLUMINANCE_SENSOR
 
 STORAGE_VERSION = 1
 STORAGE_KEY = "accurate_forecast_pv_models"
@@ -163,7 +163,7 @@ class AcurateSolarSensorDB:
         return {k: v["name"] for k, v in self.data.items()}
 
     # --- SENSOR GROUP METHODS ---
-    def add_sensor_group(self, name, irradiance_sensor, temp_sensor, temp_panel_sensor, wind_sensor, ref_tilt, ref_orientation, weather_entity=None):
+    def add_sensor_group(self, name, irradiance_sensor, temp_sensor, temp_panel_sensor, wind_sensor, ref_tilt, ref_orientation, weather_entity=None, illuminance_sensor=None):
         group_id = name.lower().replace(" ", "_")
         self.sensor_groups[group_id] = {
             CONF_SENSOR_GROUP_NAME: name,
@@ -173,7 +173,8 @@ class AcurateSolarSensorDB:
             CONF_WIND_SENSOR: wind_sensor,
             CONF_REF_TILT: ref_tilt,
             CONF_REF_ORIENTATION: ref_orientation,
-            CONF_WEATHER_ENTITY: weather_entity
+            CONF_WEATHER_ENTITY: weather_entity,
+            CONF_ILLUMINANCE_SENSOR: illuminance_sensor
         }
         return self.async_save()
         
