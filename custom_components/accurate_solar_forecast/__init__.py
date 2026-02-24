@@ -54,6 +54,15 @@ async def async_remove_entry(hass: HomeAssistant, entry) -> None:
             if result:
                await result
                
+        # Case B: Roof Entry
+        if CONF_ROOF_NAME in entry.data:
+            roof_name = entry.data[CONF_ROOF_NAME]
+            roof_id = roof_name.lower().replace(" ", "_") if roof_name else "default"
+            _LOGGER.info(f"Removing Roof from DB: {roof_id}")
+            result = db.delete_roof(roof_id)
+            if result:
+               await result
+               
         # Case B: String (Strings are now devices under Roof config entries, handled by async_remove_config_entry_device)
         return
 
