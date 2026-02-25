@@ -1,0 +1,19 @@
+{
+    "config_subentries": {
+        "pv_model": {
+            "name": "PV Module"
+        },
+        "roof": {
+            "name": "Roof"
+        },
+        "sensor_group": {
+            "name": "Sensor Group"
+        },
+        "string": {
+            "name": "Solar String"
+        },
+        "management": {
+            "name": "Manage Existing"
+        }
+    }
+}
