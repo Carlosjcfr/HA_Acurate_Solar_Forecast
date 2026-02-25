@@ -10,11 +10,24 @@ from .flow_roofs import RoofsFlowMixin
 from .flow_sensor_groups import SensorGroupsFlowMixin
 from .flow_strings import StringsFlowMixin
 
+from homeassistant.config_entries import ConfigSubentryFlow
+
 _LOGGER = logging.getLogger(__name__)
 
 class AccurateForecastCommonFlow:
-    """Common methods for both ConfigFlow and OptionsFlow."""
+    """Common methods for both ConfigFlow, OptionsFlow and SubentryFlow."""
     
+    async def _async_init_requirements(self):
+        self.hass.data.setdefault(DOMAIN, {})
+        if not hasattr(self, "temp_data"):
+            self.temp_data = {}
+        if "db" not in self.hass.data[DOMAIN]:
+            self._db = AcurateSolarSensorDB(self.hass)
+            await self._db.async_load()
+            self.hass.data[DOMAIN]["db"] = self._db
+        else:
+            self._db = self.hass.data[DOMAIN]["db"]
+
     def _get_sensor_group_schema(self, default_data):
         valid_irradiance_sensors = []
         valid_wind_sensors = []
@@ -191,15 +204,7 @@ class AccurateForecastCommonFlow:
 
     # MENU STEPS
     async def _async_main_menu(self, step_id="user"):
-        """Menú Principal: Acciones rápidas estilo píldoras."""
-        self.hass.data.setdefault(DOMAIN, {})
-        self.temp_data = {}
-        if "db" not in self.hass.data[DOMAIN]:
-            self._db = AcurateSolarSensorDB(self.hass)
-            await self._db.async_load()
-            self.hass.data[DOMAIN]["db"] = self._db
-        else:
-            self._db = self.hass.data[DOMAIN]["db"]
+        await self._async_init_requirements()
         
         menu_options = ["pv_model_create", "roof_create", "sensor_group_create"]
         if len(self._db.list_models()) > 0 and len(self._db.list_sensor_groups()) > 0:
@@ -216,7 +221,13 @@ class AccurateForecastCommonFlow:
         return self.async_show_menu(step_id="menu_management", menu_options=["menu_pv_models", "menu_roofs", "menu_sensor_groups"])
 
     async def async_step_flow_success(self, user_input=None):
-        """Menú de éxito para permitir bucles o finalizar."""
+        """Menú de éxito para permitir bucles o finalizar subentries."""
+        if isinstance(self, ConfigSubentryFlow):
+            # En un subentry flow, crear una subentrada vacía o interrumpir finalizará el proceso volviendo al panel.
+            # Según doc oficial, para cerrar subentries exitosamente:
+            return self.async_abort(reason="list_updated")
+        
+        # En ConfigFlow / OptionsFlow regular
         return self.async_show_menu(step_id="flow_success", menu_options=["user", "finish"])
 
     async def async_step_finish(self, user_input=None):
@@ -225,8 +236,46 @@ class AccurateForecastCommonFlow:
              return self.async_create_entry(title="", data={})
         return self.async_abort(reason="list_updated")
 
+class PvModelSubentryFlowHandler(AccurateForecastCommonFlow, PvModelsFlowMixin, ConfigSubentryFlow):
+    async def async_step_user(self, user_input=None):
+        await self._async_init_requirements()
+        return await super().async_step_pv_model_create(user_input)
+
+class RoofSubentryFlowHandler(AccurateForecastCommonFlow, RoofsFlowMixin, ConfigSubentryFlow):
+    async def async_step_user(self, user_input=None):
+        await self._async_init_requirements()
+        return await super().async_step_roof_create(user_input)
+
+class SensorGroupSubentryFlowHandler(AccurateForecastCommonFlow, SensorGroupsFlowMixin, ConfigSubentryFlow):
+    async def async_step_user(self, user_input=None):
+        await self._async_init_requirements()
+        return await super().async_step_sensor_group_create(user_input)
+
+class StringSubentryFlowHandler(AccurateForecastCommonFlow, StringsFlowMixin, ConfigSubentryFlow):
+    async def async_step_user(self, user_input=None):
+        await self._async_init_requirements()
+        return await super().async_step_string_create_select_relations(user_input)
+
+class MenuSubentryFlowHandler(AccurateForecastCommonFlow, PvModelsFlowMixin, RoofsFlowMixin, SensorGroupsFlowMixin, StringsFlowMixin, ConfigSubentryFlow):
+    async def async_step_user(self, user_input=None):
+        await self._async_init_requirements()
+        return await super().async_step_menu_management(user_input)
+
 class AccurateForecastFlow(AccurateForecastCommonFlow, PvModelsFlowMixin, RoofsFlowMixin, SensorGroupsFlowMixin, StringsFlowMixin, config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
+
+    @classmethod
+    @callback
+    def async_get_supported_subentry_types(cls, config_entry) -> dict[str, type[ConfigSubentryFlow]]:
+        """Devolver flujos subentry soportados para habilitar las Píldoras (Botones Flotantes)"""
+        return {
+            "pv_model": PvModelSubentryFlowHandler,
+            "roof": RoofSubentryFlowHandler,
+            "sensor_group": SensorGroupSubentryFlowHandler,
+            "string": StringSubentryFlowHandler,
+            "management": MenuSubentryFlowHandler,
+        }
+
     @staticmethod
     @callback
     def async_get_options_flow(config_entry):
@@ -238,6 +287,11 @@ class AccurateForecastFlow(AccurateForecastCommonFlow, PvModelsFlowMixin, RoofsF
         self.temp_data = {}
 
     async def async_step_user(self, user_input=None):
+        if not self._async_current_entries():
+            if user_input is not None:
+                return self.async_create_entry(title="Accurate Solar Forecast", data={})
+            return self.async_show_form(step_id="user", data_schema=vol.Schema({}))
+        
         return await self._async_main_menu(step_id="user")
 
 class AccurateForecastOptionsFlowHandler(AccurateForecastCommonFlow, PvModelsFlowMixin, RoofsFlowMixin, SensorGroupsFlowMixin, StringsFlowMixin, config_entries.OptionsFlow):

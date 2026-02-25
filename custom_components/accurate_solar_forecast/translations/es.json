@@ -289,5 +289,22 @@
                 "name": "Nubosidad"
             }
         }
+    },
+    "config_subentries": {
+        "pv_model": {
+            "title": "+ Añadir Módulo FV"
+        },
+        "roof": {
+            "title": "+ Añadir Tejado"
+        },
+        "sensor_group": {
+            "title": "+ Añadir Grupo Sensores"
+        },
+        "string": {
+            "title": "+ Añadir String Solar"
+        },
+        "management": {
+            "title": "⚙️ Gestionar Existentes"
+        }
     }
 }
