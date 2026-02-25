@@ -238,19 +238,7 @@ class AccurateForecastFlow(AccurateForecastCommonFlow, PvModelsFlowMixin, RoofsF
         self.temp_data = {}
 
     async def async_step_user(self, user_input=None):
-        if not self._async_current_entries():
-            return await self.async_step_setup()
-            
         return await self._async_main_menu(step_id="user")
-
-    async def async_step_setup(self, user_input=None):
-        if user_input is not None:
-            return self.async_create_entry(title="Accurate Solar Forecast", data={})
-
-        return self.async_show_form(
-            step_id="setup",
-            data_schema=vol.Schema({})
-        )
 
 class AccurateForecastOptionsFlowHandler(AccurateForecastCommonFlow, PvModelsFlowMixin, RoofsFlowMixin, SensorGroupsFlowMixin, StringsFlowMixin, config_entries.OptionsFlow):
     def __init__(self, config_entry):

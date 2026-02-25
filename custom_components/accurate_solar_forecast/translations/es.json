@@ -16,10 +16,6 @@
     },
     "config": {
         "step": {
-            "setup": {
-                "title": "Configuración Inicial",
-                "description": "Pulsa Enviar para empezar a utilizar Accurate Solar Forecast."
-            },
             "user": {
                 "title": "Accurate solar forecast",
                 "description": "¿Que quieres añadir?",
