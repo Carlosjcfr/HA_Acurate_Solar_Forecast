@@ -16,6 +16,10 @@
     },
     "config": {
         "step": {
+            "setup": {
+                "title": "Acurate Solar Forecast",
+                "description": "¿Quieres añadir la integración Acurate Solar Forecast?"
+            },
             "user": {
                 "title": "Accurate solar forecast",
                 "description": "¿Que quieres añadir?",
@@ -292,19 +296,118 @@
     },
     "config_subentries": {
         "pv_model": {
-            "title": "+ Añadir Módulo FV"
+            "name": "+ Añadir Módulo FV",
+            "title": "+ Módulo FV",
+            "step": {
+                "pv_model_create": {
+                    "title": "Nuevo Módulo",
+                    "description": "Introduce los datos del datasheet del fabricante.",
+                    "data": {
+                        "name": "Nombre Modelo (Ej. Trina 450W)",
+                        "brand": "Fabricante (Seleccionar o Crear Nuevo)",
+                        "p_stc": "Potencia STC (W)",
+                        "gamma": "Coef. Temp. Potencia Gamma (%/ºC)",
+                        "noct": "NOCT (ºC)",
+                        "voc": "Voc",
+                        "isc": "Isc",
+                        "vmp": "Vmp",
+                        "imp": "Imp"
+                    }
+                }
+            }
         },
         "roof": {
-            "title": "+ Añadir Tejado"
+            "name": "+ Añadir Tejado",
+            "title": "+ Tejado",
+            "step": {
+                "roof_create": {
+                    "title": "Nuevo Tejado",
+                    "description": "Introduce los datos",
+                    "data": {
+                        "name": "Nombre del Tejado",
+                        "tilt": "Inclinación (º)",
+                        "azimuth": "Orientación (180º=S)"
+                    }
+                }
+            }
         },
         "sensor_group": {
-            "title": "+ Añadir Grupo Sensores"
+            "name": "+ Añadir Grupo Sensores",
+            "title": "+ Grupo Sensores",
+            "step": {
+                "sensor_group_create": {
+                    "title": "Crear Grupo de Sensores",
+                    "description": "Define los sensores físicos disponibles.",
+                    "data": {
+                        "sensor_group_name": "Nombre del Grupo",
+                        "irradiance_sensor": "Irradiancia",
+                        "temperature_sensor": "Tª Ambiental",
+                        "temp_panel_sensor": "Tª del panel",
+                        "wind_sensor": "Sensor de viento",
+                        "ref_tilt": "Inclinación sensor de irrad (º)",
+                        "ref_orientation": "Orientación sensor de irrad (180º=S)",
+                        "weather_entity": "Pronostico del tiempo",
+                        "illuminance_sensor": "Iluminancia"
+                    }
+                }
+            }
         },
         "string": {
-            "title": "+ Añadir String Solar"
+            "name": "+ Añadir String Solar",
+            "title": "+ String Solar",
+            "step": {
+                "string_create_select_relations": {
+                    "title": "Nuevo String",
+                    "description": "Paso 1: Selecciona Sensores y Panel.",
+                    "data": {
+                        "string_name": "Nombre del String",
+                        "selected_sensor_group": "Grupo de Sensores",
+                        "brand": "Fabricante del Panel",
+                        "real_production_sensor": "Producción Solar (W)",
+                        "roof_name": "Tejado (Seleccionar o Crear Nuevo)"
+                    }
+                },
+                "string_create_details": {
+                    "title": "Detalles del String",
+                    "description": "Paso 2: Geometría y Modelo.",
+                    "data": {
+                        "panel_model": "Modelo de Panel",
+                        "num_panels": "Paneles en serie",
+                        "num_strings": "Series en paralelo",
+                        "tilt": "Inclinación Paneles (º)",
+                        "azimuth": "Orientación Paneles (180º=S)",
+                        "real_production_sensor": "Producción Real (W)"
+                    }
+                },
+                "reconfigure_string": {
+                    "title": "Reconfigurar String",
+                    "description": "Modifica la geometría o el modelo del string.",
+                    "data": {
+                        "panel_model": "Modelo de Panel",
+                        "num_panels": "Paneles en serie",
+                        "num_strings": "Series en paralelo",
+                        "tilt": "Inclinación Paneles (º)",
+                        "azimuth": "Orientación Paneles (180º=S)",
+                        "real_production_sensor": "Producción Real (W)",
+                        "roof_name": "Tejado Asignado"
+                    }
+                }
+            }
         },
         "management": {
-            "title": "⚙️ Gestionar Existentes"
+            "name": "⚙️ Gestionar Existentes",
+            "title": "⚙️ Gestionar Existentes",
+            "step": {
+                "menu_management": {
+                    "title": "Gestión de Datos",
+                    "description": "¿Qué componente deseas modificar?",
+                    "menu_options": {
+                        "menu_pv_models": "Módulos Fotovoltaicos",
+                        "menu_roofs": "Tejados y Orientaciones",
+                        "menu_sensor_groups": "Grupos de Sensores"
+                    }
+                }
+            }
         }
     }
 }
