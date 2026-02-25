@@ -190,7 +190,7 @@ class AccurateForecastCommonFlow:
         })
 
     # MENU STEPS
-    async def async_step_user(self, user_input=None):
+    async def _async_main_menu(self, step_id="user"):
         """Menú Principal: Acciones rápidas estilo píldoras."""
         self.hass.data.setdefault(DOMAIN, {})
         self.temp_data = {}
@@ -206,7 +206,10 @@ class AccurateForecastCommonFlow:
             menu_options.append("string_create_select_relations")
         menu_options.append("menu_management")
         
-        return self.async_show_menu(step_id="user", menu_options=menu_options)
+        return self.async_show_menu(step_id=step_id, menu_options=menu_options)
+
+    async def async_step_user(self, user_input=None):
+        return await self._async_main_menu(step_id="user")
 
     async def async_step_menu_management(self, user_input=None):
         """Submenú para gestionar (editar/borrar) elementos existentes."""
@@ -242,4 +245,4 @@ class AccurateForecastOptionsFlowHandler(AccurateForecastCommonFlow, PvModelsFlo
         self.selected_item_id = None
 
     async def async_step_init(self, user_input=None):
-        return await self.async_step_user()
+        return await self._async_main_menu(step_id="init")

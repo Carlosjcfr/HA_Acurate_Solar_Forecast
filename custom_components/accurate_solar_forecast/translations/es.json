@@ -1,4 +1,19 @@
 {
+    "options": {
+        "step": {
+            "init": {
+                "title": "Accurate solar forecast",
+                "description": "¿Que quieres añadir?",
+                "menu_options": {
+                    "pv_model_create": "+ Añadir Módulo FV",
+                    "roof_create": "+ Añadir Tejado",
+                    "sensor_group_create": "+ Añadir Grupo de Sensores",
+                    "string_create_select_relations": "+ Añadir String Solar",
+                    "menu_management": "⚙️ Gestionar Existentes (Editar/Borrar)"
+                }
+            }
+        }
+    },
     "config": {
         "step": {
             "user": {

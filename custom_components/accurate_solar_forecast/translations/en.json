@@ -1,4 +1,19 @@
 {
+    "options": {
+        "step": {
+            "init": {
+                "title": "Solar Forecast Configuration",
+                "description": "What do you want to add?",
+                "menu_options": {
+                    "pv_model_create": "+ Add PV Module",
+                    "roof_create": "+ Add Roof",
+                    "sensor_group_create": "+ Add Sensor Group",
+                    "string_create_select_relations": "+ Add Solar String",
+                    "menu_management": "⚙️ Manage Existing (Edit/Delete)"
+                }
+            }
+        }
+    },
     "config": {
         "step": {
             "user": {
