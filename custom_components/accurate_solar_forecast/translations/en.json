@@ -16,6 +16,10 @@
     },
     "config": {
         "step": {
+            "setup": {
+                "title": "Initial Setup",
+                "description": "Click Submit to start setting up Accurate Solar Forecast."
+            },
             "user": {
                 "title": "Solar Forecast Configuration",
                 "description": "What do you want to add?",
