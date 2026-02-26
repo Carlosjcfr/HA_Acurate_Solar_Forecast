@@ -1,0 +1,9 @@
+{
+    "config_subentries": {
+        "pv_model": "mdi:solar-panel",
+        "roof": "mdi:home-roof",
+        "sensor_group": "mdi:thermometer",
+        "string": "mdi:solar-power",
+        "management": "mdi:cog"
+    }
+}
