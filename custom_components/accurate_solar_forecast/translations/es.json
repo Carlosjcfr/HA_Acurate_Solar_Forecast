@@ -248,6 +248,10 @@
         "pv_model": {
             "name": "+ Añadir Módulo FV",
             "title": "+ Módulo FV",
+            "flow_title": "+ Módulo FV",
+            "initiate_flow": {
+                "user": "+ Añadir Módulo FV"
+            },
             "step": {
                 "pv_model_create": {
                     "title": "Nuevo Módulo",
@@ -269,6 +273,10 @@
         "roof": {
             "name": "+ Añadir Tejado",
             "title": "+ Tejado",
+            "flow_title": "+ Tejado",
+            "initiate_flow": {
+                "user": "+ Añadir Tejado"
+            },
             "step": {
                 "roof_create": {
                     "title": "Nuevo Tejado",
@@ -284,6 +292,10 @@
         "sensor_group": {
             "name": "+ Añadir Grupo Sensores",
             "title": "+ Grupo Sensores",
+            "flow_title": "+ Grupo Sensores",
+            "initiate_flow": {
+                "user": "+ Añadir Grupo Sensores"
+            },
             "step": {
                 "sensor_group_create": {
                     "title": "Crear Grupo de Sensores",
@@ -305,6 +317,10 @@
         "string": {
             "name": "+ Añadir String Solar",
             "title": "+ String Solar",
+            "flow_title": "+ String Solar",
+            "initiate_flow": {
+                "user": "+ Añadir String Solar"
+            },
             "step": {
                 "string_create_select_relations": {
                     "title": "Nuevo String",
@@ -347,6 +363,10 @@
         "management": {
             "name": "⚙️ Gestionar Existentes",
             "title": "⚙️ Gestionar Existentes",
+            "flow_title": "⚙️ Gestionar Existentes",
+            "initiate_flow": {
+                "user": "⚙️ Gestionar Existentes"
+            },
             "step": {
                 "menu_management": {
                     "title": "Gestión de Datos",
