@@ -11,5 +11,5 @@
     "issue_tracker": "https://github.com/Carlosjcfr/ha_si_sensor/issues",
     "integration_type": "hub",
     "requirements": [],
-    "version": "1.0.0"
+    "version": "1.0.1"
 }
