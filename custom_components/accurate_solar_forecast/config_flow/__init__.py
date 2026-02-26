@@ -203,38 +203,9 @@ class AccurateForecastCommonFlow:
         })
 
     # MENU STEPS
-    async def _async_main_menu(self, step_id="user"):
-        await self._async_init_requirements()
-        
-        menu_options = ["pv_model_create", "roof_create", "sensor_group_create"]
-        if len(self._db.list_models()) > 0 and len(self._db.list_sensor_groups()) > 0:
-            menu_options.append("string_create_select_relations")
-        menu_options.append("menu_management")
-        
-        return self.async_show_menu(step_id=step_id, menu_options=menu_options)
-
-    async def async_step_user(self, user_input=None):
-        return await self._async_main_menu(step_id="user")
-
     async def async_step_menu_management(self, user_input=None):
         """Submenú para gestionar (editar/borrar) elementos existentes."""
         return self.async_show_menu(step_id="menu_management", menu_options=["menu_pv_models", "menu_roofs", "menu_sensor_groups"])
-
-    async def async_step_flow_success(self, user_input=None):
-        """Menú de éxito para permitir bucles o finalizar subentries."""
-        if isinstance(self, ConfigSubentryFlow):
-            # En un subentry flow, crear una subentrada vacía o interrumpir finalizará el proceso volviendo al panel.
-            # Según doc oficial, para cerrar subentries exitosamente:
-            return self.async_abort(reason="list_updated")
-        
-        # En ConfigFlow / OptionsFlow regular
-        return self.async_show_menu(step_id="flow_success", menu_options=["user", "finish"])
-
-    async def async_step_finish(self, user_input=None):
-        """Finalizar el flujo."""
-        if hasattr(self, "config_entry") and self.config_entry:
-             return self.async_create_entry(title="", data={})
-        return self.async_abort(reason="list_updated")
 
 class PvModelSubentryFlowHandler(AccurateForecastCommonFlow, PvModelsFlowMixin, ConfigSubentryFlow):
     async def async_step_user(self, user_input=None):
@@ -276,11 +247,6 @@ class AccurateForecastFlow(AccurateForecastCommonFlow, PvModelsFlowMixin, RoofsF
             "management": MenuSubentryFlowHandler,
         }
 
-    @staticmethod
-    @callback
-    def async_get_options_flow(config_entry):
-        return AccurateForecastOptionsFlowHandler(config_entry)
-
     def __init__(self):
         self._db = None
         self.selected_item_id = None
@@ -290,19 +256,9 @@ class AccurateForecastFlow(AccurateForecastCommonFlow, PvModelsFlowMixin, RoofsF
         if not self._async_current_entries():
             return await self.async_step_setup(user_input)
         
-        return await self._async_main_menu(step_id="user")
+        return self.async_abort(reason="not_supported")
 
     async def async_step_setup(self, user_input=None):
         if user_input is not None:
             return self.async_create_entry(title="Accurate Solar Forecast", data={})
         return self.async_show_form(step_id="setup", data_schema=vol.Schema({}))
-
-class AccurateForecastOptionsFlowHandler(AccurateForecastCommonFlow, PvModelsFlowMixin, RoofsFlowMixin, SensorGroupsFlowMixin, StringsFlowMixin, config_entries.OptionsFlow):
-    def __init__(self, config_entry):
-        self.config_entry = config_entry
-        self.temp_data = dict(config_entry.data)
-        self._db = None
-        self.selected_item_id = None
-
-    async def async_step_init(self, user_input=None):
-        return await self._async_main_menu(step_id="init")

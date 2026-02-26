@@ -1,35 +1,9 @@
 {
-    "options": {
-        "step": {
-            "init": {
-                "title": "Accurate solar forecast",
-                "description": "¿Que quieres añadir?",
-                "menu_options": {
-                    "pv_model_create": "+ Añadir Módulo FV",
-                    "roof_create": "+ Añadir Tejado",
-                    "sensor_group_create": "+ Añadir Grupo de Sensores",
-                    "string_create_select_relations": "+ Añadir String Solar",
-                    "menu_management": "⚙️ Gestionar Existentes (Editar/Borrar)"
-                }
-            }
-        }
-    },
     "config": {
         "step": {
             "setup": {
                 "title": "Acurate Solar Forecast",
                 "description": "¿Quieres añadir la integración Acurate Solar Forecast?"
-            },
-            "user": {
-                "title": "Accurate solar forecast",
-                "description": "¿Que quieres añadir?",
-                "menu_options": {
-                    "pv_model_create": "+ Añadir Módulo FV",
-                    "roof_create": "+ Añadir Tejado",
-                    "sensor_group_create": "+ Añadir Grupo de Sensores",
-                    "string_create_select_relations": "+ Añadir String Solar",
-                    "menu_management": "⚙️ Gestionar Existentes (Editar/Borrar)"
-                }
             },
             "menu_management": {
                 "title": "Gestión de la Integración",
@@ -38,14 +12,6 @@
                     "menu_pv_models": "Módulos FV",
                     "menu_roofs": "Tejados / Orientaciones",
                     "menu_sensor_groups": "Grupos de Sensores"
-                }
-            },
-            "flow_success": {
-                "title": "¡Operación completada!",
-                "description": "Se ha guardado correctamente. ¿Qué deseas hacer ahora?",
-                "menu_options": {
-                    "user": "Volver al menú principal",
-                    "finish": "Salir y Finalizar"
                 }
             },
             "menu_pv_models": {
@@ -99,14 +65,6 @@
                     "isc": "Isc",
                     "vmp": "Vmp",
                     "imp": "Imp"
-                }
-            },
-            "pv_model_success": {
-                "title": "Éxito",
-                "description": "¿Qué hacer ahora?",
-                "menu_options": {
-                    "pv_model_create": "Añadir otro módulo",
-                    "pv_model_finish": "Finalizar y salir"
                 }
             },
             "pv_model_delete_select": {
@@ -215,14 +173,6 @@
                     "tilt": "Inclinación Paneles (º)",
                     "azimuth": "Orientación Paneles (180º=S)",
                     "real_production_sensor": "Producción Real (W)"
-                }
-            },
-            "string_add_another": {
-                "title": "¡String añadido!",
-                "description": "¿Deseas añadir otro String o finalizar la configuración?",
-                "menu_options": {
-                    "string_create_select_relations": "Añadir otro String",
-                    "roof_finish": "Finalizar"
                 }
             },
             "reconfigure_sensor_group": {

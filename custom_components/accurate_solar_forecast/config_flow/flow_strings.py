@@ -84,20 +84,7 @@ class StringsFlowMixin:
              if getattr(self, "reconfigure_entry", None):
                  return self.async_update_reload_and_abort(self.reconfigure_entry)
                  
-             return await self.async_step_string_add_another()
+             return self.async_abort(reason="list_updated")
             
         schema = self._get_string_details_schema()
         return self.async_show_form(step_id="string_create_details", data_schema=schema)
-
-    async def async_step_string_add_another(self, user_input=None):
-        return self.async_show_menu(
-            step_id="string_add_another",
-            menu_options=["string_create_select_relations", "roof_finish"]
-        )
-
-    async def async_step_roof_finish(self, user_input=None):
-        roof_name = self.temp_data.get(CONF_ROOF_NAME, "Tejado")
-        return self.async_create_entry(
-            title=roof_name, 
-            data={CONF_ROOF_NAME: roof_name}
-        )

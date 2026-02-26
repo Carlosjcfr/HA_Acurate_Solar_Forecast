@@ -39,7 +39,7 @@ class PvModelsFlowMixin:
                 user_input[CONF_VMP],
                 user_input[CONF_IMP]
             )
-            return await self.async_step_flow_success()
+            return self.async_abort(reason="list_updated")
 
         return self._show_pv_model_form("pv_model_create", errors)
 
@@ -64,7 +64,7 @@ class PvModelsFlowMixin:
                 user_input[CONF_VMP],
                 user_input[CONF_IMP]
             )
-            return await self.async_step_flow_success()
+            return self.async_abort(reason="list_updated")
 
         # Load Data
         model_data = self._db.get_model(self.selected_item_id)
@@ -99,7 +99,7 @@ class PvModelsFlowMixin:
                  return self.async_abort(reason="cannot_delete_default")
              
              await self._db.delete_model(model_id)
-             return self.async_create_entry(title=f"Deleted Model: {model_id}", data={})
+             return self.async_abort(reason="list_updated")
              
         models = self._db.list_models()
         if "default_450w" in models:

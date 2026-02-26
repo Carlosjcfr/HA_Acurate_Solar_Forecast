@@ -40,8 +40,8 @@ class SensorGroupsFlowMixin:
                 user_input.get(CONF_WEATHER_ENTITY),
                 user_input.get(CONF_ILLUMINANCE_SENSOR)
             )
-            # Regresar al menú de éxito
-            return await self.async_step_flow_success()
+            # Regresar al panel principal
+            return self.async_abort(reason="list_updated")
             
          return self._show_sensor_group_form("sensor_group_create", errors)
 
@@ -76,7 +76,7 @@ class SensorGroupsFlowMixin:
                 user_input.get(CONF_WEATHER_ENTITY),
                 user_input.get(CONF_ILLUMINANCE_SENSOR)
             )
-             return await self.async_step_flow_success()
+             return self.async_abort(reason="list_updated")
 
         group_data = self._db.get_sensor_group(self.selected_item_id)
         return self._show_sensor_group_form("sensor_group_edit_form", {}, default_data=group_data)
