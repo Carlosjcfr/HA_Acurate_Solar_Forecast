@@ -247,7 +247,7 @@
             "title": "+ PV Module",
             "flow_title": "+ PV Module",
             "initiate_flow": {
-                "user": "+ Add PV Module"
+                "user": "PV Module"
             },
             "step": {
                 "pv_model_create": {
@@ -272,7 +272,7 @@
             "title": "+ Roof",
             "flow_title": "+ Roof",
             "initiate_flow": {
-                "user": "+ Add Roof"
+                "user": "Roof"
             },
             "step": {
                 "roof_create": {
@@ -287,11 +287,11 @@
             }
         },
         "sensor_group": {
-            "name": "+ Add Sensor Group",
-            "title": "+ Sensor Group",
+            "name": "Nameless Sensor Group",
+            "title": "Adding Sensor Group",
             "flow_title": "+ Sensor Group",
             "initiate_flow": {
-                "user": "+ Add Sensor Group"
+                "user": "Sensor Group"
             },
             "step": {
                 "sensor_group_create": {
@@ -312,11 +312,11 @@
             }
         },
         "string": {
-            "name": "+ Add Solar String",
-            "title": "+ Solar String",
+            "name": "Nameless String ",
+            "title": "Add New String",
             "flow_title": "+ Solar String",
             "initiate_flow": {
-                "user": "+ Add Solar String"
+                "user": "String"
             },
             "step": {
                 "string_create_select_relations": {
@@ -359,10 +359,10 @@
         },
         "management": {
             "name": "⚙️ Manage Existing",
-            "title": "⚙️ Manage Existing",
+            "title": "⚙️ Manage Devices and Data",
             "flow_title": "⚙️ Manage Existing",
             "initiate_flow": {
-                "user": "⚙️ Manage Existing"
+                "user": "⚙️ Manage"
             },
             "step": {
                 "menu_management": {
