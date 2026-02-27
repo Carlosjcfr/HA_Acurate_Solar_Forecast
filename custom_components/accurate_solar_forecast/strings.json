@@ -243,8 +243,8 @@
     },
     "config_subentries": {
         "pv_model": {
-            "name": "+ Add PV Module",
-            "title": "+ PV Module",
+            "name": "Nameless PV Module",
+            "title": "Adding PV Module",
             "flow_title": "+ PV Module",
             "initiate_flow": {
                 "user": "PV Module"
@@ -268,8 +268,8 @@
             }
         },
         "roof": {
-            "name": "+ Add Roof",
-            "title": "+ Roof",
+            "name": "Nameless Roof",
+            "title": "Adding Roof",
             "flow_title": "+ Roof",
             "initiate_flow": {
                 "user": "Roof"

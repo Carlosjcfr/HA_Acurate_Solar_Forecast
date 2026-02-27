@@ -250,7 +250,7 @@
             "title": "+ Módulo FV",
             "flow_title": "+ Módulo FV",
             "initiate_flow": {
-                "user": "+ Añadir Módulo FV"
+                "user": "Módulo FV"
             },
             "step": {
                 "pv_model_create": {
@@ -275,7 +275,7 @@
             "title": "+ Tejado",
             "flow_title": "+ Tejado",
             "initiate_flow": {
-                "user": "+ Añadir Tejado"
+                "user": "Tejado"
             },
             "step": {
                 "roof_create": {
@@ -294,7 +294,7 @@
             "title": "+ Grupo Sensores",
             "flow_title": "+ Grupo Sensores",
             "initiate_flow": {
-                "user": "+ Añadir Grupo Sensores"
+                "user": "Grupo Sensores"
             },
             "step": {
                 "sensor_group_create": {
@@ -319,7 +319,7 @@
             "title": "+ String Solar",
             "flow_title": "+ String Solar",
             "initiate_flow": {
-                "user": "+ Añadir String Solar"
+                "user": "String Solar"
             },
             "step": {
                 "string_create_select_relations": {
@@ -365,7 +365,7 @@
             "title": "⚙️ Gestionar Existentes",
             "flow_title": "⚙️ Gestionar Existentes",
             "initiate_flow": {
-                "user": "⚙️ Gestionar Existentes"
+                "user": "⚙️ Gestionar existentes"
             },
             "step": {
                 "menu_management": {
