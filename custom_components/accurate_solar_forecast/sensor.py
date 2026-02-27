@@ -17,40 +17,42 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(hass, configEntry, asyncAddEntities):
     """Set up Accurate Solar Forecast sensors.
 
-    HA calls this once per config entry (main + subentries).
-    We handle both cases:
-      - Main entry  → create overview + iterate subentries for all entities
-      - Subentry    → handled via main entry iteration (this path is a no-op)
+    HA calls this for the MAIN config entry after any subentry change.
+    We read all data directly from the in-memory DB so we don't rely
+    on the configEntry.subentries API, which may not be accessible on
+    all HA versions.
+
+    Belt-and-suspenders: if called with a data-bearing subentry configEntry,
+    we handle it directly and return.
     """
     try:
         domainData = hass.data.get(DOMAIN, {})
         db = domainData.get("db")
         if not db:
+            _LOGGER.warning("DB not loaded — skipping sensor platform setup")
             return
 
-        isSubentry = (
-            CONF_SENSOR_GROUP_NAME in configEntry.data
-            or CONF_ROOF_NAME in configEntry.data
-        )
-
-        # ─────────────────────────────────────────────────────────────
-        # CASE A: Called for a specific SUBENTRY
-        # In HA's subentry model this path is also reached:
-        # process the subentry data directly (belt-and-suspenders).
-        # ─────────────────────────────────────────────────────────────
-        if isSubentry:
-            _setupSensorGroupEntry(hass, configEntry, db, asyncAddEntities)
-            _setupRoofEntry(hass, configEntry, db, asyncAddEntities)
-            return
-
-        # ─────────────────────────────────────────────────────────────
-        # CASE B: Called for the MAIN entry
-        # 1. Create "Módulos Guardados" overview device + sensor
-        # 2. Iterate over all subentries and set up their entities
-        # ─────────────────────────────────────────────────────────────
         deviceRegistry = dr.async_get(hass)
 
-        # "Módulos Guardados" service device
+        # ── BELT-AND-SUSPENDERS: subentry called directly ────────────
+        # If HA DOES call per-subentry, handle it and return.
+        # Otherwise the main-entry path below covers everything.
+        if CONF_SENSOR_GROUP_NAME in configEntry.data:
+            _setupSensorGroupFromData(
+                hass, configEntry.entry_id, configEntry.data, db, deviceRegistry, asyncAddEntities
+            )
+            return
+
+        if CONF_ROOF_NAME in configEntry.data:
+            _setupRoofFromData(
+                hass, configEntry.entry_id, configEntry.data, db, deviceRegistry, asyncAddEntities
+            )
+            return
+
+        # ── MAIN ENTRY: set up overview + all DB items ───────────────
+        _LOGGER.debug("Setting up main entry entities")
+
+        # 1. "Módulos Guardados" service device + count sensor
         deviceRegistry.async_get_or_create(
             config_entry_id=configEntry.entry_id,
             identifiers={(DOMAIN, "pv_models_library")},
@@ -61,32 +63,48 @@ async def async_setup_entry(hass, configEntry, asyncAddEntities):
         )
         asyncAddEntities([PVModelCountSensor(hass, db)])
 
-        # Iterate subentries — set up sensor groups and roofs
-        subentries = getattr(configEntry, "subentries", {}) or {}
-        for subentryId, subentry in subentries.items():
-            subData = subentry.data if hasattr(subentry, "data") else {}
-            _setupSensorGroupEntry(hass, configEntry, db, asyncAddEntities, subData)
-            _setupRoofEntry(hass, configEntry, db, asyncAddEntities, subData)
+        # 2. All sensor groups from DB
+        for groupId, sensorGroup in db.sensor_groups.items():
+            groupData = {
+                CONF_SENSOR_GROUP_NAME: sensorGroup.name,
+                CONF_REF_SENSOR: sensorGroup.refSensor,
+                CONF_TEMP_SENSOR: sensorGroup.tempSensor,
+                CONF_TEMP_PANEL_SENSOR: sensorGroup.tempPanelSensor,
+                CONF_WIND_SENSOR: sensorGroup.windSensor,
+                CONF_WEATHER_ENTITY: sensorGroup.weatherEntity,
+                CONF_ILLUMINANCE_SENSOR: sensorGroup.illuminanceSensor,
+                CONF_REF_TILT: sensorGroup.refTilt,
+                CONF_REF_ORIENTATION: sensorGroup.refOrientation,
+            }
+            _setupSensorGroupFromData(
+                hass, configEntry.entry_id, groupData, db, deviceRegistry, asyncAddEntities
+            )
+
+        # 3. All roofs from DB (each roof → hub + string child devices)
+        for roofId, roof in db.roofs.items():
+            roofData = {CONF_ROOF_NAME: roof.name}
+            _setupRoofFromData(
+                hass, configEntry.entry_id, roofData, db, deviceRegistry, asyncAddEntities
+            )
 
     except Exception as e:
         _LOGGER.exception(f"Error setting up sensor platform: {e}")
 
 
-def _setupSensorGroupEntry(hass, configEntry, db, asyncAddEntities, data=None):
-    """Create sensor group service device and virtual sensors."""
-    if data is None:
-        data = configEntry.data
-    if CONF_SENSOR_GROUP_NAME not in data:
+# ─────────────────────────────────────────────────────────────────────────────
+# Helper: sensor group
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _setupSensorGroupFromData(hass, entryId, data, db, deviceRegistry, asyncAddEntities):
+    """Create sensor group service device and its virtual sensors."""
+    groupName = data.get(CONF_SENSOR_GROUP_NAME)
+    if not groupName:
         return
-
     try:
-        groupName = data.get(CONF_SENSOR_GROUP_NAME, "Sensor Group")
         groupId = slugify(groupName)
-        deviceRegistry = dr.async_get(hass)
-
         sgIdentifier = (DOMAIN, f"sg_{groupId}")
         deviceRegistry.async_get_or_create(
-            config_entry_id=configEntry.entry_id,
+            config_entry_id=entryId,
             identifiers={sgIdentifier},
             name=groupName,
             manufacturer="Accurate Solar Forecast",
@@ -94,51 +112,56 @@ def _setupSensorGroupEntry(hass, configEntry, db, asyncAddEntities, data=None):
             entry_type=dr.DeviceEntryType.SERVICE,
         )
 
-        # Build a minimal proxy so VirtualSensor / CloudinessSensor can read data
-        class _SubentryProxy:
-            entry_id = configEntry.entry_id
-
-        proxy = _SubentryProxy()
+        # Build a minimal proxy so VirtualSensor / CloudinessSensor read config
+        class _Proxy:
+            pass
+        proxy = _Proxy()
+        proxy.entry_id = entryId
         proxy.data = data
 
         asyncAddEntities([
             SensorGroupVirtualSensor(hass, proxy, {sgIdentifier}),
             SensorGroupCloudinessSensor(hass, proxy, {sgIdentifier}),
         ])
+        _LOGGER.debug(f"Sensor group '{groupName}' entities registered")
     except Exception as e:
-        _LOGGER.exception(f"Error setting up sensor group '{data.get(CONF_SENSOR_GROUP_NAME)}': {e}")
+        _LOGGER.exception(f"Error setting up sensor group '{groupName}': {e}")
 
 
-def _setupRoofEntry(hass, configEntry, db, asyncAddEntities, data=None):
-    """Create roof hub device and string sensors as child devices."""
-    if data is None:
-        data = configEntry.data
-    if CONF_ROOF_NAME not in data:
+# ─────────────────────────────────────────────────────────────────────────────
+# Helper: roof + strings
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _setupRoofFromData(hass, entryId, data, db, deviceRegistry, asyncAddEntities):
+    """Create roof hub device and string child sensor entities."""
+    roofName = data.get(CONF_ROOF_NAME)
+    if not roofName:
         return
-
     try:
-        roofName = data.get(CONF_ROOF_NAME)
-        roofId = slugify(roofName) if roofName else "default"
+        roofId = slugify(roofName)
         roofStrings = db.getRoofStrings(roofId)
-        deviceRegistry = dr.async_get(hass)
-
         sensorGroupObj = db.getSensorGroupForRoof(roofId)
+
         if not sensorGroupObj:
             _LOGGER.warning(
                 f"Roof '{roofId}' has no sensor group assigned — "
-                "strings registered in degraded mode."
+                "strings will be registered in degraded mode."
             )
 
         # Roof hub device
         roofHubIdentifier = (DOMAIN, f"roof_{roofId}")
         deviceRegistry.async_get_or_create(
-            config_entry_id=configEntry.entry_id,
+            config_entry_id=entryId,
             identifiers={roofHubIdentifier},
             name=roofName,
             manufacturer="Accurate Solar Forecast",
             model="Roof Hub",
             entry_type=dr.DeviceEntryType.SERVICE,
         )
+
+        if not roofStrings:
+            _LOGGER.warning(f"Roof '{roofId}' has no strings configured yet.")
+            return
 
         entities = []
         for stringId, stringObj in roofStrings.items():
@@ -152,9 +175,7 @@ def _setupRoofEntry(hass, configEntry, db, asyncAddEntities, data=None):
 
         if entities:
             asyncAddEntities(entities, update_before_add=True)
-
-        if not roofStrings:
-            _LOGGER.warning(f"Roof '{roofId}' has no strings configured.")
+            _LOGGER.debug(f"Roof '{roofName}': {len(entities)} string entities registered")
 
     except Exception as e:
-        _LOGGER.exception(f"Error setting up roof '{data.get(CONF_ROOF_NAME)}': {e}")
+        _LOGGER.exception(f"Error setting up roof '{roofName}': {e}")
