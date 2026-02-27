@@ -239,14 +239,28 @@ class AccurateForecastFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @classmethod
     @callback
     def async_get_supported_subentry_types(cls, configEntry) -> dict[str, type[ConfigSubentryFlow]]:
-        """Return supported subentry flow types."""
-        return {
+        """Return supported subentry flow types based on current DB state."""
+        try:
+            state = getSubentryMenuState(configEntry.hass)
+        except Exception:
+            state = {"hasModels": False, "hasRoofs": False, "hasSensors": False, "canAddString": False}
+
+        # PV Module and Management are always available
+        supported = {
             "pv_model": PvModelSubentryFlowHandler,
-            "roof": RoofSubentryFlowHandler,
             "sensor_group": SensorGroupSubentryFlowHandler,
-            "string": StringSubentryFlowHandler,
             "management": MenuSubentryFlowHandler,
         }
+
+        # Roof pill requires at least one sensor group 
+        if state["hasSensors"]:
+            supported["roof"] = RoofSubentryFlowHandler
+
+        # String pill requires at least one roof AND one sensor group
+        if state["hasRoofs"] and state["hasSensors"]:
+            supported["string"] = StringSubentryFlowHandler
+
+        return supported
 
     async def async_step_user(self, userInput=None):
         """Handle the initial step."""
