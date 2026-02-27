@@ -7,7 +7,7 @@ class PvModel:
     """Represents a Photovoltaic Panel model."""
     name: str
     brand: str
-    p_stc: float
+    pStc: float
     gamma: float
     noct: float
     voc: float
@@ -21,7 +21,7 @@ class PvModel:
         return cls(
             name=data.get("name", "Generic"),
             brand=data.get("brand", "Generic"),
-            p_stc=float(data.get("p_stc", 450)),
+            pStc=float(data.get("p_stc", 450)),
             gamma=float(data.get("gamma", -0.35)),
             noct=float(data.get("noct", 45)),
             voc=float(data.get("voc", 49.0)),
@@ -32,36 +32,55 @@ class PvModel:
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
-        return asdict(self)
+        return {
+            "name": self.name,
+            "brand": self.brand,
+            "p_stc": self.pStc,
+            "gamma": self.gamma,
+            "noct": self.noct,
+            "voc": self.voc,
+            "isc": self.isc,
+            "vmp": self.vmp,
+            "imp": self.imp
+        }
 
 @dataclass
 class SolarString:
     """Represents a string of PV panels."""
     name: str
-    panel_model: str
-    num_panels: int
-    num_strings: int
+    panelModel: str
+    numPanels: int
+    numStrings: int
     tilt: float
     azimuth: float
-    selected_sensor_group: str
-    real_production_sensor: Optional[str] = None
+    selectedSensorGroup: str
+    realProductionSensor: Optional[str] = None
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "SolarString":
         return cls(
             name=data.get("name", "Unknown String"),
-            panel_model=data.get("panel_model", "Generic"),
-            num_panels=int(data.get("num_panels", 1)),
-            num_strings=int(data.get("num_strings", 1)),
+            panelModel=data.get("panel_model", "Generic"),
+            numPanels=int(data.get("num_panels", 1)),
+            numStrings=int(data.get("num_strings", 1)),
             tilt=float(data.get("tilt", 30.0)),
             azimuth=float(data.get("azimuth", 180.0)),
-            selected_sensor_group=data.get("selected_sensor_group", ""),
-            real_production_sensor=data.get("real_production_sensor"),
+            selectedSensorGroup=data.get("selected_sensor_group", ""),
+            realProductionSensor=data.get("real_production_sensor"),
         )
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
-        return asdict(self)
+        return {
+            "name": self.name,
+            "panel_model": self.panelModel,
+            "num_panels": self.numPanels,
+            "num_strings": self.numStrings,
+            "tilt": self.tilt,
+            "azimuth": self.azimuth,
+            "selected_sensor_group": self.selectedSensorGroup,
+            "real_production_sensor": self.realProductionSensor
+        }
 
 @dataclass
 class Roof:
@@ -94,14 +113,14 @@ class Roof:
 class SensorGroup:
     """Represents a physical sensor group (irradiance, temp, etc)."""
     name: str
-    ref_sensor: str
-    ref_tilt: float
-    ref_orientation: float
-    temp_sensor: str
-    temp_panel_sensor: Optional[str] = None
-    wind_sensor: Optional[str] = None
-    weather_entity: Optional[str] = None
-    illuminance_sensor: Optional[str] = None
+    refSensor: str
+    refTilt: float
+    refOrientation: float
+    tempSensor: str
+    tempPanelSensor: Optional[str] = None
+    windSensor: Optional[str] = None
+    weatherEntity: Optional[str] = None
+    illuminanceSensor: Optional[str] = None
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "SensorGroup":
@@ -112,14 +131,14 @@ class SensorGroup:
         )
         return cls(
             name=data.get(CONF_SENSOR_GROUP_NAME, "Default Group"),
-            ref_sensor=data.get(CONF_REF_SENSOR, ""),
-            ref_tilt=float(data.get(CONF_REF_TILT, 0.0)),
-            ref_orientation=float(data.get(CONF_REF_ORIENTATION, 180.0)),
-            temp_sensor=data.get(CONF_TEMP_SENSOR, ""),
-            temp_panel_sensor=data.get(CONF_TEMP_PANEL_SENSOR),
-            wind_sensor=data.get(CONF_WIND_SENSOR),
-            weather_entity=data.get(CONF_WEATHER_ENTITY),
-            illuminance_sensor=data.get(CONF_ILLUMINANCE_SENSOR),
+            refSensor=data.get(CONF_REF_SENSOR, ""),
+            refTilt=float(data.get(CONF_REF_TILT, 0.0)),
+            refOrientation=float(data.get(CONF_REF_ORIENTATION, 180.0)),
+            tempSensor=data.get(CONF_TEMP_SENSOR, ""),
+            tempPanelSensor=data.get(CONF_TEMP_PANEL_SENSOR),
+            windSensor=data.get(CONF_WIND_SENSOR),
+            weatherEntity=data.get(CONF_WEATHER_ENTITY),
+            illuminanceSensor=data.get(CONF_ILLUMINANCE_SENSOR),
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -130,12 +149,12 @@ class SensorGroup:
         )
         return {
             CONF_SENSOR_GROUP_NAME: self.name,
-            CONF_REF_SENSOR: self.ref_sensor,
-            CONF_REF_TILT: self.ref_tilt,
-            CONF_REF_ORIENTATION: self.ref_orientation,
-            CONF_TEMP_SENSOR: self.temp_sensor,
-            CONF_TEMP_PANEL_SENSOR: self.temp_panel_sensor,
-            CONF_WIND_SENSOR: self.wind_sensor,
-            CONF_WEATHER_ENTITY: self.weather_entity,
-            CONF_ILLUMINANCE_SENSOR: self.illuminance_sensor,
+            CONF_REF_SENSOR: self.refSensor,
+            CONF_REF_TILT: self.refTilt,
+            CONF_REF_ORIENTATION: self.refOrientation,
+            CONF_TEMP_SENSOR: self.tempSensor,
+            CONF_TEMP_PANEL_SENSOR: self.tempPanelSensor,
+            CONF_WIND_SENSOR: self.windSensor,
+            CONF_WEATHER_ENTITY: self.weatherEntity,
+            CONF_ILLUMINANCE_SENSOR: self.illuminanceSensor,
         }

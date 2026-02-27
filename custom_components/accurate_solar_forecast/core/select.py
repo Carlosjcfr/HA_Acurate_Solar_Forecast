@@ -9,46 +9,46 @@ _LOGGER = logging.getLogger(__name__)
 class SolarStringRoofSelect(SelectEntity):
     """Select entity for choosing the roof of a solar string."""
     _attr_has_entity_name, _attr_translation_key, _attr_icon = True, "roof", "mdi:home-roof"
-    def __init__(self, hass, string_data, db, config_entry, string_id, roof_id):
-        self.hass, self._config_entry, self._data, self._string_id, self._roof_id, self._db = hass, config_entry, string_data, string_id, roof_id, db
-        self._string_name, self._attr_unique_id = self._data.get(CONF_STRING_NAME), f"str_{self._string_id}_roof_select"
+    def __init__(self, hass, stringData, db, configEntry, stringId, roofId):
+        self.hass, self._configEntry, self._data, self._stringId, self._roofId, self._db = hass, configEntry, stringData, stringId, roofId, db
+        self._stringName, self._attr_unique_id = self._data.get(CONF_STRING_NAME), f"str_{self._stringId}_roof_select"
         from .helpers import slugify
-        self._sensor_group = db.get_sensor_group(self._data.get("selected_sensor_group"))
-        model_name = self._data.get("panel_model")
-        self._panel_data = db.data.get(slugify(model_name)) if db and db.data else None
+        self._sensorGroup = db.getSensorGroup(self._data.get("selected_sensor_group"))
+        modelName = self._data.get("panel_model")
+        self._panelData = db.data.get(slugify(modelName)) if db and db.data else None
 
     @property
-    def options(self): return list(self._db.list_roofs().values())
+    def options(self): return list(self._db.listRoofs().values())
     @property
     def current_option(self): return self._data.get(CONF_ROOF_NAME)
     @property
     def device_info(self):
         from .helpers import slugify
-        string_id_slug = f"str_{slugify(self._string_name)}"
-        device_identifiers = {(DOMAIN, string_id_slug)}
-        real_sensor_id = self._data.get(CONF_REAL_PRODUCTION_SENSOR)
-        found_device = False
-        if real_sensor_id:
-             entity_entry = er.async_get(self.hass).async_get(real_sensor_id)
-             if entity_entry and entity_entry.device_id:
-                 device = dr.async_get(self.hass).async_get(entity_entry.device_id)
-                 if device: device_identifiers, found_device = device.identifiers, True
+        stringIdSlug = f"str_{slugify(self._stringName)}"
+        deviceIdentifiers = {(DOMAIN, stringIdSlug)}
+        realSensorId = self._data.get(CONF_REAL_PRODUCTION_SENSOR)
+        foundDevice = False
+        if realSensorId:
+             entityEntry = er.async_get(self.hass).async_get(realSensorId)
+             if entityEntry and entityEntry.device_id:
+                 device = dr.async_get(self.hass).async_get(entityEntry.device_id)
+                 if device: deviceIdentifiers, foundDevice = device.identifiers, True
         return DeviceInfo(
-            identifiers=device_identifiers,
-            name=self._string_name if not found_device else None,
-            manufacturer=(self._panel_data.brand if self._panel_data else "Generic") if not found_device else None,
-            model=(self._panel_data.name if self._panel_data else model_name) if not found_device else None,
-            via_device=(DOMAIN, self._sensor_group.name) if (not found_device and self._sensor_group) else None
+            identifiers=deviceIdentifiers,
+            name=self._stringName if not foundDevice else None,
+            manufacturer=(self._panelData.brand if self._panelData else "Generic") if not foundDevice else None,
+            model=(self._panelData.name if self._panelData else modelName) if not foundDevice else None,
+            via_device=(DOMAIN, self._sensorGroup.name) if (not foundDevice and self._sensorGroup) else None
         )
 
     async def async_select_option(self, option: str) -> None:
-        roof_id = next((rid for rid, rname in self._db.list_roofs().items() if rname == option), None)
-        if not roof_id: return
-        roof_obj = self._db.get_roof(roof_id)
-        new_data = self._config_entry.data.copy()
-        new_data[CONF_ROOF_NAME] = option
-        if roof_obj:
-            if roof_obj.tilt is not None: new_data[CONF_TILT] = roof_obj.tilt
-            if roof_obj.azimuth is not None: new_data[CONF_AZIMUTH] = roof_obj.azimuth
-        self.hass.config_entries.async_update_entry(self._config_entry, data=new_data)
-        await self.hass.config_entries.async_reload(self._config_entry.entry_id)
+        targetRoofId = next((rid for rid, rname in self._db.listRoofs().items() if rname == option), None)
+        if not targetRoofId: return
+        roofObj = self._db.getRoof(targetRoofId)
+        newData = self._configEntry.data.copy()
+        newData[CONF_ROOF_NAME] = option
+        if roofObj:
+            if roofObj.tilt is not None: newData[CONF_TILT] = roofObj.tilt
+            if roofObj.azimuth is not None: newData[CONF_AZIMUTH] = roofObj.azimuth
+        self.hass.config_entries.async_update_entry(self._configEntry, data=newData)
+        await self.hass.config_entries.async_reload(self._configEntry.entry_id)

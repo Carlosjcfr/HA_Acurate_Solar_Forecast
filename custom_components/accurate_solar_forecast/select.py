@@ -4,19 +4,19 @@ from .core import SolarStringRoofSelect, slugify
 
 _LOGGER = logging.getLogger(__name__)
 
-async def async_setup_entry(hass, config_entry, async_add_entities):
+async def async_setup_entry(hass, configEntry, asyncAddEntities):
     """Set up the Accurate Solar Forecast select entities."""
-    if CONF_ROOF_NAME in config_entry.data:
+    if CONF_ROOF_NAME in configEntry.data:
         db = hass.data[DOMAIN]["db"]
-        roof_name = config_entry.data.get(CONF_ROOF_NAME)
-        roof_id = slugify(roof_name) if roof_name else "default"
-        roof_strings = db.get_roof_strings(roof_id)
+        roofName = configEntry.data.get(CONF_ROOF_NAME)
+        roofId = slugify(roofName) if roofName else "default"
+        roofStrings = db.getRoofStrings(roofId)
         
         entities = []
-        for string_id, string_obj in roof_strings.items():
-            combined_data = string_obj.to_dict()
-            combined_data[CONF_ROOF_NAME] = roof_name
-            entities.append(SolarStringRoofSelect(hass, combined_data, db, config_entry, string_id, roof_id))
+        for stringId, stringObj in roofStrings.items():
+            combinedData = stringObj.to_dict()
+            combinedData[CONF_ROOF_NAME] = roofName
+            entities.append(SolarStringRoofSelect(hass, combinedData, db, configEntry, stringId, roofId))
             
         if entities:
-            async_add_entities(entities)
+            asyncAddEntities(entities)

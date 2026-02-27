@@ -39,39 +39,39 @@ class AccurateSolarSensorDB:
             self.roofs = {}
             await self.async_save()
         else:
-            models_raw = data.get("models", {})
+            modelsRaw = data.get("models", {})
             # Migration check: if "models" is empty but data has values, it might be old structure
-            if not models_raw and data:
+            if not modelsRaw and data:
                  if "default_450w" in data or any("brand" in v for v in data.values()):
-                     models_raw = data
+                     modelsRaw = data
             
-            self.data = {k: PvModel.from_dict(v) for k, v in models_raw.items() if isinstance(v, dict)}
+            self.data = {k: PvModel.from_dict(v) for k, v in modelsRaw.items() if isinstance(v, dict)}
             
-            groups_raw = data.get("sensor_groups", {})
-            self.sensor_groups = {k: SensorGroup.from_dict(v) for k, v in groups_raw.items() if isinstance(v, dict)}
+            groupsRaw = data.get("sensor_groups", {})
+            self.sensor_groups = {k: SensorGroup.from_dict(v) for k, v in groupsRaw.items() if isinstance(v, dict)}
             
-            roofs_raw = data.get("roofs", {})
-            self.roofs = {k: Roof.from_dict(v) for k, v in roofs_raw.items() if isinstance(v, dict)}
+            roofsRaw = data.get("roofs", {})
+            self.roofs = {k: Roof.from_dict(v) for k, v in roofsRaw.items() if isinstance(v, dict)}
             
             # Save if we cleared old "default" roofs or fixed structure
             await self.async_save()
 
     async def async_save(self) -> None:
         """Guarda la DB al disco serializando los objetos a diccionarios."""
-        save_data = {
+        saveData = {
             "models": {k: v.to_dict() for k, v in self.data.items()},
             "sensor_groups": {k: v.to_dict() for k, v in self.sensor_groups.items()},
             "roofs": {k: v.to_dict() for k, v in self.roofs.items()}
         }
-        await self._store.async_save(save_data)
+        await self._store.async_save(saveData)
 
     # --- ROOF METHODS ---
-    def add_roof(self, name: str, tilt: Optional[float] = None, azimuth: Optional[float] = None, strings: Optional[dict[str, SolarString]] = None) -> Coroutine:
+    def addRoof(self, name: str, tilt: Optional[float] = None, azimuth: Optional[float] = None, strings: Optional[dict[str, SolarString]] = None) -> Coroutine:
         """Adds a roof to the database."""
-        roof_id = slugify(name)
-        existing = self.roofs.get(roof_id)
+        roofId = slugify(name)
+        existing = self.roofs.get(roofId)
         
-        self.roofs[roof_id] = Roof(
+        self.roofs[roofId] = Roof(
             name=name,
             tilt=float(tilt) if tilt is not None else (existing.tilt if existing else 30.0),
             azimuth=float(azimuth) if azimuth is not None else (existing.azimuth if existing else 180.0),
@@ -79,66 +79,66 @@ class AccurateSolarSensorDB:
         )
         return self.async_save()
 
-    def add_string_to_roof(self, roof_id: str, string_id: str, string_data: Any) -> Coroutine | bool:
-        if roof_id in self.roofs:
-            if isinstance(string_data, dict):
-                 string_data = SolarString.from_dict(string_data)
-            self.roofs[roof_id].strings[string_id] = string_data
+    def addStringToRoof(self, roofId: str, stringId: str, stringData: Any) -> Coroutine | bool:
+        if roofId in self.roofs:
+            if isinstance(stringData, dict):
+                 stringData = SolarString.from_dict(stringData)
+            self.roofs[roofId].strings[stringId] = stringData
             return self.async_save()
         return False
         
-    def delete_string_from_roof(self, roof_id: str, string_id: str) -> Coroutine | bool:
-        if roof_id in self.roofs:
-            if string_id in self.roofs[roof_id].strings:
-                del self.roofs[roof_id].strings[string_id]
+    def deleteStringFromRoof(self, roofId: str, stringId: str) -> Coroutine | bool:
+        if roofId in self.roofs:
+            if stringId in self.roofs[roofId].strings:
+                del self.roofs[roofId].strings[stringId]
                 return self.async_save()
         return False
         
-    def get_roof_strings(self, roof_id) -> dict[str, SolarString]:
-        roof = self.roofs.get(roof_id)
+    def getRoofStrings(self, roofId) -> dict[str, SolarString]:
+        roof = self.roofs.get(roofId)
         return roof.strings if roof else {}
 
-    def list_roofs(self) -> dict[str, str]:
+    def listRoofs(self) -> dict[str, str]:
         """Returns a dict {id: name} of roofs."""
         return {k: v.name for k, v in self.roofs.items()}
     
-    def get_roof(self, roof_id: str) -> Optional[Roof]:
-        return self.roofs.get(roof_id)
+    def getRoof(self, roofId: str) -> Optional[Roof]:
+        return self.roofs.get(roofId)
 
-    def delete_roof(self, roof_id: str) -> Coroutine | bool:
+    def deleteRoof(self, roofId: str) -> Coroutine | bool:
         """Removes a roof from the database."""
-        if roof_id in self.roofs:
-            del self.roofs[roof_id]
+        if roofId in self.roofs:
+            del self.roofs[roofId]
             return self.async_save()
         return False
 
     # --- PV MODEL METHODS ---
-    def add_model(self, name: str, brand: str, p_stc: float, gamma: float, noct: float, voc: float, isc: float, vmp: float, imp: float) -> Coroutine:
-        model_id = slugify(name)
-        self.data[model_id] = PvModel(
+    def addModel(self, name: str, brand: str, p_stc: float, gamma: float, noct: float, voc: float, isc: float, vmp: float, imp: float) -> Coroutine:
+        modelId = slugify(name)
+        self.data[modelId] = PvModel(
             name=name, brand=brand, p_stc=float(p_stc), gamma=float(gamma),
             noct=float(noct), voc=float(voc), isc=float(isc), vmp=float(vmp), imp=float(imp)
         )
         return self.async_save()
 
-    async def delete_model(self, model_id: str) -> bool:
+    async def deleteModel(self, modelId: str) -> bool:
         """Elimina un modelo de la DB."""
-        if model_id == "default_450w":
+        if modelId == "default_450w":
             return False
-        if model_id in self.data:
-            del self.data[model_id]
+        if modelId in self.data:
+            del self.data[modelId]
             return await self.async_save()
         return False
 
-    def get_model(self, model_id: str) -> Optional[PvModel]:
-        return self.data.get(model_id)
+    def getModel(self, modelId: str) -> Optional[PvModel]:
+        return self.data.get(modelId)
 
-    def list_brands(self) -> list[str]:
+    def listBrands(self) -> list[str]:
         """Devuelve lista de marcas únicas."""
         brands = {v.brand for v in self.data.values()}
         return sorted(list(brands)) if brands else ["Generic"]
 
-    def list_models_by_brand(self, brand: str) -> dict[str, str]:
+    def listModelsByBrand(self, brand: str) -> dict[str, str]:
         """Devuelve dict {id: nombre} filtrado por marca."""
         return {
             k: v.name 
@@ -146,35 +146,35 @@ class AccurateSolarSensorDB:
             if v.brand == brand
         }
 
-    def list_models(self) -> dict[str, str]:
+    def listModels(self) -> dict[str, str]:
         """Devuelve dict {id: nombre} para el selector."""
         return {k: v.name for k, v in self.data.items()}
 
     # --- SENSOR GROUP METHODS ---
-    def add_sensor_group(self, name: str, irradiance_sensor: str, temp_sensor: str, temp_panel_sensor: Optional[str], wind_sensor: Optional[str], ref_tilt: float, ref_orientation: float, weather_entity: Optional[str] = None, illuminance_sensor: Optional[str] = None) -> Coroutine:
-        group_id = slugify(name)
-        self.sensor_groups[group_id] = SensorGroup(
+    def addSensorGroup(self, name: str, irradianceSensor: str, tempSensor: str, tempPanelSensor: Optional[str], windSensor: Optional[str], refTilt: float, refOrientation: float, weatherEntity: Optional[str] = None, illuminanceSensor: Optional[str] = None) -> Coroutine:
+        groupId = slugify(name)
+        self.sensor_groups[groupId] = SensorGroup(
             name=name,
-            ref_sensor=irradiance_sensor,
-            ref_tilt=float(ref_tilt),
-            ref_orientation=float(ref_orientation),
-            temp_sensor=temp_sensor,
-            temp_panel_sensor=temp_panel_sensor,
-            wind_sensor=wind_sensor,
-            weather_entity=weather_entity,
-            illuminance_sensor=illuminance_sensor
+            ref_sensor=irradianceSensor,
+            ref_tilt=float(refTilt),
+            ref_orientation=float(refOrientation),
+            temp_sensor=tempSensor,
+            temp_panel_sensor=tempPanelSensor,
+            wind_sensor=windSensor,
+            weather_entity=weatherEntity,
+            illuminance_sensor=illuminanceSensor
         )
         return self.async_save()
         
-    def get_sensor_group(self, group_id: str) -> Optional[SensorGroup]:
-        return self.sensor_groups.get(group_id)
+    def getSensorGroup(self, groupId: str) -> Optional[SensorGroup]:
+        return self.sensor_groups.get(groupId)
 
-    def list_sensor_groups(self) -> dict[str, str]:
+    def listSensorGroups(self) -> dict[str, str]:
         """Devuelve dict {id: nombre} para selectores."""
         return {k: v.name for k, v in self.sensor_groups.items()}
     
-    def delete_sensor_group(self, group_id: str) -> Coroutine | bool:
-        if group_id in self.sensor_groups:
-            del self.sensor_groups[group_id]
+    def deleteSensorGroup(self, groupId: str) -> Coroutine | bool:
+        if groupId in self.sensor_groups:
+            del self.sensor_groups[groupId]
             return self.async_save()
         return False

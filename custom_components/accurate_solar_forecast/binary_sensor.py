@@ -9,13 +9,13 @@ from .variables.const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
-async def async_setup_entry(hass, config_entry, async_add_entities):
+async def async_setup_entry(hass, configEntry, asyncAddEntities):
     """Set up the diagnostic binary sensors."""
     db = hass.data[DOMAIN]["db"]
     
     # We only add the health sensor once (per integration entry that represents a global status)
     # Usually we can tie it to the first config entry or a global virtual device.
-    async_add_entities([AccurateSolarHealthSensor(hass, db, config_entry)])
+    asyncAddEntities([AccurateSolarHealthSensor(hass, db, configEntry)])
 
 class AccurateSolarHealthSensor(BinarySensorEntity):
     """Reflects the global health of the integration."""
@@ -24,11 +24,11 @@ class AccurateSolarHealthSensor(BinarySensorEntity):
     _attr_translation_key = "integration_health"
     _attr_device_class = BinarySensorDeviceClass.PROBLEM
 
-    def __init__(self, hass, db, config_entry):
+    def __init__(self, hass, db, configEntry):
         self.hass = hass
         self._db = db
-        self._config_entry = config_entry
-        self._attr_unique_id = f"{config_entry.entry_id}_health"
+        self._configEntry = configEntry
+        self._attr_unique_id = f"{configEntry.entry_id}_health"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, "global_diagnostics")},
             name="Accurate Solar Forecast (Diagnostics)",
@@ -48,12 +48,12 @@ class AccurateSolarHealthSensor(BinarySensorEntity):
             for string in roof.strings.values():
                 # Check model
                 from .core import slugify
-                model_id = slugify(string.panel_model)
-                if model_id not in self._db.data:
+                modelId = slugify(string.panelModel)
+                if modelId not in self._db.data:
                     return True
                 # Check sensor group
-                group_id = slugify(string.selected_sensor_group)
-                if group_id not in self._db.sensor_groups:
+                groupId = slugify(string.selectedSensorGroup)
+                if groupId not in self._db.sensor_groups:
                     return True
                     
         return False
@@ -65,13 +65,13 @@ class AccurateSolarHealthSensor(BinarySensorEntity):
         if not self._db or not self._db.data:
             issues.append("Database not loaded or empty")
             
-        for roof_id, roof in self._db.roofs.items():
-            for string_id, string in roof.strings.items():
+        for roofId, roof in self._db.roofs.items():
+            for stringId, string in roof.strings.items():
                 from .core import slugify
-                if slugify(string.panel_model) not in self._db.data:
-                    issues.append(f"Orphan string '{string.name}': Model '{string.panel_model}' missing")
-                if slugify(string.selected_sensor_group) not in self._db.sensor_groups:
-                    issues.append(f"Orphan string '{string.name}': Sensor Group '{string.selected_sensor_group}' missing")
+                if slugify(string.panelModel) not in self._db.data:
+                    issues.append(f"Orphan string '{string.name}': Model '{string.panelModel}' missing")
+                if slugify(string.selectedSensorGroup) not in self._db.sensor_groups:
+                    issues.append(f"Orphan string '{string.name}': Sensor Group '{string.selectedSensorGroup}' missing")
                     
         return {
             "issues": issues,

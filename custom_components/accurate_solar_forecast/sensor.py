@@ -12,53 +12,53 @@ from .core import (
 
 _LOGGER = logging.getLogger(__name__)
 
-async def async_setup_entry(hass, config_entry, async_add_entities):
+async def async_setup_entry(hass, configEntry, asyncAddEntities):
     """Set up the Accurate Solar Forecast sensors from a config entry."""
     db = hass.data[DOMAIN]["db"]
     
     # CASE 1: SENSOR GROUP
-    if CONF_SENSOR_GROUP_NAME in config_entry.data:
-        ref_sensor_id = config_entry.data.get(CONF_REF_SENSOR)
-        device_identifiers = None
+    if CONF_SENSOR_GROUP_NAME in configEntry.data:
+        refSensorId = configEntry.data.get(CONF_REF_SENSOR)
+        deviceIdentifiers = None
         
-        if ref_sensor_id:
+        if refSensorId:
             try:
-                ent_reg = er.async_get(hass)
-                dev_reg = dr.async_get(hass)
-                ref_entry = ent_reg.async_get(ref_sensor_id)
-                if ref_entry and ref_entry.device_id:
-                    device = dev_reg.async_get(ref_entry.device_id)
+                entityRegistry = er.async_get(hass)
+                deviceRegistry = dr.async_get(hass)
+                refEntry = entityRegistry.async_get(refSensorId)
+                if refEntry and refEntry.device_id:
+                    device = deviceRegistry.async_get(refEntry.device_id)
                     if device:
-                        device_identifiers = device.identifiers
+                        deviceIdentifiers = device.identifiers
             except Exception as e:
                 _LOGGER.warning(f"Could not link to existing device: {e}")
 
-        async_add_entities([
-            SensorGroupVirtualSensor(hass, config_entry, device_identifiers),
-            SensorGroupCloudinessSensor(hass, config_entry, device_identifiers)
+        asyncAddEntities([
+            SensorGroupVirtualSensor(hass, configEntry, deviceIdentifiers),
+            SensorGroupCloudinessSensor(hass, configEntry, deviceIdentifiers)
         ])
 
     # CASE 2: ROOF (CONTAINS SOLAR STRINGS)
-    elif CONF_ROOF_NAME in config_entry.data:
-        roof_name = config_entry.data.get(CONF_ROOF_NAME)
-        roof_id = slugify(roof_name) if roof_name else "default"
-        roof_strings = db.get_roof_strings(roof_id)
+    elif CONF_ROOF_NAME in configEntry.data:
+        roofName = configEntry.data.get(CONF_ROOF_NAME)
+        roofId = slugify(roofName) if roofName else "default"
+        roofStrings = db.getRoofStrings(roofId)
         
         entities = []
-        for string_id, string_obj in roof_strings.items():
-            combined_data = string_obj.to_dict()
-            combined_data[CONF_ROOF_NAME] = roof_name
-            group_name = string_obj.selected_sensor_group
-            sensor_group_obj = db.get_sensor_group(group_name)
+        for stringId, stringObj in roofStrings.items():
+            combinedData = stringObj.to_dict()
+            combinedData[CONF_ROOF_NAME] = roofName
+            groupName = stringObj.selectedSensorGroup
+            sensorGroupObj = db.getSensorGroup(groupName)
             
-            if sensor_group_obj:
-                entities.append(SolarStringSensor(hass, combined_data, db, sensor_group_obj))
-                if string_obj.real_production_sensor:
-                    entities.append(SolarStringPerformanceSensor(hass, combined_data, db, sensor_group_obj))
+            if sensorGroupObj:
+                entities.append(SolarStringSensor(hass, combinedData, db, sensorGroupObj))
+                if stringObj.realProductionSensor:
+                    entities.append(SolarStringPerformanceSensor(hass, combinedData, db, sensorGroupObj))
                     
         if entities:
-            async_add_entities(entities, update_before_add=True)
+            asyncAddEntities(entities, update_before_add=True)
 
     # CASE 3: PV DATABASE MONITOR
-    if CONF_SENSOR_GROUP_NAME in config_entry.data and "db" in hass.data[DOMAIN]:
-         async_add_entities([AccurateSolarSensorDBSensor(hass, hass.data[DOMAIN]["db"])])
+    if CONF_SENSOR_GROUP_NAME in configEntry.data and "db" in hass.data[DOMAIN]:
+         asyncAddEntities([AccurateSolarSensorDBSensor(hass, hass.data[DOMAIN]["db"])])

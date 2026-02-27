@@ -10,7 +10,7 @@ _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS = ["sensor", "number", "select", "binary_sensor"]
 
-async def async_setup_entry(hass: HomeAssistant, entry):
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     # Cargar la DB y ponerla disponible globalmente
     if DOMAIN not in hass.data:
         db = AccurateSolarSensorDB(hass)
@@ -26,7 +26,7 @@ async def async_setup_entry(hass: HomeAssistant, entry):
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
-async def async_setup(hass: HomeAssistant, config):
+async def async_setup(hass: HomeAssistant, config: dict[str, Any]):
     # Inicialización global
     hass.data.setdefault(DOMAIN, {})
     if "db" not in hass.data[DOMAIN]:
@@ -35,11 +35,11 @@ async def async_setup(hass: HomeAssistant, config):
         hass.data[DOMAIN]["db"] = db
     return True
 
-async def async_unload_entry(hass: HomeAssistant, entry):
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Unload a config entry."""
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
-async def async_remove_entry(hass: HomeAssistant, entry) -> None:
+async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Handle removal of an entry."""
     # This is called when the user clicks 'Delete' on the Integration card.
     if DOMAIN in hass.data and "db" in hass.data[DOMAIN]:
@@ -48,19 +48,19 @@ async def async_remove_entry(hass: HomeAssistant, entry) -> None:
         # Case A: Sensor Group
         if CONF_SENSOR_GROUP_NAME in entry.data:
             # The key in DB is usually name.lower().replace(" ", "_")
-            group_name = entry.data[CONF_SENSOR_GROUP_NAME]
-            group_id = slugify(group_name)
-            _LOGGER.info(f"Removing Sensor Group from DB: {group_id}")
-            result = db.delete_sensor_group(group_id)
+            groupName = entry.data[CONF_SENSOR_GROUP_NAME]
+            groupId = slugify(groupName)
+            _LOGGER.info(f"Removing Sensor Group from DB: {groupId}")
+            result = db.deleteSensorGroup(groupId)
             if result:
                await result
                
         # Case B: Roof Entry
         if CONF_ROOF_NAME in entry.data:
-            roof_name = entry.data[CONF_ROOF_NAME]
-            roof_id = slugify(roof_name) if roof_name else "default"
-            _LOGGER.info(f"Removing Roof from DB: {roof_id}")
-            result = db.delete_roof(roof_id)
+            roofName = entry.data[CONF_ROOF_NAME]
+            roofId = slugify(roofName) if roofName else "default"
+            _LOGGER.info(f"Removing Roof from DB: {roofId}")
+            result = db.deleteRoof(roofId)
             if result:
                await result
                
@@ -68,26 +68,26 @@ async def async_remove_entry(hass: HomeAssistant, entry) -> None:
         return
 
 async def async_remove_config_entry_device(
-    hass: HomeAssistant, config_entry: ConfigEntry, device_entry: DeviceEntry
+    hass: HomeAssistant, configEntry: ConfigEntry, deviceEntry: DeviceEntry
 ) -> bool:
     """Allow user to remove a device via the UI and clean up the database."""
     if DOMAIN in hass.data and "db" in hass.data[DOMAIN]:
         db = hass.data[DOMAIN]["db"]
         
         # Check if this device is part of a Roof entry
-        if CONF_ROOF_NAME in config_entry.data:
-            roof_name = config_entry.data[CONF_ROOF_NAME]
-            roof_id = slugify(roof_name) if roof_name else "default"
+        if CONF_ROOF_NAME in configEntry.data:
+            roofName = configEntry.data[CONF_ROOF_NAME]
+            roofId = slugify(roofName) if roofName else "default"
             
             # Find the string ID from the device identifiers
             # Typically a set of tuples like {(DOMAIN, "str_mppt1")}
-            for domain, identifier in device_entry.identifiers:
+            for domain, identifier in deviceEntry.identifiers:
                 if domain == DOMAIN and isinstance(identifier, str) and identifier.startswith("str_"):
-                    string_id = identifier[4:] # remove 'str_' prefix
-                    _LOGGER.info(f"Removing string device '{string_id}' from roof '{roof_id}'")
+                    stringId = identifier[4:] # remove 'str_' prefix
+                    _LOGGER.info(f"Removing string device '{stringId}' from roof '{roofId}'")
                     
                     # Delete from our custom JSON DB
-                    db.delete_string_from_roof(roof_id, string_id)
+                    db.deleteStringFromRoof(roofId, stringId)
                     return True
                     
     # Return True to allow Home Assistant to complete the deletion of the device entity
