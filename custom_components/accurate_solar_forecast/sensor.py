@@ -53,11 +53,24 @@ async def async_setup_entry(hass, configEntry, asyncAddEntities):
             
             # Sensor group is now associated at roof level
             sensorGroupObj = db.getSensorGroupForRoof(roofId)
+
+            # Create the roof hub device in HA device registry
+            deviceRegistry = dr.async_get(hass)
+            roofHubIdentifier = (DOMAIN, f"roof_{roofId}")
+            deviceRegistry.async_get_or_create(
+                config_entry_id=configEntry.entry_id,
+                identifiers={roofHubIdentifier},
+                name=roofName,
+                manufacturer="Accurate Solar Forecast",
+                model="Roof Hub",
+                entry_type=dr.DeviceEntryType.SERVICE,
+            )
             
             entities = []
             for stringId, stringObj in roofStrings.items():
                 combinedData = stringObj.to_dict()
                 combinedData[CONF_ROOF_NAME] = roofName
+                combinedData["_roof_hub_identifier"] = roofHubIdentifier
                 
                 if sensorGroupObj:
                     entities.append(SolarStringSensor(hass, combinedData, db, sensorGroupObj))

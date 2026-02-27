@@ -203,10 +203,13 @@ class RoofSubentryFlowHandler(AccurateForecastCommonFlow, RoofsFlowMixin, Sensor
     async def async_step_user(self, userInput=None):
         await self._asyncInitRequirements()
         self._guidedFlow = True
-        return await self.async_step_roof_create_guided(userInput)
+        return await self.async_step_roof_create(userInput)
 
-    async def async_step_roof_create_guided(self, userInput=None):
-        """Create roof (Step 1), then chain: sensor_group_create (if missing) → select group → string creation."""
+    async def async_step_roof_create(self, userInput=None):
+        """Override StringsFlowMixin.async_step_roof_create for the guided flow.
+        HA maps step_id='roof_create' to this method via MRO, so this class's
+        version takes priority over the mixin's version.
+        """
         if userInput is not None:
             name = userInput["name"]
             tilt = userInput[CONF_TILT]
@@ -220,10 +223,10 @@ class RoofSubentryFlowHandler(AccurateForecastCommonFlow, RoofsFlowMixin, Sensor
 
             groups = self._db.listSensorGroups()
             if not groups:
-                # No sensor groups exist → create one first
+                # No sensor groups yet — create one first
                 return await self.async_step_sensor_group_create()
             else:
-                # Sensor groups exist → let user choose which to assign
+                # Sensor groups exist — let user choose which to assign
                 return await self.async_step_roof_select_sensor_group()
 
         schema = self._getRoofCreateSchema()

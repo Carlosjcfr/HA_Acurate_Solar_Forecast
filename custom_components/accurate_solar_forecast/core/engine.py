@@ -87,6 +87,9 @@ class SolarStringSensor(SensorEntity):
         deviceIdentifiers = None
         deviceName = None
         
+        # Use the roof hub as via_device when available
+        roofHubIdentifier = self._config.get("_roof_hub_identifier")
+        
         if realSensorId:
              entityRegistry = er.async_get(hass)
              entityEntry = entityRegistry.async_get(realSensorId)
@@ -97,7 +100,7 @@ class SolarStringSensor(SensorEntity):
                      deviceIdentifiers = device.identifiers
 
         if not deviceIdentifiers:
-            deviceIdentifiers = {(DOMAIN, self._attr_unique_id)} 
+            deviceIdentifiers = {(DOMAIN, f"str_{slugify(stringNameRaw)}")}
             deviceName = stringNameRaw
 
         self._attr_device_info = DeviceInfo(
@@ -105,7 +108,9 @@ class SolarStringSensor(SensorEntity):
             name=deviceName if not realSensorId else None,
             manufacturer=(self._panelData.brand if self._panelData else "Generic") if not realSensorId else None,
             model=modelName if not realSensorId else None,
-            via_device=(DOMAIN, self._sensorGroup.name if self._sensorGroup else "Unknown") if not realSensorId else None
+            via_device=roofHubIdentifier if roofHubIdentifier else (
+                (DOMAIN, self._sensorGroup.name if self._sensorGroup else "Unknown") if not realSensorId else None
+            )
         )
         
         # Performance caching
