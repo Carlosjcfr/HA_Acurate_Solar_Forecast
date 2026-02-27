@@ -14,51 +14,57 @@ _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass, configEntry, asyncAddEntities):
     """Set up the Accurate Solar Forecast sensors from a config entry."""
-    db = hass.data[DOMAIN]["db"]
-    
-    # CASE 1: SENSOR GROUP
-    if CONF_SENSOR_GROUP_NAME in configEntry.data:
-        refSensorId = configEntry.data.get(CONF_REF_SENSOR)
-        deviceIdentifiers = None
+    try:
+        domainData = hass.data.get(DOMAIN, {})
+        db = domainData.get("db")
+        if not db:
+            return
         
-        if refSensorId:
-            try:
-                entityRegistry = er.async_get(hass)
-                deviceRegistry = dr.async_get(hass)
-                refEntry = entityRegistry.async_get(refSensorId)
-                if refEntry and refEntry.device_id:
-                    device = deviceRegistry.async_get(refEntry.device_id)
-                    if device:
-                        deviceIdentifiers = device.identifiers
-            except Exception as e:
-                _LOGGER.warning(f"Could not link to existing device: {e}")
-
-        asyncAddEntities([
-            SensorGroupVirtualSensor(hass, configEntry, deviceIdentifiers),
-            SensorGroupCloudinessSensor(hass, configEntry, deviceIdentifiers)
-        ])
-
-    # CASE 2: ROOF (CONTAINS SOLAR STRINGS)
-    elif CONF_ROOF_NAME in configEntry.data:
-        roofName = configEntry.data.get(CONF_ROOF_NAME)
-        roofId = slugify(roofName) if roofName else "default"
-        roofStrings = db.getRoofStrings(roofId)
-        
-        entities = []
-        for stringId, stringObj in roofStrings.items():
-            combinedData = stringObj.to_dict()
-            combinedData[CONF_ROOF_NAME] = roofName
-            groupName = stringObj.selectedSensorGroup
-            sensorGroupObj = db.getSensorGroup(groupName)
+        # CASE 1: SENSOR GROUP
+        if CONF_SENSOR_GROUP_NAME in configEntry.data:
+            refSensorId = configEntry.data.get(CONF_REF_SENSOR)
+            deviceIdentifiers = None
             
-            if sensorGroupObj:
-                entities.append(SolarStringSensor(hass, combinedData, db, sensorGroupObj))
-                if stringObj.realProductionSensor:
-                    entities.append(SolarStringPerformanceSensor(hass, combinedData, db, sensorGroupObj))
-                    
-        if entities:
-            asyncAddEntities(entities, update_before_add=True)
+            if refSensorId:
+                try:
+                    entityRegistry = er.async_get(hass)
+                    deviceRegistry = dr.async_get(hass)
+                    refEntry = entityRegistry.async_get(refSensorId)
+                    if refEntry and refEntry.device_id:
+                        device = deviceRegistry.async_get(refEntry.device_id)
+                        if device:
+                            deviceIdentifiers = device.identifiers
+                except Exception as e:
+                    _LOGGER.warning(f"Could not link to existing device: {e}")
 
-    # CASE 3: PV DATABASE MONITOR
-    if CONF_SENSOR_GROUP_NAME in configEntry.data and "db" in hass.data[DOMAIN]:
-         asyncAddEntities([AccurateSolarSensorDBSensor(hass, hass.data[DOMAIN]["db"])])
+            asyncAddEntities([
+                SensorGroupVirtualSensor(hass, configEntry, deviceIdentifiers),
+                SensorGroupCloudinessSensor(hass, configEntry, deviceIdentifiers)
+            ])
+
+            # Add PV database monitor sensor
+            asyncAddEntities([AccurateSolarSensorDBSensor(hass, db)])
+
+        # CASE 2: ROOF (CONTAINS SOLAR STRINGS)
+        elif CONF_ROOF_NAME in configEntry.data:
+            roofName = configEntry.data.get(CONF_ROOF_NAME)
+            roofId = slugify(roofName) if roofName else "default"
+            roofStrings = db.getRoofStrings(roofId)
+            
+            entities = []
+            for stringId, stringObj in roofStrings.items():
+                combinedData = stringObj.to_dict()
+                combinedData[CONF_ROOF_NAME] = roofName
+                groupName = stringObj.selectedSensorGroup
+                sensorGroupObj = db.getSensorGroup(groupName)
+                
+                if sensorGroupObj:
+                    entities.append(SolarStringSensor(hass, combinedData, db, sensorGroupObj))
+                    if stringObj.realProductionSensor:
+                        entities.append(SolarStringPerformanceSensor(hass, combinedData, db, sensorGroupObj))
+                        
+            if entities:
+                asyncAddEntities(entities, update_before_add=True)
+    except Exception as e:
+        _LOGGER.exception(f"Error setting up sensor platform: {e}")
+

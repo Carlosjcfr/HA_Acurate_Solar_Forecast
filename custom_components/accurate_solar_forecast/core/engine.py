@@ -387,13 +387,16 @@ class AccurateSolarSensorDBSensor(SensorEntity):
     def __init__(self, hass, db):
         self.hass = hass
         self._db = db
-        self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, "pv_database_global")}, name="Módulos Fotovoltaicos", model="Database")
-        self._updateState()
+        self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, "pv_database_global")}, name="PV Modules Database", model="Database")
+        # Set initial value without calling async_write_ha_state (entity not registered yet)
+        models, roofs = self._db.listModels(), self._db.listRoofs()
+        self._attr_native_value = len(models) + len(roofs)
 
     def _updateState(self):
         models, roofs = self._db.listModels(), self._db.listRoofs()
         self._attr_native_value = len(models) + len(roofs)
-        self.async_write_ha_state()
+        if self.hass and self.entity_id:
+            self.async_write_ha_state()
     
     async def async_added_to_hass(self):
         self._updateState()

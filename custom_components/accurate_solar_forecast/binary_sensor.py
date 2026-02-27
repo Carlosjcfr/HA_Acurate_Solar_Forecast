@@ -11,11 +11,13 @@ _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass, configEntry, asyncAddEntities):
     """Set up the diagnostic binary sensors."""
-    db = hass.data[DOMAIN]["db"]
-    
-    # We only add the health sensor once (per integration entry that represents a global status)
-    # Usually we can tie it to the first config entry or a global virtual device.
-    asyncAddEntities([AccurateSolarHealthSensor(hass, db, configEntry)])
+    try:
+        domainData = hass.data.get(DOMAIN, {})
+        db = domainData.get("db")
+        if db:
+            asyncAddEntities([AccurateSolarHealthSensor(hass, db, configEntry)])
+    except Exception as e:
+        _LOGGER.exception(f"Error setting up binary_sensor platform: {e}")
 
 class AccurateSolarHealthSensor(BinarySensorEntity):
     """Reflects the global health of the integration."""
@@ -39,43 +41,43 @@ class AccurateSolarHealthSensor(BinarySensorEntity):
     @property
     def is_on(self) -> bool:
         """Return True if there is a problem."""
-        # Check 1: Database availability
-        if not self._db or not self._db.data:
+        try:
+            if not self._db or not self._db.data:
+                return True
+            for roof in self._db.roofs.values():
+                for string in roof.strings.values():
+                    from .core import slugify
+                    modelId = slugify(string.panelModel)
+                    if modelId not in self._db.data:
+                        return True
+                    groupId = slugify(string.selectedSensorGroup)
+                    if groupId not in self._db.sensor_groups:
+                        return True
+            return False
+        except Exception:
             return True
-            
-        # Check 2: Orphan strings (strings referencing non-existent models)
-        for roof in self._db.roofs.values():
-            for string in roof.strings.values():
-                # Check model
-                from .core import slugify
-                modelId = slugify(string.panelModel)
-                if modelId not in self._db.data:
-                    return True
-                # Check sensor group
-                groupId = slugify(string.selectedSensorGroup)
-                if groupId not in self._db.sensor_groups:
-                    return True
-                    
-        return False
 
     @property
     def extra_state_attributes(self):
         """Return detailed status."""
-        issues = []
-        if not self._db or not self._db.data:
-            issues.append("Database not loaded or empty")
-            
-        for roofId, roof in self._db.roofs.items():
-            for stringId, string in roof.strings.items():
-                from .core import slugify
-                if slugify(string.panelModel) not in self._db.data:
-                    issues.append(f"Orphan string '{string.name}': Model '{string.panelModel}' missing")
-                if slugify(string.selectedSensorGroup) not in self._db.sensor_groups:
-                    issues.append(f"Orphan string '{string.name}': Sensor Group '{string.selectedSensorGroup}' missing")
-                    
-        return {
-            "issues": issues,
-            "models_count": len(self._db.data),
-            "roofs_count": len(self._db.roofs),
-            "groups_count": len(self._db.sensor_groups),
-        }
+        try:
+            issues = []
+            if not self._db or not self._db.data:
+                issues.append("Database not loaded or empty")
+
+            for roofId, roof in self._db.roofs.items():
+                for stringId, string in roof.strings.items():
+                    from .core import slugify
+                    if slugify(string.panelModel) not in self._db.data:
+                        issues.append(f"Orphan string '{string.name}': Model '{string.panelModel}' missing")
+                    if slugify(string.selectedSensorGroup) not in self._db.sensor_groups:
+                        issues.append(f"Orphan string '{string.name}': Sensor Group '{string.selectedSensorGroup}' missing")
+
+            return {
+                "issues": issues,
+                "models_count": len(self._db.data),
+                "roofs_count": len(self._db.roofs),
+                "groups_count": len(self._db.sensor_groups),
+            }
+        except Exception:
+            return {"issues": ["Error reading database"]}
