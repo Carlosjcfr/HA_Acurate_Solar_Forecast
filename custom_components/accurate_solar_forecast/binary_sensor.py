@@ -12,6 +12,10 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(hass, configEntry, asyncAddEntities):
     """Set up the diagnostic binary sensors."""
     try:
+        # Only create the health sensor on the main entry (no special key in data)
+        from .variables.const import CONF_SENSOR_GROUP_NAME, CONF_ROOF_NAME
+        if CONF_SENSOR_GROUP_NAME in configEntry.data or CONF_ROOF_NAME in configEntry.data:
+            return
         domainData = hass.data.get(DOMAIN, {})
         db = domainData.get("db")
         if db:
@@ -33,9 +37,9 @@ class AccurateSolarHealthSensor(BinarySensorEntity):
         self._attr_unique_id = f"{configEntry.entry_id}_health"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, "global_diagnostics")},
-            name="Accurate Solar Forecast (Diagnostics)",
+            name="Diagnosis",
             manufacturer="Accurate Solar Forecast",
-            model="Diagnostic System",
+            model="Diagnosis",
         )
 
     @property
@@ -44,15 +48,15 @@ class AccurateSolarHealthSensor(BinarySensorEntity):
         try:
             if not self._db or not self._db.data:
                 return True
-            for roof in self._db.roofs.values():
+            from .core import slugify
+            for roofId, roof in self._db.roofs.items():
                 for string in roof.strings.values():
-                    from .core import slugify
                     modelId = slugify(string.panelModel)
                     if modelId not in self._db.data:
                         return True
-                    groupId = slugify(string.selectedSensorGroup)
-                    if groupId not in self._db.sensor_groups:
-                        return True
+                # Sensor group is now at roof level
+                if not self._db.getSensorGroupForRoof(roofId):
+                    return True
             return False
         except Exception:
             return True
@@ -61,17 +65,17 @@ class AccurateSolarHealthSensor(BinarySensorEntity):
     def extra_state_attributes(self):
         """Return detailed status."""
         try:
+            from .core import slugify
             issues = []
             if not self._db or not self._db.data:
                 issues.append("Database not loaded or empty")
 
             for roofId, roof in self._db.roofs.items():
                 for stringId, string in roof.strings.items():
-                    from .core import slugify
                     if slugify(string.panelModel) not in self._db.data:
                         issues.append(f"Orphan string '{string.name}': Model '{string.panelModel}' missing")
-                    if slugify(string.selectedSensorGroup) not in self._db.sensor_groups:
-                        issues.append(f"Orphan string '{string.name}': Sensor Group '{string.selectedSensorGroup}' missing")
+                if not self._db.getSensorGroupForRoof(roofId):
+                    issues.append(f"Roof '{roofId}' has no sensor group assigned")
 
             return {
                 "issues": issues,

@@ -91,28 +91,28 @@ class AccurateForecastCommonFlow:
         if tempPanelDefault is not vol.UNDEFINED and tempPanelDefault not in validTemperatureSensors:
              validTemperatureSensors.append(tempPanelDefault)
 
+        # Safety guard: if no sensors of a type found, fall back to unfiltered selector
+        def _entitySel(entityList):
+            if entityList:
+                return selector.EntitySelector(
+                    selector.EntitySelectorConfig(include_entities=entityList)
+                )
+            return selector.EntitySelector(
+                selector.EntitySelectorConfig(domain="sensor")
+            )
+
         return vol.Schema({
             vol.Required(CONF_SENSOR_GROUP_NAME, default=self._getDefault(CONF_SENSOR_GROUP_NAME, defaultData, "")): str,
             vol.Optional(CONF_WEATHER_ENTITY, default=self._getDefault(CONF_WEATHER_ENTITY, defaultData)): selector.EntitySelector(
-                selector.SelectSelectorConfig(domain="weather")
+                selector.EntitySelectorConfig(domain="weather")
             ),
-            vol.Optional(CONF_ILLUMINANCE_SENSOR, default=illuDefault): selector.EntitySelector(
-                selector.SelectSelectorConfig(include_entities=validIlluminanceSensors)
-            ),
-            vol.Required(CONF_REF_SENSOR, default=refDefault): selector.EntitySelector(
-                selector.SelectSelectorConfig(include_entities=validIrradianceSensors)
-            ),
+            vol.Optional(CONF_ILLUMINANCE_SENSOR, default=illuDefault): _entitySel(validIlluminanceSensors),
+            vol.Required(CONF_REF_SENSOR, default=refDefault): _entitySel(validIrradianceSensors),
             vol.Required(CONF_REF_TILT, default=self._getDefault(CONF_REF_TILT, defaultData, 0)): vol.All(vol.Coerce(float), vol.Range(min=0, max=90)),
             vol.Required(CONF_REF_ORIENTATION, default=self._getDefault(CONF_REF_ORIENTATION, defaultData, 180)): vol.All(vol.Coerce(float), vol.Range(min=0, max=360)),
-            vol.Required(CONF_TEMP_SENSOR, default=tempDefault): selector.EntitySelector(
-                selector.SelectSelectorConfig(include_entities=validTemperatureSensors)
-            ),
-            vol.Optional(CONF_TEMP_PANEL_SENSOR, default=tempPanelDefault): selector.EntitySelector(
-                selector.EntitySelectorConfig(include_entities=validTemperatureSensors)
-            ),
-            vol.Optional(CONF_WIND_SENSOR, default=windDefault): selector.EntitySelector(
-                selector.EntitySelectorConfig(include_entities=validWindSensors)
-            ),
+            vol.Required(CONF_TEMP_SENSOR, default=tempDefault): _entitySel(validTemperatureSensors),
+            vol.Optional(CONF_TEMP_PANEL_SENSOR, default=tempPanelDefault): _entitySel(validTemperatureSensors),
+            vol.Optional(CONF_WIND_SENSOR, default=windDefault): _entitySel(validWindSensors),
         })
 
     def _getStringSelectRelationsSchema(self):
