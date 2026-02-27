@@ -209,7 +209,8 @@
             "no_sensor_groups": "No sensor groups. Create one first.",
             "no_sensor_groups_available": "No sensor groups available.",
             "no_models_available_to_delete": "No models available to delete.",
-            "cannot_delete_default": "Cannot delete the default model."
+            "cannot_delete_default": "Cannot delete the default model.",
+            "sensor_unavailable": "One or more selected sensors are unavailable or have an unknown state. Please check your configuration."
         },
         "abort": {
             "already_configured": "Device is already configured",
@@ -227,6 +228,9 @@
         "number": {
             "tilt": {
                 "name": "Tilt"
+            },
+            "azimuth": {
+                "name": "Azimuth"
             }
         },
         "sensor": {
@@ -238,6 +242,11 @@
             },
             "cloud_coverage": {
                 "name": "Cloudiness"
+            }
+        },
+        "binary_sensor": {
+            "integration_health": {
+                "name": "Integration Health"
             }
         }
     },
@@ -312,11 +321,11 @@
             }
         },
         "string": {
-            "name": "Nameless String ",
+            "name": "Nameless String",
             "title": "Add New String",
             "flow_title": "+ Solar String",
             "initiate_flow": {
-                "user": "String"
+                "user": "Solar String"
             },
             "step": {
                 "string_create_select_relations": {
@@ -362,7 +371,7 @@
             "title": "⚙️ Manage Devices and Data",
             "flow_title": "⚙️ Manage Existing",
             "initiate_flow": {
-                "user": "⚙️ Manage"
+                "user": "⚙️ Manage existing"
             },
             "step": {
                 "menu_management": {
