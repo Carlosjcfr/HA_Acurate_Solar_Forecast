@@ -53,6 +53,11 @@ async def async_setup_entry(hass, configEntry, asyncAddEntities):
             
             # Sensor group is now associated at roof level
             sensorGroupObj = db.getSensorGroupForRoof(roofId)
+            if not sensorGroupObj:
+                _LOGGER.warning(
+                    f"Roof '{roofId}' has no sensor group assigned — "
+                    "strings registered in degraded mode (no forecast)."
+                )
 
             # Create the roof hub device in HA device registry
             deviceRegistry = dr.async_get(hass)
@@ -72,10 +77,10 @@ async def async_setup_entry(hass, configEntry, asyncAddEntities):
                 combinedData[CONF_ROOF_NAME] = roofName
                 combinedData["_roof_hub_identifier"] = roofHubIdentifier
                 
-                if sensorGroupObj:
-                    entities.append(SolarStringSensor(hass, combinedData, db, sensorGroupObj))
-                    if stringObj.realProductionSensor:
-                        entities.append(SolarStringPerformanceSensor(hass, combinedData, db, sensorGroupObj))
+                # Always create string sensor (sensorGroupObj=None = degraded mode)
+                entities.append(SolarStringSensor(hass, combinedData, db, sensorGroupObj))
+                if stringObj.realProductionSensor:
+                    entities.append(SolarStringPerformanceSensor(hass, combinedData, db, sensorGroupObj))
                         
             if entities:
                 asyncAddEntities(entities, update_before_add=True)

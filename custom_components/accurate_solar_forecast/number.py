@@ -17,12 +17,13 @@ async def async_setup_entry(hass, configEntry, asyncAddEntities):
         roofId = slugify(roofName) if roofName else "default"
         roofStrings = db.getRoofStrings(roofId)
         
+        # Sensor group is now at roof level
+        sensorGroupObj = db.getSensorGroupForRoof(roofId)
+        
         entities = []
         for stringId, stringObj in roofStrings.items():
             combinedData = stringObj.to_dict()
             combinedData[CONF_ROOF_NAME] = roofName
-            sensorGroupObj = db.getSensorGroup(stringObj.selectedSensorGroup)
-            
             entities.append(SolarStringTiltNumber(hass, combinedData, db, configEntry, stringId, roofId, sensorGroupObj))
             entities.append(SolarStringAzimuthNumber(hass, combinedData, db, configEntry, stringId, roofId, sensorGroupObj))
             
@@ -30,4 +31,5 @@ async def async_setup_entry(hass, configEntry, asyncAddEntities):
             asyncAddEntities(entities)
     except Exception as e:
         _LOGGER.exception(f"Error setting up number platform: {e}")
+
 
