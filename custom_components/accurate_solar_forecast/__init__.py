@@ -2,7 +2,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.device_registry import DeviceEntry
 from .variables.const import DOMAIN, CONF_SENSOR_GROUP_NAME, CONF_ROOF_NAME
-from .databases.acurate_solar_sensor_db import AcurateSolarSensorDB
+from .databases import AccurateSolarSensorDB
+from .core import slugify
 import logging
 
 _LOGGER = logging.getLogger(__name__)
@@ -12,13 +13,13 @@ PLATFORMS = ["sensor", "number", "select"]
 async def async_setup_entry(hass: HomeAssistant, entry):
     # Cargar la DB y ponerla disponible globalmente
     if DOMAIN not in hass.data:
-        db = AcurateSolarSensorDB(hass)
+        db = AccurateSolarSensorDB(hass)
         await db.async_load()
         hass.data[DOMAIN] = {"db": db}
     else:
         # Ensure older entries get the DB reference if hot-reloading
         if "db" not in hass.data[DOMAIN]:
-             db = AcurateSolarSensorDB(hass)
+             db = AccurateSolarSensorDB(hass)
              await db.async_load()
              hass.data[DOMAIN]["db"] = db
 
@@ -29,7 +30,7 @@ async def async_setup(hass: HomeAssistant, config):
     # Inicialización global
     hass.data.setdefault(DOMAIN, {})
     if "db" not in hass.data[DOMAIN]:
-        db = AcurateSolarSensorDB(hass)
+        db = AccurateSolarSensorDB(hass)
         await db.async_load()
         hass.data[DOMAIN]["db"] = db
     return True
@@ -48,7 +49,7 @@ async def async_remove_entry(hass: HomeAssistant, entry) -> None:
         if CONF_SENSOR_GROUP_NAME in entry.data:
             # The key in DB is usually name.lower().replace(" ", "_")
             group_name = entry.data[CONF_SENSOR_GROUP_NAME]
-            group_id = group_name.lower().replace(" ", "_")
+            group_id = slugify(group_name)
             _LOGGER.info(f"Removing Sensor Group from DB: {group_id}")
             result = db.delete_sensor_group(group_id)
             if result:
@@ -57,7 +58,7 @@ async def async_remove_entry(hass: HomeAssistant, entry) -> None:
         # Case B: Roof Entry
         if CONF_ROOF_NAME in entry.data:
             roof_name = entry.data[CONF_ROOF_NAME]
-            roof_id = roof_name.lower().replace(" ", "_") if roof_name else "default"
+            roof_id = slugify(roof_name) if roof_name else "default"
             _LOGGER.info(f"Removing Roof from DB: {roof_id}")
             result = db.delete_roof(roof_id)
             if result:
@@ -76,7 +77,7 @@ async def async_remove_config_entry_device(
         # Check if this device is part of a Roof entry
         if CONF_ROOF_NAME in config_entry.data:
             roof_name = config_entry.data[CONF_ROOF_NAME]
-            roof_id = roof_name.lower().replace(" ", "_") if roof_name else "default"
+            roof_id = slugify(roof_name) if roof_name else "default"
             
             # Find the string ID from the device identifiers
             # Typically a set of tuples like {(DOMAIN, "str_mppt1")}

@@ -11,6 +11,7 @@ from ..variables.const import (
     CONF_NUM_PANELS,
     CONF_NUM_STRINGS
 )
+from ..core import slugify
 
 class StringsFlowMixin:
     # =================================================================================
@@ -59,9 +60,9 @@ class StringsFlowMixin:
              
              # Always save string to DB under the current Roof
              roof_name = final_data.get(CONF_ROOF_NAME)
-             roof_id = roof_name.lower().replace(" ", "_") if roof_name else "default"
+             roof_id = slugify(roof_name) if roof_name else "default"
              string_name = final_data[CONF_STRING_NAME]
-             string_id = string_name.lower().replace(" ", "_")
+             string_id = slugify(string_name)
              
              string_data = {
                  CONF_STRING_NAME: string_name,

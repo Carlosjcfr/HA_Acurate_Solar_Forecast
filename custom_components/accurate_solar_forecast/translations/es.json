@@ -2,8 +2,8 @@
     "config": {
         "step": {
             "setup": {
-                "title": "Acurate Solar Forecast",
-                "description": "¿Quieres añadir la integración Acurate Solar Forecast?"
+                "title": "Accurate Solar Forecast",
+                "description": "¿Quieres añadir la integración Accurate Solar Forecast?"
             },
             "menu_management": {
                 "title": "Gestión de la Integración",

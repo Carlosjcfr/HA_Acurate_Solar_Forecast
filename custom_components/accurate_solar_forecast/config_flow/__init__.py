@@ -1,10 +1,11 @@
+"""Configuration flow for Accurate Solar Forecast."""
 import voluptuous as vol
 import logging
 from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.helpers import selector
-from ..variables.const import *
-from ..databases.acurate_solar_sensor_db import AcurateSolarSensorDB
+from ..variables import *
+from ..databases import AccurateSolarSensorDB
 from .flow_pv_models import PvModelsFlowMixin
 from .flow_roofs import RoofsFlowMixin
 from .flow_sensor_groups import SensorGroupsFlowMixin
@@ -22,11 +23,17 @@ class AccurateForecastCommonFlow:
         if not hasattr(self, "temp_data"):
             self.temp_data = {}
         if "db" not in self.hass.data[DOMAIN]:
-            self._db = AcurateSolarSensorDB(self.hass)
+            self._db = AccurateSolarSensorDB(self.hass)
             await self._db.async_load()
             self.hass.data[DOMAIN]["db"] = self._db
         else:
             self._db = self.hass.data[DOMAIN]["db"]
+
+    def _get_default(self, key, source_data=None, fallback=vol.UNDEFINED):
+        """Helper to get default value for schemas."""
+        data = source_data if source_data is not None else self.temp_data
+        val = data.get(key)
+        return val if val is not None else fallback
 
     def _get_sensor_group_schema(self, default_data):
         valid_irradiance_sensors = []
@@ -59,33 +66,29 @@ class AccurateForecastCommonFlow:
         valid_illuminance_sensors.sort()
         valid_temperature_sensors.sort()
 
-        def get_default(key, fallback=vol.UNDEFINED):
-            val = default_data.get(key)
-            return val if val is not None else fallback
-
-        ref_default = get_default(CONF_REF_SENSOR)
+        ref_default = self._get_default(CONF_REF_SENSOR, default_data)
         if ref_default is not vol.UNDEFINED and ref_default not in valid_irradiance_sensors:
              valid_irradiance_sensors.append(ref_default)
              
-        wind_default = get_default(CONF_WIND_SENSOR)
+        wind_default = self._get_default(CONF_WIND_SENSOR, default_data)
         if wind_default is not vol.UNDEFINED and wind_default not in valid_wind_sensors:
              valid_wind_sensors.append(wind_default)
 
-        illu_default = get_default(CONF_ILLUMINANCE_SENSOR)
+        illu_default = self._get_default(CONF_ILLUMINANCE_SENSOR, default_data)
         if illu_default is not vol.UNDEFINED and illu_default not in valid_illuminance_sensors:
              valid_illuminance_sensors.append(illu_default)
 
-        temp_default = get_default(CONF_TEMP_SENSOR)
+        temp_default = self._get_default(CONF_TEMP_SENSOR, default_data)
         if temp_default is not vol.UNDEFINED and temp_default not in valid_temperature_sensors:
              valid_temperature_sensors.append(temp_default)
 
-        temp_panel_default = get_default(CONF_TEMP_PANEL_SENSOR)
+        temp_panel_default = self._get_default(CONF_TEMP_PANEL_SENSOR, default_data)
         if temp_panel_default is not vol.UNDEFINED and temp_panel_default not in valid_temperature_sensors:
              valid_temperature_sensors.append(temp_panel_default)
 
         return vol.Schema({
-            vol.Required(CONF_SENSOR_GROUP_NAME, default=get_default(CONF_SENSOR_GROUP_NAME, "")): str,
-            vol.Optional(CONF_WEATHER_ENTITY, default=get_default(CONF_WEATHER_ENTITY)): selector.EntitySelector(
+            vol.Required(CONF_SENSOR_GROUP_NAME, default=self._get_default(CONF_SENSOR_GROUP_NAME, default_data, "")): str,
+            vol.Optional(CONF_WEATHER_ENTITY, default=self._get_default(CONF_WEATHER_ENTITY, default_data)): selector.EntitySelector(
                 selector.SelectSelectorConfig(domain="weather")
             ),
             vol.Optional(CONF_ILLUMINANCE_SENSOR, default=illu_default): selector.EntitySelector(
@@ -94,8 +97,8 @@ class AccurateForecastCommonFlow:
             vol.Required(CONF_REF_SENSOR, default=ref_default): selector.EntitySelector(
                 selector.SelectSelectorConfig(include_entities=valid_irradiance_sensors)
             ),
-            vol.Required(CONF_REF_TILT, default=get_default(CONF_REF_TILT, 0)): vol.All(vol.Coerce(float), vol.Range(min=0, max=90)),
-            vol.Required(CONF_REF_ORIENTATION, default=get_default(CONF_REF_ORIENTATION, 180)): vol.All(vol.Coerce(float), vol.Range(min=0, max=360)),
+            vol.Required(CONF_REF_TILT, default=self._get_default(CONF_REF_TILT, default_data, 0)): vol.All(vol.Coerce(float), vol.Range(min=0, max=90)),
+            vol.Required(CONF_REF_ORIENTATION, default=self._get_default(CONF_REF_ORIENTATION, default_data, 180)): vol.All(vol.Coerce(float), vol.Range(min=0, max=360)),
             vol.Required(CONF_TEMP_SENSOR, default=temp_default): selector.EntitySelector(
                 selector.SelectSelectorConfig(include_entities=valid_temperature_sensors)
             ),
@@ -121,11 +124,7 @@ class AccurateForecastCommonFlow:
          valid_power_sensors.sort()
          
          group_options = list(sensor_groups.keys())
-
-         def get_default(key, fallback=vol.UNDEFINED):
-             val = self.temp_data.get(key)
-             return val if val is not None else fallback
-
+         
          group_default = self.temp_data.get("selected_sensor_group")
          if group_default not in group_options:
              group_default = vol.UNDEFINED
@@ -133,9 +132,9 @@ class AccurateForecastCommonFlow:
          brand_default = self.temp_data.get(CONF_BRAND, "Generic")
          if brand_default not in brands_list:
              brand_default = vol.UNDEFINED
-
+             
          schema_dict = {
-            vol.Required(CONF_STRING_NAME, default=get_default(CONF_STRING_NAME)): str,
+            vol.Required(CONF_STRING_NAME, default=self._get_default(CONF_STRING_NAME)): str,
             vol.Required("selected_sensor_group", default=group_default): selector.SelectSelector(
                 selector.SelectSelectorConfig(options=group_options, mode="dropdown")
             ),
@@ -161,10 +160,6 @@ class AccurateForecastCommonFlow:
         })
 
     def _get_string_details_schema(self):
-        def get_default(key, fallback=vol.UNDEFINED):
-            val = self.temp_data.get(key)
-            return val if val is not None else fallback
-
         selected_brand = self.temp_data.get(CONF_BRAND, "Generic")
         models_filtered = self._db.list_models_by_brand(selected_brand)
         
@@ -196,8 +191,8 @@ class AccurateForecastCommonFlow:
             vol.Required(CONF_PANEL_MODEL, default=model_default): selector.SelectSelector(
                 selector.SelectSelectorConfig(options=model_options, mode="dropdown")
             ),
-            vol.Required(CONF_NUM_PANELS, default=get_default(CONF_NUM_PANELS, 1)): vol.All(int, vol.Range(min=1)),
-            vol.Required(CONF_NUM_STRINGS, default=get_default(CONF_NUM_STRINGS, 1)): vol.All(int, vol.Range(min=1)),
+            vol.Required(CONF_NUM_PANELS, default=self._get_default(CONF_NUM_PANELS, fallback=1)): vol.All(int, vol.Range(min=1)),
+            vol.Required(CONF_NUM_STRINGS, default=self._get_default(CONF_NUM_STRINGS, fallback=1)): vol.All(int, vol.Range(min=1)),
             vol.Required(CONF_TILT, default=default_tilt): vol.All(vol.Coerce(float), vol.Range(min=0, max=90)),
             vol.Required(CONF_AZIMUTH, default=default_azimuth): vol.All(vol.Coerce(float), vol.Range(min=0, max=360)),
         })
@@ -232,20 +227,29 @@ class MenuSubentryFlowHandler(AccurateForecastCommonFlow, PvModelsFlowMixin, Roo
         await self._async_init_requirements()
         return await super().async_step_menu_management(user_input)
 
+from ..core import get_subentry_menu_state
+
 class AccurateForecastFlow(AccurateForecastCommonFlow, PvModelsFlowMixin, RoofsFlowMixin, SensorGroupsFlowMixin, StringsFlowMixin, config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
     @classmethod
     @callback
     def async_get_supported_subentry_types(cls, config_entry) -> dict[str, type[ConfigSubentryFlow]]:
-        """Devolver flujos subentry soportados para habilitar las Píldoras (Botones Flotantes)"""
-        return {
+        """Devolver flujos subentry soportados dinámicamente según el estado."""
+        state = get_subentry_menu_state(config_entry.hass)
+        
+        supported = {
             "pv_model": PvModelSubentryFlowHandler,
             "roof": RoofSubentryFlowHandler,
             "sensor_group": SensorGroupSubentryFlowHandler,
-            "string": StringSubentryFlowHandler,
             "management": MenuSubentryFlowHandler,
         }
+        
+        # Solo permitimos añadir un "String" si hay infraestructura previa
+        if state["can_add_string"]:
+            supported["string"] = StringSubentryFlowHandler
+            
+        return supported
 
     def __init__(self):
         self._db = None

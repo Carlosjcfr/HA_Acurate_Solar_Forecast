@@ -7,7 +7,7 @@ from ..core import slugify
 STORAGE_VERSION = 1
 STORAGE_KEY = "accurate_forecast_pv_models"
 
-class AcurateSolarSensorDB:
+class AccurateSolarSensorDB:
     def __init__(self, hass):
         self._store = Store(hass, STORAGE_VERSION, STORAGE_KEY)
         self.data = {}
