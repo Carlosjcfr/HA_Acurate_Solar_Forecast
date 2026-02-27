@@ -1,8 +1,9 @@
 import math
 import logging
+from typing import Any, Optional
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.components.sensor import SensorEntity, SensorDeviceClass, SensorStateClass
 from homeassistant.const import UnitOfPower
-from homeassistant.core import callback
 from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers import device_registry as dr, entity_registry as er
@@ -15,7 +16,7 @@ _LOGGER = logging.getLogger(__name__)
 SUN_MOVEMENT_THRESHOLD = 0.5  # Re-calculate geometry only if sun moves > 0.5 degrees
 SENSOR_REFRESH_THRESHOLD = 5.0 # Re-calculate if input changes significantly
 
-def get_converted_value(hass, entity_id, target_type, default=0.0):
+def get_converted_value(hass: HomeAssistant, entity_id: str, target_type: str, default: float = 0.0) -> float:
     """Fetch state and convert to target internal units (Celsius, m/s, W/m2)."""
     if not entity_id:
         return default
@@ -62,7 +63,7 @@ def get_converted_value(hass, entity_id, target_type, default=0.0):
 
 # --- SENSOR CLASSES ---
 class SolarStringSensor(SensorEntity):
-    def __init__(self, hass, config_entry_data, db, sensor_group_data):
+    def __init__(self, hass: HomeAssistant, config_entry_data: dict[str, Any], db: Any, sensor_group_data: Any):
         self.hass = hass
         self._config = config_entry_data
         self._db = db
@@ -115,10 +116,10 @@ class SolarStringSensor(SensorEntity):
         self._last_t_amb = -100.0
 
     @property
-    def check_config(self):
+    def check_config(self) -> bool:
         return self._panel_data is not None and self._sensor_group is not None
 
-    def calculate_cos_incidence(self, sun_az, sun_el, panel_az, panel_tilt):
+    def calculate_cos_incidence(self, sun_az: float, sun_el: float, panel_az: float, panel_tilt: float) -> float:
         sol_zenith_rad = math.radians(90 - sun_el)
         sol_az_rad = math.radians(sun_az)
         panel_tilt_rad = math.radians(panel_tilt)
@@ -256,13 +257,13 @@ class SensorGroupVirtualSensor(SensorEntity):
                 entry_type=dr.DeviceEntryType.SERVICE
             )
 
-    async def async_added_to_hass(self):
+    async def async_added_to_hass(self) -> None:
         sensors = [v for k,v in self._config.items() if "sensor" in k or k == CONF_WEATHER_ENTITY]
         self.async_on_remove(async_track_state_change_event(self.hass, sensors, self._update_state))
         self._update_state()
 
     @callback
-    def _update_state(self, event=None):
+    def _update_state(self, event: Any = None) -> None:
         attributes = {}
         status = "OK"
         for k, attr in [(CONF_REF_SENSOR, "irradiance"), (CONF_TEMP_SENSOR, "temperature")]:
@@ -286,7 +287,7 @@ class SensorGroupCloudinessSensor(SensorEntity):
     _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_icon = "mdi:cloud-percent"
 
-    def __init__(self, hass, config_entry, target_device_identifiers=None):
+    def __init__(self, hass: HomeAssistant, config_entry: Any, target_device_identifiers: Any = None):
         self.hass = hass
         self._config = config_entry.data
         self._name = self._config.get(CONF_SENSOR_GROUP_NAME)

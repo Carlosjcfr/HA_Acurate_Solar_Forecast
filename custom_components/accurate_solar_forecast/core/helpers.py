@@ -1,3 +1,5 @@
+from homeassistant.core import HomeAssistant
+from typing import Any
 from ..variables.const import DOMAIN
 
 def slugify(text: str) -> str:
@@ -6,8 +8,8 @@ def slugify(text: str) -> str:
         return ""
     return str(text).lower().replace(" ", "_").strip()
 
-def get_subentry_menu_state(hass):
-    """Analiza la DB y devuelve el estado de preparación de la integración."""
+def get_subentry_menu_state(hass: HomeAssistant) -> dict[str, bool]:
+    """Analyze the DB and return the integration's preparation state."""
     db = hass.data.get(DOMAIN, {}).get("db")
     
     if not db:

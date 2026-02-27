@@ -18,12 +18,22 @@ Olvídate de comprar múltiples sensores de irradiancia.
 * Utiliza la posición solar en tiempo real (Azimut y Elevación) para calcular el **Ángulo de Incidencia (AOI)**.
 * **Gestión Geométrica Completa:** Configura la orientación e inclinación tanto de tus paneles como de tus sensores de referencia (ej: una estación meteorológica horizontal o un sensor en el tejado).
 
-### ⚙️ Arquitectura Modular (Nuevo)
+### ⚙️ Arquitectura Modular (v1.3.0)
 
-Diseñado para instalaciones complejas:
+El sistema ha sido completamente refactorizado para separar la persistencia de datos del motor de cálculo:
 
-* **Grupos de Sensores:** Configura tus estaciones meteorológicas o conjuntos de sensores *una sola vez*. Se crearán como Dispositivos en Home Assistant.
-* **Strings Flexibles:** Crea múltiples strings virtuales (ej: Este, Oeste, Pérgola) usando el mismo grupo de sensores como fuente.
+* **`core/` (El Cerebro):** Motores de transposición solar y lógica de sensores.
+* **`databases/` (La Memoria):** Motor JSON basado en Home Assistant Store para persistencia de paneles y roofs.
+* **`config_flow/` (La Interfaz):** Sistema de sub-entradas tipo "pill" para una gestión dinámica.
+
+```mermaid
+graph TD
+    UI[Config Flow UI] --> DB[(JSON Store DB)]
+    DB --> Engine[Solar Calc Engine]
+    Sun[Sun Component] --> Engine
+    Sensors[Real Sensors] --> Engine
+    Engine --> Entities[String Power Entities]
+```
 
 ### 💾 Base de Datos de Paneles (PV Database)
 
