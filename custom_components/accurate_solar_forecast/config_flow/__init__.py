@@ -239,23 +239,14 @@ class AccurateForecastFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @classmethod
     @callback
     def async_get_supported_subentry_types(cls, configEntry) -> dict[str, type[ConfigSubentryFlow]]:
-        """Return supported subentry flow types dynamically based on state."""
-        try:
-            state = getSubentryMenuState(configEntry.hass)
-            
-            supported = {
-                "pv_model": PvModelSubentryFlowHandler,
-                "roof": RoofSubentryFlowHandler,
-                "sensor_group": SensorGroupSubentryFlowHandler,
-                "management": MenuSubentryFlowHandler,
-            }
-            
-            if state["canAddString"]:
-                supported["string"] = StringSubentryFlowHandler
-                
-            return supported
-        except Exception:
-            return {}
+        """Return supported subentry flow types."""
+        return {
+            "pv_model": PvModelSubentryFlowHandler,
+            "roof": RoofSubentryFlowHandler,
+            "sensor_group": SensorGroupSubentryFlowHandler,
+            "string": StringSubentryFlowHandler,
+            "management": MenuSubentryFlowHandler,
+        }
 
     async def async_step_user(self, userInput=None):
         """Handle the initial step."""
