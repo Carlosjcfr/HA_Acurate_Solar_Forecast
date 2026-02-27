@@ -46,10 +46,10 @@
 
 This release focused on a complete internal restructuring of the integration to improve maintainability and performance.
 
-### Resumen de Situación Actual
+### Current Situation Summary
 
-- **Arquitectura**: Totalmente modularizada (core, databases, config_flow, variables).
-- **Consistencia**: Ortografía corregida a "Accurate" en todo el proyecto.
-- **Estándares**: Código alineado con las reglas de estilo del proyecto (camelCase).
+- **Architecture**: Fully modularized (core, databases, config_flow, variables).
+- **Consistency**: Spelling corrected to "Accurate" throughout the project.
+- **Standards**: Code aligned with the project's style rules (camelCase).
 
 Developed by Carlosjcfr

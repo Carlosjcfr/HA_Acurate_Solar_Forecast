@@ -12,7 +12,11 @@ from .flow_sensor_groups import SensorGroupsFlowMixin
 from .flow_strings import StringsFlowMixin
 from ..core import getSubentryMenuState
 
-from homeassistant.config_entries import ConfigSubentryFlow
+try:
+    from homeassistant.config_entries import ConfigSubentryFlow
+except ImportError:
+    class ConfigSubentryFlow:
+        pass
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -228,7 +232,7 @@ class MenuSubentryFlowHandler(AccurateForecastCommonFlow, PvModelsFlowMixin, Roo
         await self._asyncInitRequirements()
         return await super().async_step_menu_management(userInput)
 
-class AccurateForecastFlow(AccurateForecastCommonFlow, PvModelsFlowMixin, RoofsFlowMixin, SensorGroupsFlowMixin, StringsFlowMixin, config_entries.ConfigFlow, domain=DOMAIN):
+class AccurateForecastFlow(config_entries.ConfigFlow, AccurateForecastCommonFlow, PvModelsFlowMixin, RoofsFlowMixin, SensorGroupsFlowMixin, StringsFlowMixin, domain=DOMAIN):
     VERSION = 1
 
     @classmethod
@@ -251,6 +255,7 @@ class AccurateForecastFlow(AccurateForecastCommonFlow, PvModelsFlowMixin, RoofsF
         return supported
 
     def __init__(self):
+        super().__init__()
         self._db = None
         self.selectedItemId = None
         self.tempData = {}

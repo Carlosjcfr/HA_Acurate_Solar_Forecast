@@ -2,29 +2,29 @@
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
 [![Maintainer](https://img.shields.io/badge/maintainer-Carlosjcfr-blue)](https://github.com/Carlosjcfr)
-[![version](https://img.shields.io/badge/version-1.0.0-green)]()
+[![version](https://img.shields.io/badge/version-1.3.2-green)]()
 
-**Accurate Solar Forecast** es una integración personalizada para Home Assistant diseñada para estimar la producción fotovoltaica con alta precisión física y geométrica.
+**Accurate Solar Forecast** is a custom integration for Home Assistant designed to estimate photovoltaic production with high physical and geometric precision.
 
-A diferencia de las estimaciones simples, este componente utiliza **motores de transposición de irradiancia**, permitiendo simular múltiples strings con diferentes orientaciones utilizando **un único sensor de referencia** (piranómetro o sensor solar).
+Unlike simple estimations, this component uses **irradiance transposition engines**, allowing you to simulate multiple strings with different orientations using **a single reference sensor** (pyranometer or solar sensor).
 
-## ✨ Características Principales
+## ✨ Key Features
 
-### 📐 Motor de Transposición Geométrica
+### 📐 Geometric Transposition Engine
 
-Olvídate de comprar múltiples sensores de irradiancia.
+Forget about buying multiple irradiance sensors.
 
-* Calcula la radiación incidente en cualquier superficie (orientación/inclinación).
-* Utiliza la posición solar en tiempo real (Azimut y Elevación) para calcular el **Ángulo de Incidencia (AOI)**.
-* **Gestión Geométrica Completa:** Configura la orientación e inclinación tanto de tus paneles como de tus sensores de referencia (ej: una estación meteorológica horizontal o un sensor en el tejado).
+* Calculates incident radiation on any surface (orientation/tilt).
+* Uses real-time solar position (Azimuth and Elevation) to calculate the **Angle of Incidence (AOI)**.
+* **Full Geometric Management:** Configure the orientation and tilt of both your panels and your reference sensors (e.g., a horizontal weather station or a rooftop sensor).
 
-### ⚙️ Arquitectura Modular (v1.3.0)
+### ⚙️ Modular Architecture (v1.3.2)
 
-El sistema ha sido completamente refactorizado para separar la persistencia de datos del motor de cálculo:
+The system has been completely refactored to separate data persistence from the calculation engine:
 
-* **`core/` (El Cerebro):** Motores de transposición solar y lógica de sensores.
-* **`databases/` (La Memoria):** Motor JSON basado en Home Assistant Store para persistencia de paneles y roofs.
-* **`config_flow/` (La Interfaz):** Sistema de sub-entradas tipo "pill" para una gestión dinámica.
+* **`core/` (The Brain):** Solar transposition engines and sensor logic.
+* **`databases/` (The Memory):** JSON engine based on Home Assistant Store for panel and roof persistence.
+* **`config_flow/` (The UI):** "Pill" type sub-entry system for dynamic management.
 
 ```mermaid
 graph TD
@@ -35,81 +35,81 @@ graph TD
     Engine --> Entities[String Power Entities]
 ```
 
-### 💾 Base de Datos de Paneles (PV Database)
+### 💾 PV Database (Solar Panels)
 
-Sistema de gestión de inventario integrado.
+Integrated inventory management system.
 
-* **Define una vez, usa siempre:** Crea modelos de tus placas solares (Potencia, Coeficientes, NOCT, Voc, Isc, Vmp, Imp) y guárdalos en la base de datos interna.
-* **Reutilizable:** Asigna el mismo modelo de panel a diferentes strings sin volver a introducir fichas técnicas.
-
----
-
-## 🚀 Instalación
-
-### Opción 1: HACS (Recomendado)
-
-1. Añade este repositorio como **Custom Repository** en HACS.
-2. Busca "Accurate Solar Forecast" e instala.
-3. Reinicia Home Assistant.
-
-### Opción 2: Manual
-
-1. Descarga la carpeta `custom_components/accurate_solar_forecast`.
-2. Cópiala dentro de `config/custom_components/` en tu instalación de HA.
-3. Reinicia Home Assistant.
+* **Define once, use always:** Create models for your solar panels (Power, Coefficients, NOCT, Voc, Isc, Vmp, Imp) and save them in the internal database.
+* **Reusable:** Assign the same panel model to different strings without re-entering technical specifications.
 
 ---
 
-## 📖 Uso y Configuración
+## 🚀 Installation
 
-Ve a **Ajustes** > **Dispositivos y Servicios** > **Añadir Integración** > **Accurate Solar Forecast**.
+### Option 1: HACS (Recommended)
 
-Verás un nuevo menú principal estructurado en tres secciones:
+1. Add this repository as a **Custom Repository** in HACS.
+2. Search for "Accurate Solar Forecast" and install.
+3. Restart Home Assistant.
 
-### 1. 🏭 Configurar Módulos Fotovoltaicos (PV Models)
+### Option 2: Manual
 
-Aquí gestionas tu "inventario" de paneles.
-
-* **Crear Nuevo Módulo:** Introduce la ficha técnica de tu panel.
-* **Editar Módulo Existente:** Modifica datos si te equivocaste.
-* **Eliminar Módulo:** Borra modelos que ya no necesites.
-
-### 2. 🌡️ Configurar Sensores
-
-Define tus estaciones meteorológicas o grupos de sensores.
-
-* **Crear Grupo de Sensores:** Selecciona tus sensores de irradiancia y temperatura. Define también la **Inclinación y Orientación** física de tu sensor de irradiancia. Esto crea un nuevo Dispositivo en Home Assistant.
-* **Editar Grupo de Sensores:** Modifica una configuración existente.
-
-*Nota: Para eliminar un Grupo de Sensores, bórralo directamente desde la vista de integraciones de Home Assistant.*
-
-### 3. ☀️ Configurar Strings
-
-Aquí creas tus arrays solares virtuales.
-
-* **Crear Nuevo String:**
-    1. Selecciona qué **Grupo de Sensores** alimenta este string.
-    2. Selecciona el **Módulo FV** (Marca/Modelo) de tu base de datos.
-    3. Define la **Geometría del Panel** (Tilt/Azimut) y el número de paneles.
-
-*Resultado:* Se creará una entidad String que simula la producción. *Nota: Para eliminar un String, bórralo directamente desde la vista de integraciones de Home Assistant.*
+1. Download the `custom_components/accurate_solar_forecast` folder.
+2. Copy it into `config/custom_components/` in your HA installation.
+3. Restart Home Assistant.
 
 ---
 
-## 🧠 Cómo funciona (La Ciencia)
+## 📖 Usage and Configuration
 
-El componente realiza los siguientes cálculos en cada actualización:
+Go to **Settings** > **Devices & Services** > **Add Integration** > **Accurate Solar Forecast**.
 
-1. **Geometría Solar:** Obtiene la posición del sol (`sun.sun`).
-2. **Cálculo AOI:** Determina el ángulo de incidencia solar tanto para el **sensor de referencia** (definido en el Grupo de Sensores) como para el **panel objetivo** (definido en el String).
-3. **Factor Geométrico:** Transpone la irradiancia medida a la superficie del panel:
-    `Irradiancia_Target = Irradiancia_Ref * (cos(θ_target) / cos(θ_ref))`
-4. **Modelo Térmico:** Calcula la temperatura de la célula ($T_{cell}$) basándose en los datos del Grupo de Sensores.
-5. **Potencia Final:** Aplica el coeficiente de pérdidas por temperatura (Gamma) a la potencia base generada.
+You will see a new main menu structured into three sections:
+
+### 1. 🏭 Configure PV Modules (PV Models)
+
+Manage your panel "inventory" here.
+
+* **Create New Module:** Enter the technical specifications of your panel.
+* **Edit Existing Module:** Modify data if needed.
+* **Delete Module:** Remove models you no longer need.
+
+### 2. 🌡️ Configure Sensors
+
+Define your weather stations or sensor groups.
+
+* **Create Sensor Group:** Select your irradiance and temperature sensors. Also define the physical **Tilt and Orientation** of your irradiance sensor. This creates a new Device in Home Assistant.
+* **Edit Sensor Group:** Modify an existing configuration.
+
+*Note: To delete a Sensor Group, remove it directly from the Home Assistant integrations view.*
+
+### 3. ☀️ Configure Strings
+
+Create your virtual solar arrays here.
+
+* **Create New String:**
+    1. Select which **Sensor Group** feeds this string.
+    2. Select the **PV Module** (Brand/Model) from your database.
+    3. Define the **Panel Geometry** (Tilt/Azimuth) and the number of panels.
+
+*Result:* A String entity will be created to simulate production. *Note: To delete a String, remove it directly from the Home Assistant integrations view.*
 
 ---
 
-## 📄 Licencia
+## 🧠 How it works (The Science)
+
+The component performs the following calculations in each update:
+
+1. **Solar Geometry:** Obtains the solar position (`sun.sun`).
+2. **AOI Calculation:** Determines the solar incidence angle for both the **reference sensor** (defined in the Sensor Group) and the **target panel** (defined in the String).
+3. **Geometric Factor:** Transposes measured irradiance to the panel surface:
+    `Target_Irradiance = Ref_Irradiance * (cos(θ_target) / cos(θ_ref))`
+4. **Thermal Model:** Calculates cell temperature ($T_{cell}$) based on Sensor Group data.
+5. **Final Power:** Applies the temperature loss coefficient (Gamma) to the base generated power.
+
+---
+
+## 📄 License
 
 PolyForm Strict License 1.0.0 ->
 <https://polyformproject.org/licenses/strict/1.0.0>

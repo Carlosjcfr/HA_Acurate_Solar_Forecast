@@ -66,7 +66,7 @@ class AccurateSolarSensorDB:
         await self._store.async_save(saveData)
 
     # --- ROOF METHODS ---
-    def addRoof(self, name: str, tilt: Optional[float] = None, azimuth: Optional[float] = None, strings: Optional[dict[str, SolarString]] = None) -> Coroutine:
+    async def addRoof(self, name: str, tilt: Optional[float] = None, azimuth: Optional[float] = None, strings: Optional[dict[str, SolarString]] = None) -> None:
         """Adds a roof to the database."""
         roofId = slugify(name)
         existing = self.roofs.get(roofId)
@@ -77,21 +77,23 @@ class AccurateSolarSensorDB:
             azimuth=float(azimuth) if azimuth is not None else (existing.azimuth if existing else 180.0),
             strings=strings if strings is not None else (existing.strings if existing else {})
         )
-        return self.async_save()
+        await self.async_save()
 
-    def addStringToRoof(self, roofId: str, stringId: str, stringData: Any) -> Coroutine | bool:
+    async def addStringToRoof(self, roofId: str, stringId: str, stringData: Any) -> bool:
         if roofId in self.roofs:
             if isinstance(stringData, dict):
                  stringData = SolarString.from_dict(stringData)
             self.roofs[roofId].strings[stringId] = stringData
-            return self.async_save()
+            await self.async_save()
+            return True
         return False
         
-    def deleteStringFromRoof(self, roofId: str, stringId: str) -> Coroutine | bool:
+    async def deleteStringFromRoof(self, roofId: str, stringId: str) -> bool:
         if roofId in self.roofs:
             if stringId in self.roofs[roofId].strings:
                 del self.roofs[roofId].strings[stringId]
-                return self.async_save()
+                await self.async_save()
+                return True
         return False
         
     def getRoofStrings(self, roofId) -> dict[str, SolarString]:
@@ -105,21 +107,22 @@ class AccurateSolarSensorDB:
     def getRoof(self, roofId: str) -> Optional[Roof]:
         return self.roofs.get(roofId)
 
-    def deleteRoof(self, roofId: str) -> Coroutine | bool:
+    async def deleteRoof(self, roofId: str) -> bool:
         """Removes a roof from the database."""
         if roofId in self.roofs:
             del self.roofs[roofId]
-            return self.async_save()
+            await self.async_save()
+            return True
         return False
 
     # --- PV MODEL METHODS ---
-    def addModel(self, name: str, brand: str, pStc: float, gamma: float, noct: float, voc: float, isc: float, vmp: float, imp: float) -> Coroutine:
+    async def addModel(self, name: str, brand: str, pStc: float, gamma: float, noct: float, voc: float, isc: float, vmp: float, imp: float) -> None:
         modelId = slugify(name)
         self.data[modelId] = PvModel(
             name=name, brand=brand, pStc=float(pStc), gamma=float(gamma),
             noct=float(noct), voc=float(voc), isc=float(isc), vmp=float(vmp), imp=float(imp)
         )
-        return self.async_save()
+        await self.async_save()
 
     async def deleteModel(self, modelId: str) -> bool:
         """Elimina un modelo de la DB."""
@@ -127,7 +130,8 @@ class AccurateSolarSensorDB:
             return False
         if modelId in self.data:
             del self.data[modelId]
-            return await self.async_save()
+            await self.async_save()
+            return True
         return False
 
     def getModel(self, modelId: str) -> Optional[PvModel]:
@@ -151,20 +155,20 @@ class AccurateSolarSensorDB:
         return {k: v.name for k, v in self.data.items()}
 
     # --- SENSOR GROUP METHODS ---
-    def addSensorGroup(self, name: str, irradianceSensor: str, tempSensor: str, tempPanelSensor: Optional[str], windSensor: Optional[str], refTilt: float, refOrientation: float, weatherEntity: Optional[str] = None, illuminanceSensor: Optional[str] = None) -> Coroutine:
+    async def addSensorGroup(self, name: str, irradianceSensor: str, tempSensor: str, tempPanelSensor: Optional[str], windSensor: Optional[str], refTilt: float, refOrientation: float, weatherEntity: Optional[str] = None, illuminanceSensor: Optional[str] = None) -> None:
         groupId = slugify(name)
         self.sensor_groups[groupId] = SensorGroup(
             name=name,
-            ref_sensor=irradianceSensor,
-            ref_tilt=float(refTilt),
-            ref_orientation=float(refOrientation),
-            temp_sensor=tempSensor,
-            temp_panel_sensor=tempPanelSensor,
-            wind_sensor=windSensor,
-            weather_entity=weatherEntity,
-            illuminance_sensor=illuminanceSensor
+            refSensor=irradianceSensor,
+            refTilt=float(refTilt),
+            refOrientation=float(refOrientation),
+            tempSensor=tempSensor,
+            tempPanelSensor=tempPanelSensor,
+            windSensor=windSensor,
+            weatherEntity=weatherEntity,
+            illuminanceSensor=illuminanceSensor
         )
-        return self.async_save()
+        await self.async_save()
         
     def getSensorGroup(self, groupId: str) -> Optional[SensorGroup]:
         return self.sensor_groups.get(groupId)
@@ -173,8 +177,9 @@ class AccurateSolarSensorDB:
         """Devuelve dict {id: nombre} para selectores."""
         return {k: v.name for k, v in self.sensor_groups.items()}
     
-    def deleteSensorGroup(self, groupId: str) -> Coroutine | bool:
+    async def deleteSensorGroup(self, groupId: str) -> bool:
         if groupId in self.sensor_groups:
             del self.sensor_groups[groupId]
-            return self.async_save()
+            await self.async_save()
+            return True
         return False

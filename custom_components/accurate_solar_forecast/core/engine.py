@@ -351,7 +351,7 @@ class SolarStringPerformanceSensor(SensorEntity):
              if entityEntry and entityEntry.device_id:
                  device = dr.async_get(hass).async_get(entityEntry.device_id)
                  if device: deviceIdentifiers = device.identifiers
-        self._attr_device_info = DeviceInfo(identifiers=deviceIdentifiers or {(DOMAIN, f"str_{self._stringName.lower().replace(' ', '_')}")})
+        self._attr_device_info = DeviceInfo(identifiers=deviceIdentifiers or {(DOMAIN, f"str_{slugify(self._stringName)}")})
         self.realSensorId = realSensorId
 
     async def async_added_to_hass(self):
@@ -391,7 +391,7 @@ class AccurateSolarSensorDBSensor(SensorEntity):
         self._updateState()
 
     def _updateState(self):
-        models, roofs = self._db.list_models(), self._db.list_roofs()
+        models, roofs = self._db.listModels(), self._db.listRoofs()
         self._attr_native_value = len(models) + len(roofs)
         self.async_write_ha_state()
     
