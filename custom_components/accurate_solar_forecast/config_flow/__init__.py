@@ -232,49 +232,18 @@ class MenuSubentryFlowHandler(AccurateForecastCommonFlow, PvModelsFlowMixin, Roo
         await self._asyncInitRequirements()
         return await super().async_step_menu_management(userInput)
 
-class AccurateForecastFlow(config_entries.ConfigFlow, AccurateForecastCommonFlow, PvModelsFlowMixin, RoofsFlowMixin, SensorGroupsFlowMixin, StringsFlowMixin, domain=DOMAIN):
+class AccurateForecastFlow(config_entries.ConfigFlow, domain=DOMAIN):
+    """Config flow for Accurate Solar Forecast."""
     VERSION = 1
 
-    @classmethod
-    @callback
-    def async_get_supported_subentry_types(cls, configEntry) -> dict[str, type[ConfigSubentryFlow]]:
-        """Devolver flujos subentry soportados dinámicamente según el estado."""
-        state = getSubentryMenuState(configEntry.hass)
-        
-        supported = {
-            "pv_model": PvModelSubentryFlowHandler,
-            "roof": RoofSubentryFlowHandler,
-            "sensor_group": SensorGroupSubentryFlowHandler,
-            "management": MenuSubentryFlowHandler,
-        }
-        
-        # Solo permitimos añadir un "String" si hay infraestructura previa
-        if state["canAddString"]:
-            supported["string"] = StringSubentryFlowHandler
-            
-        return supported
-
-    def __init__(self):
-        super().__init__()
-        self._db = None
-        self.selectedItemId = None
-        self.tempData = {}
-
     async def async_step_user(self, userInput=None):
-        try:
-            if not self._async_current_entries():
-                return await self.async_step_setup(userInput)
-            return self.async_abort(reason="not_supported")
-        except Exception as e:
-            _LOGGER.exception(f"Error in async_step_user: {e}")
-            return self.async_abort(reason="unknown")
+        """Handle the initial step."""
+        if self._async_current_entries():
+            return self.async_abort(reason="already_configured")
+        return await self.async_step_setup(userInput)
 
     async def async_step_setup(self, userInput=None):
-        try:
-            if userInput is not None:
-                return self.async_create_entry(title="Accurate Solar Forecast", data={})
-            return self.async_show_form(step_id="setup", data_schema=vol.Schema({}))
-        except Exception as e:
-            _LOGGER.exception(f"Error in async_step_setup: {e}")
-            return self.async_abort(reason="unknown")
-
+        """Show the setup confirmation form."""
+        if userInput is not None:
+            return self.async_create_entry(title="Accurate Solar Forecast", data={})
+        return self.async_show_form(step_id="setup", data_schema=vol.Schema({}))
