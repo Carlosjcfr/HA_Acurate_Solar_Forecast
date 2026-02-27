@@ -45,7 +45,7 @@ class SensorGroupsFlowMixin:
             
             if not errors:
                 # Save to DB
-                await self._db.addSensorGroup(
+                groupId = await self._db.addSensorGroup(
                     name,
                     userInput[CONF_REF_SENSOR],
                     userInput[CONF_TEMP_SENSOR],
@@ -56,8 +56,18 @@ class SensorGroupsFlowMixin:
                     userInput.get(CONF_WEATHER_ENTITY),
                     userInput.get(CONF_ILLUMINANCE_SENSOR)
                 )
-                # If in guided flow, chain to string creation
+                # If in guided flow, back-assign the new group to the pending roof
                 if getattr(self, '_guidedFlow', False):
+                    roofName = self.tempData.get("roof_name")
+                    if roofName:
+                        from ..core import slugify as _slugify
+                        roofId = _slugify(roofName)
+                        roof = self._db.getRoof(roofId)
+                        if roof and not roof.sensorGroupId:
+                            await self._db.addRoof(
+                                roof.name, roof.tilt, roof.azimuth,
+                                sensorGroupId=groupId or name
+                            )
                     return await self.async_step_string_create_select_relations()
                 return self.async_abort(reason="list_updated")
             

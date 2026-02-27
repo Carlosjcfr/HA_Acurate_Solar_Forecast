@@ -290,7 +290,13 @@
                     "data": {
                         "name": "Roof Name",
                         "tilt": "Tilt (º)",
-                        "azimuth": "Azimuth (180º=S)",
+                        "azimuth": "Azimuth (180º=S)"
+                    }
+                },
+                "roof_select_sensor_group": {
+                    "title": "Assign Sensor Group",
+                    "description": "Select which sensor group to use for this roof.",
+                    "data": {
                         "selected_sensor_group": "Sensor Group"
                     }
                 },

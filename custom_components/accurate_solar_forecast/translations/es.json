@@ -290,7 +290,13 @@
                     "data": {
                         "name": "Nombre del Tejado",
                         "tilt": "Inclinación (º)",
-                        "azimuth": "Orientación (180º=S)",
+                        "azimuth": "Orientación (180º=S)"
+                    }
+                },
+                "roof_select_sensor_group": {
+                    "title": "Asignar Grupo de Sensores",
+                    "description": "Selecciona qué grupo de sensores usará este tejado.",
+                    "data": {
                         "selected_sensor_group": "Grupo de Sensores"
                     }
                 },

@@ -163,7 +163,7 @@ class AccurateSolarSensorDB:
         return {k: v.name for k, v in self.data.items()}
 
     # --- SENSOR GROUP METHODS ---
-    async def addSensorGroup(self, name: str, irradianceSensor: str, tempSensor: str, tempPanelSensor: Optional[str], windSensor: Optional[str], refTilt: float, refOrientation: float, weatherEntity: Optional[str] = None, illuminanceSensor: Optional[str] = None) -> None:
+    async def addSensorGroup(self, name: str, irradianceSensor: str, tempSensor: str, tempPanelSensor: Optional[str], windSensor: Optional[str], refTilt: float, refOrientation: float, weatherEntity: Optional[str] = None, illuminanceSensor: Optional[str] = None) -> str:
         groupId = slugify(name)
         self.sensor_groups[groupId] = SensorGroup(
             name=name,
@@ -177,6 +177,7 @@ class AccurateSolarSensorDB:
             illuminanceSensor=illuminanceSensor
         )
         await self.async_save()
+        return groupId
         
     def getSensorGroup(self, groupId: str) -> Optional[SensorGroup]:
         return self.sensor_groups.get(groupId)

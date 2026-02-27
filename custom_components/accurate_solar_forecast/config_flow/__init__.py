@@ -147,18 +147,12 @@ class AccurateForecastCommonFlow:
          return vol.Schema(schemaDict)
 
     def _getRoofCreateSchema(self):
-        """Roof schema includes sensor group selector."""
-        sensorGroups = self._db.listSensorGroups()
-        schemaDict = {
+        """Roof create schema — clean form with just geometry. Sensor group assigned automatically."""
+        return vol.Schema({
             vol.Required("name"): str,
             vol.Required(CONF_TILT, default=30): vol.All(vol.Coerce(float), vol.Range(min=0, max=90)),
             vol.Required(CONF_AZIMUTH, default=180): vol.All(vol.Coerce(float), vol.Range(min=0, max=360)),
-        }
-        if sensorGroups:
-            schemaDict[vol.Required("selected_sensor_group")] = selector.SelectSelector(
-                selector.SelectSelectorConfig(options=list(sensorGroups.keys()), mode="dropdown")
-            )
-        return vol.Schema(schemaDict)
+        })
 
     def _getStringDetailsSchema(self):
         selectedBrand = self.tempData.get(CONF_BRAND, "Generic")
@@ -167,21 +161,17 @@ class AccurateForecastCommonFlow:
         defaultTilt = self.tempData.get(CONF_TILT, 30)
         defaultAzimuth = self.tempData.get(CONF_AZIMUTH, 180)
         
+        # Try to pre-fill tilt/azimuth from the associated roof
         roofName = self.tempData.get(CONF_ROOF_NAME)
         if roofName:
-             roofId = None
-             for rid, rname in self._db.listRoofs().items():
-                 if rname == roofName:
-                     roofId = rid
-                     break
-             
-             if roofId:
-                 roofData = self._db.getRoof(roofId)
-                 if roofData:
-                     if CONF_TILT not in self.tempData: 
-                         defaultTilt = roofData.get("tilt") or 30
-                     if CONF_AZIMUTH not in self.tempData:
-                         defaultAzimuth = roofData.get("azimuth") or 180
+            from ..core import slugify as _slugify
+            roofId = _slugify(roofName)
+            roofObj = self._db.getRoof(roofId)
+            if roofObj:
+                if CONF_TILT not in self.tempData:
+                    defaultTilt = roofObj.tilt or 30
+                if CONF_AZIMUTH not in self.tempData:
+                    defaultAzimuth = roofObj.azimuth or 180
 
         modelDefault = self.tempData.get(CONF_PANEL_MODEL)
         modelOptions = list(modelsFiltered.values())
@@ -216,30 +206,55 @@ class RoofSubentryFlowHandler(AccurateForecastCommonFlow, RoofsFlowMixin, Sensor
         return await self.async_step_roof_create_guided(userInput)
 
     async def async_step_roof_create_guided(self, userInput=None):
-        """Create a roof, then chain to sensor group or string creation."""
+        """Create roof (Step 1), then chain: sensor_group_create (if missing) → select group → string creation."""
         if userInput is not None:
             name = userInput["name"]
             tilt = userInput[CONF_TILT]
             azimuth = userInput[CONF_AZIMUTH]
-            sensorGroupId = userInput.get("selected_sensor_group", "")
 
-            await self._db.addRoof(name, tilt, azimuth, sensorGroupId=sensorGroupId)
+            # Save roof without sensor group for now
+            await self._db.addRoof(name, tilt, azimuth, sensorGroupId="")
             self.tempData[CONF_ROOF_NAME] = name
             self.tempData[CONF_TILT] = tilt
             self.tempData[CONF_AZIMUTH] = azimuth
 
-            # If sensor group was selected, go straight to string creation
-            if sensorGroupId:
-                return await self.async_step_string_create_select_relations()
-            # Otherwise, if no groups exist yet, create one first
             groups = self._db.listSensorGroups()
             if not groups:
+                # No sensor groups exist → create one first
                 return await self.async_step_sensor_group_create()
-            # Groups exist but none selected — go to string creation anyway
-            return await self.async_step_string_create_select_relations()
+            else:
+                # Sensor groups exist → let user choose which to assign
+                return await self.async_step_roof_select_sensor_group()
 
         schema = self._getRoofCreateSchema()
         return self.async_show_form(step_id="roof_create", data_schema=schema)
+
+    async def async_step_roof_select_sensor_group(self, userInput=None):
+        """Step 2 (when groups exist): choose which sensor group to assign to the new roof."""
+        if userInput is not None:
+            selectedGroupId = userInput["selected_sensor_group"]
+            roofName = self.tempData.get(CONF_ROOF_NAME)
+            if roofName:
+                from ..core import slugify as _slugify
+                roofId = _slugify(roofName)
+                roof = self._db.getRoof(roofId)
+                if roof:
+                    await self._db.addRoof(
+                        roof.name, roof.tilt, roof.azimuth,
+                        sensorGroupId=selectedGroupId
+                    )
+            return await self.async_step_string_create_select_relations()
+
+        groups = self._db.listSensorGroups()
+        schema = vol.Schema({
+            vol.Required("selected_sensor_group"): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=list(groups.keys()),
+                    mode="dropdown"
+                )
+            )
+        })
+        return self.async_show_form(step_id="roof_select_sensor_group", data_schema=schema)
 
 class SensorGroupSubentryFlowHandler(AccurateForecastCommonFlow, SensorGroupsFlowMixin, ConfigSubentryFlow):
     async def async_step_user(self, userInput=None):
