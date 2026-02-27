@@ -386,22 +386,49 @@ class AccurateSolarSensorDBSensor(SensorEntity):
     _attr_has_entity_name = True
     _attr_translation_key = "pv_db_status"
     _attr_unique_id = "pv_database_status"
-    _attr_icon = "mdi:solar-panel"
+    _attr_icon = "mdi:database"
     _attr_native_unit_of_measurement = "items"
 
     def __init__(self, hass, db):
         self.hass = hass
         self._db = db
-        self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, "pv_database_global")}, name="PV Modules Database", model="Database")
-        # Set initial value without calling async_write_ha_state (entity not registered yet)
-        models, roofs = self._db.listModels(), self._db.listRoofs()
-        self._attr_native_value = len(models) + len(roofs)
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, "pv_models_library")},
+        )
+        models = self._db.listModels()
+        self._attr_native_value = len(models)
 
     def _updateState(self):
-        models, roofs = self._db.listModels(), self._db.listRoofs()
-        self._attr_native_value = len(models) + len(roofs)
+        models = self._db.listModels()
+        self._attr_native_value = len(models)
         if self.hass and self.entity_id:
             self.async_write_ha_state()
     
     async def async_added_to_hass(self):
         self._updateState()
+
+
+class PVModelCountSensor(SensorEntity):
+    """Sensor showing the number of saved PV panel models in the database."""
+    _attr_has_entity_name = True
+    _attr_unique_id = "pv_model_count"
+    _attr_icon = "mdi:solar-panel"
+    _attr_native_unit_of_measurement = "models"
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_name = "Modelos guardados"
+
+    def __init__(self, hass: HomeAssistant, db: Any):
+        self.hass = hass
+        self._db = db
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, "pv_models_library")},
+        )
+        self._attr_native_value = len(self._db.listModels()) if self._db else 0
+
+    @property
+    def native_value(self) -> int:
+        return len(self._db.listModels()) if self._db else 0
+
+    async def async_update(self) -> None:
+        """HA will poll this sensor; DB updates are in-memory."""
+        self._attr_native_value = len(self._db.listModels()) if self._db else 0

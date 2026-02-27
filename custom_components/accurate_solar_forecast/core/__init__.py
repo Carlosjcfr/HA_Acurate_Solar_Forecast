@@ -6,6 +6,7 @@ from .engine import (
     SensorGroupCloudinessSensor,
     SolarStringPerformanceSensor,
     AccurateSolarSensorDBSensor,
+    PVModelCountSensor,
     getConvertedValue
 )
 from .helpers import getSubentryMenuState, slugify
@@ -19,6 +20,7 @@ __all__ = [
     "SensorGroupCloudinessSensor",
     "SolarStringPerformanceSensor",
     "AccurateSolarSensorDBSensor",
+    "PVModelCountSensor",
     "getConvertedValue",
     "getSubentryMenuState",
     "slugify",
