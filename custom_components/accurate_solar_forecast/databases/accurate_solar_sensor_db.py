@@ -66,8 +66,8 @@ class AccurateSolarSensorDB:
         await self._store.async_save(saveData)
 
     # --- ROOF METHODS ---
-    async def addRoof(self, name: str, tilt: Optional[float] = None, azimuth: Optional[float] = None, strings: Optional[dict[str, SolarString]] = None) -> None:
-        """Adds a roof to the database."""
+    async def addRoof(self, name: str, tilt: Optional[float] = None, azimuth: Optional[float] = None, sensorGroupId: str = "", strings: Optional[dict] = None) -> None:
+        """Adds or updates a roof in the database."""
         roofId = slugify(name)
         existing = self.roofs.get(roofId)
         
@@ -75,6 +75,7 @@ class AccurateSolarSensorDB:
             name=name,
             tilt=float(tilt) if tilt is not None else (existing.tilt if existing else 30.0),
             azimuth=float(azimuth) if azimuth is not None else (existing.azimuth if existing else 180.0),
+            sensorGroupId=sensorGroupId if sensorGroupId else (existing.sensorGroupId if existing else ""),
             strings=strings if strings is not None else (existing.strings if existing else {})
         )
         await self.async_save()
@@ -114,6 +115,13 @@ class AccurateSolarSensorDB:
             await self.async_save()
             return True
         return False
+
+    def getSensorGroupForRoof(self, roofId: str) -> Optional[SensorGroup]:
+        """Returns the SensorGroup object associated with a roof."""
+        roof = self.roofs.get(roofId)
+        if roof and roof.sensorGroupId:
+            return self.sensor_groups.get(roof.sensorGroupId)
+        return None
 
     # --- PV MODEL METHODS ---
     async def addModel(self, name: str, brand: str, pStc: float, gamma: float, noct: float, voc: float, isc: float, vmp: float, imp: float) -> None:

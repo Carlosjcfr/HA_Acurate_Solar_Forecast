@@ -56,6 +56,9 @@ class SensorGroupsFlowMixin:
                     userInput.get(CONF_WEATHER_ENTITY),
                     userInput.get(CONF_ILLUMINANCE_SENSOR)
                 )
+                # If in guided flow, chain to string creation
+                if getattr(self, '_guidedFlow', False):
+                    return await self.async_step_string_create_select_relations()
                 return self.async_abort(reason="list_updated")
             
          return self._showSensorGroupForm("sensor_group_create", errors)

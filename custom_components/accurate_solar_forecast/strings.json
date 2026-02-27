@@ -290,7 +290,46 @@
                     "data": {
                         "name": "Roof Name",
                         "tilt": "Tilt (º)",
-                        "azimuth": "Azimuth (180º=S)"
+                        "azimuth": "Azimuth (180º=S)",
+                        "selected_sensor_group": "Sensor Group"
+                    }
+                },
+                "sensor_group_create": {
+                    "title": "Create Sensor Group",
+                    "description": "No sensor groups configured yet. Create one to continue.",
+                    "data": {
+                        "sensor_group_name": "Group Name",
+                        "irradiance_sensor": "Irradiance",
+                        "temperature_sensor": "Ambient Temp",
+                        "temp_panel_sensor": "Panel Temp",
+                        "wind_sensor": "Wind Speed",
+                        "ref_tilt": "Irrad. Sensor Tilt (°)",
+                        "ref_orientation": "Irrad. Sensor Orientation (180°=S)",
+                        "weather_entity": "Weather forecast",
+                        "illuminance_sensor": "Illuminance"
+                    }
+                },
+                "string_create_select_relations": {
+                    "title": "Add First String",
+                    "description": "Select a sensor group and panel manufacturer.",
+                    "data": {
+                        "string_name": "String Name",
+                        "selected_sensor_group": "Sensor Group",
+                        "brand": "Panel Manufacturer",
+                        "real_production_sensor": "Real Production (W)",
+                        "roof_name": "Roof (Select or Create New)"
+                    }
+                },
+                "string_create_details": {
+                    "title": "String Details",
+                    "description": "Geometry and model for your string.",
+                    "data": {
+                        "panel_model": "Panel Model",
+                        "num_panels": "Series Panels",
+                        "num_strings": "Parallel Strings",
+                        "tilt": "Panel Tilt (º)",
+                        "azimuth": "Azimuth (180º=S)",
+                        "real_production_sensor": "Real Production (W)"
                     }
                 }
             }
@@ -381,6 +420,145 @@
                         "menu_pv_models": "PV Modules",
                         "menu_roofs": "Roofs and Orientations",
                         "menu_sensor_groups": "Sensor Groups"
+                    }
+                },
+                "menu_pv_models": {
+                    "title": "PV Module Actions",
+                    "description": "PV Model Database.",
+                    "menu_options": {
+                        "pv_model_create": "Create PV Module",
+                        "pv_model_edit_select": "Edit PV Module",
+                        "pv_model_delete_select": "Delete PV Module"
+                    }
+                },
+                "pv_model_create": {
+                    "title": "New PV Module",
+                    "description": "Enter technical specifications.",
+                    "data": {
+                        "name": "Model",
+                        "brand": "Manufacturer",
+                        "p_stc": "Power (STC)",
+                        "gamma": "Temp Coeff (%/°C)",
+                        "noct": "NOCT (°C)",
+                        "voc": "Voc",
+                        "isc": "Isc",
+                        "vmp": "Vmp",
+                        "imp": "Imp"
+                    }
+                },
+                "pv_model_edit_select": {
+                    "title": "Edit Module",
+                    "description": "Select module to edit.",
+                    "data": {
+                        "selected_model": "PV Module"
+                    }
+                },
+                "pv_model_edit_form": {
+                    "title": "Edit Module",
+                    "description": "Modify technical data.",
+                    "data": {
+                        "name": "Model",
+                        "brand": "Manufacturer",
+                        "p_stc": "Power (STC)",
+                        "gamma": "Temp Coeff (%/°C)",
+                        "noct": "NOCT (°C)",
+                        "voc": "Voc",
+                        "isc": "Isc",
+                        "vmp": "Vmp",
+                        "imp": "Imp"
+                    }
+                },
+                "pv_model_delete_select": {
+                    "title": "Delete Module",
+                    "description": "Select the module to delete.",
+                    "data": {
+                        "selected_model": "Module to delete"
+                    }
+                },
+                "menu_roofs": {
+                    "title": "Roof Actions",
+                    "description": "Manage the roof orientations database.",
+                    "menu_options": {
+                        "roof_create": "Create roof",
+                        "roof_edit_select": "Edit roof",
+                        "roof_delete_select": "Delete roof"
+                    }
+                },
+                "roof_create": {
+                    "title": "Create New Roof",
+                    "description": "Enter the details for the new roof.",
+                    "data": {
+                        "name": "Roof Name",
+                        "tilt": "Tilt (°)",
+                        "azimuth": "Azimuth (180°=S)"
+                    }
+                },
+                "roof_edit_select": {
+                    "title": "Edit Roof",
+                    "description": "Select the roof to edit.",
+                    "data": {
+                        "selected_roof": "Roof"
+                    }
+                },
+                "roof_edit_form": {
+                    "title": "Edit Roof",
+                    "description": "Modify roof details.",
+                    "data": {
+                        "name": "Name",
+                        "tilt": "Tilt (°)",
+                        "azimuth": "Azimuth (180°=S)"
+                    }
+                },
+                "roof_delete_select": {
+                    "title": "Delete Roof",
+                    "description": "Select the roof to delete.",
+                    "data": {
+                        "selected_roof": "Roof to delete"
+                    }
+                },
+                "menu_sensor_groups": {
+                    "title": "Sensor Group Actions",
+                    "description": "Sensor Group Configuration.",
+                    "menu_options": {
+                        "sensor_group_create": "Create Group",
+                        "sensor_group_edit_select": "Edit Group"
+                    }
+                },
+                "sensor_group_create": {
+                    "title": "Create Sensor Group",
+                    "description": "Define physical sensors available.",
+                    "data": {
+                        "sensor_group_name": "Group Name",
+                        "irradiance_sensor": "Irradiance",
+                        "temperature_sensor": "Ambient Temp",
+                        "temp_panel_sensor": "Panel Temp",
+                        "wind_sensor": "Wind Speed",
+                        "ref_tilt": "Irrad. Sensor Tilt (°)",
+                        "ref_orientation": "Irrad. Sensor Orientation (180°=S)",
+                        "weather_entity": "Weather forecast",
+                        "illuminance_sensor": "Illuminance"
+                    }
+                },
+                "sensor_group_edit_select": {
+                    "title": "Edit Group",
+                    "description": "Select group to edit.",
+                    "data": {
+                        "selected_group": "Sensor Group"
+                    }
+                },
+                "sensor_group_edit_form": {
+                    "title": "Edit Group",
+                    "description": "Modify group configuration.",
+                    "data": {
+                        "sensor_group_name": "Group Name",
+                        "irradiance_sensor": "Irradiance",
+                        "temperature_sensor": "Ambient Temp",
+                        "temp_panel_sensor": "Panel Temp",
+                        "wind_sensor": "Wind Speed",
+                        "ref_tilt": "Irrad. Sensor Tilt (°)",
+                        "ref_orientation": "Irrad. Sensor Orientation (180°=S)",
+                        "weather_entity": "Weather forecast",
+                        "illuminance_sensor": "Illuminance"
                     }
                 }
             }

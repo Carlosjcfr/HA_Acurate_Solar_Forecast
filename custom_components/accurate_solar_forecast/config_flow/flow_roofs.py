@@ -38,19 +38,25 @@ class RoofsFlowMixin:
 
     async def async_step_roof_edit_form(self, userInput=None):
         if userInput is not None:
+            sensorGroupId = userInput.get("selected_sensor_group", "")
             await self._db.addRoof(
                 userInput["name"],
                 userInput[CONF_TILT],
-                userInput[CONF_AZIMUTH]
+                userInput[CONF_AZIMUTH],
+                sensorGroupId=sensorGroupId
             )
             return self.async_abort(reason="list_updated")
 
         # Load Data
         roofData = self._db.getRoof(self.selectedItemId)
+        sensorGroups = self._db.listSensorGroups()
         schema = vol.Schema({
-            vol.Required("name", default=roofData.get("name")): str,
-            vol.Required(CONF_TILT, default=roofData.get("tilt")): vol.All(vol.Coerce(float), vol.Range(min=0, max=90)),
-            vol.Required(CONF_AZIMUTH, default=roofData.get("azimuth")): vol.All(vol.Coerce(float), vol.Range(min=0, max=360)),
+            vol.Required("name", default=roofData.name): str,
+            vol.Required(CONF_TILT, default=roofData.tilt): vol.All(vol.Coerce(float), vol.Range(min=0, max=90)),
+            vol.Required(CONF_AZIMUTH, default=roofData.azimuth): vol.All(vol.Coerce(float), vol.Range(min=0, max=360)),
+            vol.Required("selected_sensor_group", default=roofData.sensorGroupId or vol.UNDEFINED): selector.SelectSelector(
+                selector.SelectSelectorConfig(options=list(sensorGroups.keys()), mode="dropdown")
+            ),
         })
         return self.async_show_form(step_id="roof_edit_form", data_schema=schema)
 

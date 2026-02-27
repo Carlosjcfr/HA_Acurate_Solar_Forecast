@@ -117,8 +117,6 @@ class AccurateForecastCommonFlow:
 
     def _getStringSelectRelationsSchema(self):
          brandsList = self._db.listBrands()
-         sensorGroups = self._db.listSensorGroups()
-         if not sensorGroups: return None 
 
          validPowerSensors = []
          for state in self.hass.states.async_all("sensor"):
@@ -127,12 +125,6 @@ class AccurateForecastCommonFlow:
                  (attributes.get("unit_of_measurement") and attributes.get("unit_of_measurement") in ["W", "kW"])):
                  validPowerSensors.append(state.entity_id)
          validPowerSensors.sort()
-         
-         groupOptions = list(sensorGroups.keys())
-         
-         groupDefault = self.tempData.get("selected_sensor_group")
-         if groupDefault not in groupOptions:
-             groupDefault = vol.UNDEFINED
              
          brandDefault = self.tempData.get(CONF_BRAND, "Generic")
          if brandDefault not in brandsList:
@@ -140,9 +132,6 @@ class AccurateForecastCommonFlow:
              
          schemaDict = {
             vol.Required(CONF_STRING_NAME, default=self._getDefault(CONF_STRING_NAME)): str,
-            vol.Required("selected_sensor_group", default=groupDefault): selector.SelectSelector(
-                selector.SelectSelectorConfig(options=groupOptions, mode="dropdown")
-            ),
             vol.Required(CONF_BRAND, default=brandDefault): selector.SelectSelector(
                 selector.SelectSelectorConfig(options=brandsList, mode="dropdown")
             ),
@@ -158,11 +147,18 @@ class AccurateForecastCommonFlow:
          return vol.Schema(schemaDict)
 
     def _getRoofCreateSchema(self):
-        return vol.Schema({
+        """Roof schema includes sensor group selector."""
+        sensorGroups = self._db.listSensorGroups()
+        schemaDict = {
             vol.Required("name"): str,
             vol.Required(CONF_TILT, default=30): vol.All(vol.Coerce(float), vol.Range(min=0, max=90)),
             vol.Required(CONF_AZIMUTH, default=180): vol.All(vol.Coerce(float), vol.Range(min=0, max=360)),
-        })
+        }
+        if sensorGroups:
+            schemaDict[vol.Required("selected_sensor_group")] = selector.SelectSelector(
+                selector.SelectSelectorConfig(options=list(sensorGroups.keys()), mode="dropdown")
+            )
+        return vol.Schema(schemaDict)
 
     def _getStringDetailsSchema(self):
         selectedBrand = self.tempData.get(CONF_BRAND, "Generic")
@@ -212,10 +208,38 @@ class PvModelSubentryFlowHandler(AccurateForecastCommonFlow, PvModelsFlowMixin, 
         await self._asyncInitRequirements()
         return await super().async_step_pv_model_create(userInput)
 
-class RoofSubentryFlowHandler(AccurateForecastCommonFlow, RoofsFlowMixin, ConfigSubentryFlow):
+class RoofSubentryFlowHandler(AccurateForecastCommonFlow, RoofsFlowMixin, SensorGroupsFlowMixin, StringsFlowMixin, ConfigSubentryFlow):
+    """Guided flow: Roof -> (Sensor Group if missing) -> String creation."""
     async def async_step_user(self, userInput=None):
         await self._asyncInitRequirements()
-        return await super().async_step_roof_create(userInput)
+        self._guidedFlow = True
+        return await self.async_step_roof_create_guided(userInput)
+
+    async def async_step_roof_create_guided(self, userInput=None):
+        """Create a roof, then chain to sensor group or string creation."""
+        if userInput is not None:
+            name = userInput["name"]
+            tilt = userInput[CONF_TILT]
+            azimuth = userInput[CONF_AZIMUTH]
+            sensorGroupId = userInput.get("selected_sensor_group", "")
+
+            await self._db.addRoof(name, tilt, azimuth, sensorGroupId=sensorGroupId)
+            self.tempData[CONF_ROOF_NAME] = name
+            self.tempData[CONF_TILT] = tilt
+            self.tempData[CONF_AZIMUTH] = azimuth
+
+            # If sensor group was selected, go straight to string creation
+            if sensorGroupId:
+                return await self.async_step_string_create_select_relations()
+            # Otherwise, if no groups exist yet, create one first
+            groups = self._db.listSensorGroups()
+            if not groups:
+                return await self.async_step_sensor_group_create()
+            # Groups exist but none selected — go to string creation anyway
+            return await self.async_step_string_create_select_relations()
+
+        schema = self._getRoofCreateSchema()
+        return self.async_show_form(step_id="roof_create", data_schema=schema)
 
 class SensorGroupSubentryFlowHandler(AccurateForecastCommonFlow, SensorGroupsFlowMixin, ConfigSubentryFlow):
     async def async_step_user(self, userInput=None):
@@ -245,19 +269,16 @@ class AccurateForecastFlow(config_entries.ConfigFlow, domain=DOMAIN):
         except Exception:
             state = {"hasModels": False, "hasRoofs": False, "hasSensors": False, "canAddString": False}
 
-        # PV Module and Management are always available
+        # PV Module, Roof, Sensor Group and Management are always available
         supported = {
             "pv_model": PvModelSubentryFlowHandler,
+            "roof": RoofSubentryFlowHandler,
             "sensor_group": SensorGroupSubentryFlowHandler,
             "management": MenuSubentryFlowHandler,
         }
 
-        # Roof pill requires at least one sensor group 
-        if state["hasSensors"]:
-            supported["roof"] = RoofSubentryFlowHandler
-
-        # String pill requires at least one roof AND one sensor group
-        if state["hasRoofs"] and state["hasSensors"]:
+        # String pill requires roof + sensor group + models
+        if state["hasRoofs"] and state["hasSensors"] and state["hasModels"]:
             supported["string"] = StringSubentryFlowHandler
 
         return supported

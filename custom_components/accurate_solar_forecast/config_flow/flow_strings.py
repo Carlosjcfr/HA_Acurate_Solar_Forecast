@@ -64,9 +64,9 @@ class StringsFlowMixin:
              stringName = finalData[CONF_STRING_NAME]
              stringId = slugify(stringName)
              
+             # sensor group is now owned by the roof, not the string
              stringData = {
                  CONF_STRING_NAME: stringName,
-                 "selected_sensor_group": finalData.get("selected_sensor_group"),
                  CONF_BRAND: finalData.get(CONF_BRAND),
                  CONF_REAL_PRODUCTION_SENSOR: finalData.get(CONF_REAL_PRODUCTION_SENSOR),
                  CONF_PANEL_MODEL: finalData.get(CONF_PANEL_MODEL),

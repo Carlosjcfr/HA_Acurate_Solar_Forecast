@@ -290,7 +290,46 @@
                     "data": {
                         "name": "Nombre del Tejado",
                         "tilt": "Inclinación (º)",
-                        "azimuth": "Orientación (180º=S)"
+                        "azimuth": "Orientación (180º=S)",
+                        "selected_sensor_group": "Grupo de Sensores"
+                    }
+                },
+                "sensor_group_create": {
+                    "title": "Crear Grupo de Sensores",
+                    "description": "No hay grupos de sensores configurados. Crea uno para continuar.",
+                    "data": {
+                        "sensor_group_name": "Nombre del Grupo",
+                        "irradiance_sensor": "Irradiancia",
+                        "temperature_sensor": "Tª Ambiental",
+                        "temp_panel_sensor": "Tª del panel",
+                        "wind_sensor": "Sensor de viento",
+                        "ref_tilt": "Inclinación sensor de irrad (º)",
+                        "ref_orientation": "Orientación sensor de irrad (180º=S)",
+                        "weather_entity": "Pronostico del tiempo",
+                        "illuminance_sensor": "Iluminancia"
+                    }
+                },
+                "string_create_select_relations": {
+                    "title": "Añadir Primer String",
+                    "description": "Selecciona un grupo de sensores y fabricante de panel.",
+                    "data": {
+                        "string_name": "Nombre del String",
+                        "selected_sensor_group": "Grupo de Sensores",
+                        "brand": "Fabricante del Panel",
+                        "real_production_sensor": "Producción Solar (W)",
+                        "roof_name": "Tejado (Seleccionar o Crear Nuevo)"
+                    }
+                },
+                "string_create_details": {
+                    "title": "Detalles del String",
+                    "description": "Geometría y modelo del string.",
+                    "data": {
+                        "panel_model": "Modelo de Panel",
+                        "num_panels": "Paneles en serie",
+                        "num_strings": "Series en paralelo",
+                        "tilt": "Inclinación Paneles (º)",
+                        "azimuth": "Orientación Paneles (180º=S)",
+                        "real_production_sensor": "Producción Real (W)"
                     }
                 }
             }
@@ -381,6 +420,145 @@
                         "menu_pv_models": "Módulos Fotovoltaicos",
                         "menu_roofs": "Tejados y Orientaciones",
                         "menu_sensor_groups": "Grupos de Sensores"
+                    }
+                },
+                "menu_pv_models": {
+                    "title": "Acciones Módulos FV",
+                    "description": "Base de datos de paneles.",
+                    "menu_options": {
+                        "pv_model_create": "Crear módulo FV",
+                        "pv_model_edit_select": "Editar módulo FV",
+                        "pv_model_delete_select": "Eliminar módulo FV"
+                    }
+                },
+                "pv_model_create": {
+                    "title": "Nuevo Módulo FV",
+                    "description": "Introduce las especificaciones técnicas.",
+                    "data": {
+                        "name": "Modelo",
+                        "brand": "Fabricante",
+                        "p_stc": "Potencia (STC)",
+                        "gamma": "Coeficiente de t° (%/°C)",
+                        "noct": "NOCT (°C)",
+                        "voc": "Voc",
+                        "isc": "Isc",
+                        "vmp": "Vmp",
+                        "imp": "Imp"
+                    }
+                },
+                "pv_model_edit_select": {
+                    "title": "Editar Módulo",
+                    "description": "Selecciona el módulo a editar.",
+                    "data": {
+                        "selected_model": "Módulo Fotovoltaico"
+                    }
+                },
+                "pv_model_edit_form": {
+                    "title": "Editar Módulo",
+                    "description": "Modifica los datos técnicos.",
+                    "data": {
+                        "name": "Modelo",
+                        "brand": "Fabricante",
+                        "p_stc": "Potencia (STC)",
+                        "gamma": "Coeficiente de t° (%/°C)",
+                        "noct": "NOCT (°C)",
+                        "voc": "Voc",
+                        "isc": "Isc",
+                        "vmp": "Vmp",
+                        "imp": "Imp"
+                    }
+                },
+                "pv_model_delete_select": {
+                    "title": "Eliminar Módulo",
+                    "description": "Selecciona el módulo a eliminar.",
+                    "data": {
+                        "selected_model": "Módulo a eliminar"
+                    }
+                },
+                "menu_roofs": {
+                    "title": "Acciones de Tejados",
+                    "description": "Gestiona la base de datos de orientaciones de tejados.",
+                    "menu_options": {
+                        "roof_create": "Crear tejado",
+                        "roof_edit_select": "Editar tejado",
+                        "roof_delete_select": "Eliminar tejado"
+                    }
+                },
+                "roof_create": {
+                    "title": "Nuevo Tejado",
+                    "description": "Introduce los datos",
+                    "data": {
+                        "name": "Nombre del Tejado",
+                        "tilt": "Inclinación (º)",
+                        "azimuth": "Orientación (180º=S)"
+                    }
+                },
+                "roof_edit_select": {
+                    "title": "Editar Tejado",
+                    "description": "Selecciona el tejado a editar.",
+                    "data": {
+                        "selected_roof": "Tejado"
+                    }
+                },
+                "roof_edit_form": {
+                    "title": "Editar Tejado",
+                    "description": "Modifica los datos del tejado.",
+                    "data": {
+                        "name": "Nombre",
+                        "tilt": "Inclinación (º)",
+                        "azimuth": "Orientación (180º=S)"
+                    }
+                },
+                "roof_delete_select": {
+                    "title": "Eliminar Tejado",
+                    "description": "Selecciona el tejado a eliminar.",
+                    "data": {
+                        "selected_roof": "Tejado a eliminar"
+                    }
+                },
+                "menu_sensor_groups": {
+                    "title": "Acciones Grupos de Sensores",
+                    "description": "Configuración de grupos de sensores.",
+                    "menu_options": {
+                        "sensor_group_create": "Crear grupo",
+                        "sensor_group_edit_select": "Editar grupo"
+                    }
+                },
+                "sensor_group_create": {
+                    "title": "Crear Grupo de Sensores",
+                    "description": "Define los sensores físicos disponibles.",
+                    "data": {
+                        "sensor_group_name": "Nombre del Grupo",
+                        "irradiance_sensor": "Irradiancia",
+                        "temperature_sensor": "Tª Ambiental",
+                        "temp_panel_sensor": "Tª del panel",
+                        "wind_sensor": "Sensor de viento",
+                        "ref_tilt": "Inclinación sensor de irrad (º)",
+                        "ref_orientation": "Orientación sensor de irrad (180º=S)",
+                        "weather_entity": "Pronostico del tiempo",
+                        "illuminance_sensor": "Iluminancia"
+                    }
+                },
+                "sensor_group_edit_select": {
+                    "title": "Editar Grupo",
+                    "description": "Selecciona el grupo a editar.",
+                    "data": {
+                        "selected_group": "Grupo de Sensores"
+                    }
+                },
+                "sensor_group_edit_form": {
+                    "title": "Editar Grupo",
+                    "description": "Modifica la configuración del grupo.",
+                    "data": {
+                        "sensor_group_name": "Nombre del Grupo",
+                        "irradiance_sensor": "Irradiancia",
+                        "temperature_sensor": "Tª Ambiental",
+                        "temp_panel_sensor": "Tª del panel",
+                        "wind_sensor": "Sensor de viento",
+                        "ref_tilt": "Inclinación sensor de irrad (º)",
+                        "ref_orientation": "Orientación sensor de irrad (180º=S)",
+                        "weather_entity": "Pronostico del tiempo",
+                        "illuminance_sensor": "Iluminancia"
                     }
                 }
             }

@@ -53,7 +53,6 @@ class SolarString:
     numStrings: int
     tilt: float
     azimuth: float
-    selectedSensorGroup: str
     realProductionSensor: Optional[str] = None
 
     @classmethod
@@ -65,7 +64,6 @@ class SolarString:
             numStrings=int(data.get("num_strings", data.get("numStrings", 1))),
             tilt=float(data.get("tilt", 30.0)),
             azimuth=float(data.get("azimuth", 180.0)),
-            selectedSensorGroup=data.get("selected_sensor_group", data.get("selectedSensorGroup", "")),
             realProductionSensor=data.get("real_production_sensor", data.get("realProductionSensor")),
         )
 
@@ -78,7 +76,6 @@ class SolarString:
             "num_strings": self.numStrings,
             "tilt": self.tilt,
             "azimuth": self.azimuth,
-            "selected_sensor_group": self.selectedSensorGroup,
             "real_production_sensor": self.realProductionSensor
         }
 
@@ -88,16 +85,25 @@ class Roof:
     name: str
     tilt: float
     azimuth: float
+    sensorGroupId: str = ""
     strings: Dict[str, SolarString] = field(default_factory=dict)
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Roof":
         strings_data = data.get("strings", {})
         strings = {k: SolarString.from_dict(v) for k, v in strings_data.items()}
+
+        # Migration: if no sensorGroupId on roof, try to read from first string (legacy data)
+        sensorGroupId = data.get("sensor_group_id", "")
+        if not sensorGroupId and strings:
+            firstString = next(iter(strings_data.values()), {})
+            sensorGroupId = firstString.get("selected_sensor_group", firstString.get("selectedSensorGroup", ""))
+
         return cls(
             name=data.get("name", "Generic Roof"),
             tilt=float(data.get("tilt", 30.0)),
             azimuth=float(data.get("azimuth", 180.0)),
+            sensorGroupId=sensorGroupId,
             strings=strings,
         )
 
@@ -106,6 +112,7 @@ class Roof:
             "name": self.name,
             "tilt": self.tilt,
             "azimuth": self.azimuth,
+            "sensor_group_id": self.sensorGroupId,
             "strings": {k: v.to_dict() for k, v in self.strings.items()}
         }
 

@@ -51,12 +51,13 @@ async def async_setup_entry(hass, configEntry, asyncAddEntities):
             roofId = slugify(roofName) if roofName else "default"
             roofStrings = db.getRoofStrings(roofId)
             
+            # Sensor group is now associated at roof level
+            sensorGroupObj = db.getSensorGroupForRoof(roofId)
+            
             entities = []
             for stringId, stringObj in roofStrings.items():
                 combinedData = stringObj.to_dict()
                 combinedData[CONF_ROOF_NAME] = roofName
-                groupName = stringObj.selectedSensorGroup
-                sensorGroupObj = db.getSensorGroup(groupName)
                 
                 if sensorGroupObj:
                     entities.append(SolarStringSensor(hass, combinedData, db, sensorGroupObj))
