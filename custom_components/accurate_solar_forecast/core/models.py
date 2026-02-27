@@ -60,13 +60,13 @@ class SolarString:
     def from_dict(cls, data: Dict[str, Any]) -> "SolarString":
         return cls(
             name=data.get("name", "Unknown String"),
-            panelModel=data.get("panel_model", "Generic"),
-            numPanels=int(data.get("num_panels", 1)),
-            numStrings=int(data.get("num_strings", 1)),
+            panelModel=data.get("panel_model", data.get("panelModel", "Generic")),
+            numPanels=int(data.get("num_panels", data.get("numPanels", 1))),
+            numStrings=int(data.get("num_strings", data.get("numStrings", 1))),
             tilt=float(data.get("tilt", 30.0)),
             azimuth=float(data.get("azimuth", 180.0)),
-            selectedSensorGroup=data.get("selected_sensor_group", ""),
-            realProductionSensor=data.get("real_production_sensor"),
+            selectedSensorGroup=data.get("selected_sensor_group", data.get("selectedSensorGroup", "")),
+            realProductionSensor=data.get("real_production_sensor", data.get("realProductionSensor")),
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -106,7 +106,7 @@ class Roof:
             "name": self.name,
             "tilt": self.tilt,
             "azimuth": self.azimuth,
-            "strings": {k: asdict(v) for k, v in self.strings.items()}
+            "strings": {k: v.to_dict() for k, v in self.strings.items()}
         }
 
 @dataclass

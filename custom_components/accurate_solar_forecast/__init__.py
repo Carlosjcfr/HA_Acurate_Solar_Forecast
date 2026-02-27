@@ -11,21 +11,25 @@ _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS = ["sensor", "number", "select", "binary_sensor"]
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
-    # Cargar la DB y ponerla disponible globalmente
-    if DOMAIN not in hass.data:
-        db = AccurateSolarSensorDB(hass)
-        await db.async_load()
-        hass.data[DOMAIN] = {"db": db}
-    else:
-        # Ensure older entries get the DB reference if hot-reloading
-        if "db" not in hass.data[DOMAIN]:
-             db = AccurateSolarSensorDB(hass)
-             await db.async_load()
-             hass.data[DOMAIN]["db"] = db
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    try:
+        # Cargar la DB y ponerla disponible globalmente
+        if DOMAIN not in hass.data:
+            db = AccurateSolarSensorDB(hass)
+            await db.async_load()
+            hass.data[DOMAIN] = {"db": db}
+        else:
+            # Ensure older entries get the DB reference if hot-reloading
+            if "db" not in hass.data[DOMAIN]:
+                 db = AccurateSolarSensorDB(hass)
+                 await db.async_load()
+                 hass.data[DOMAIN]["db"] = db
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-    return True
+        await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+        return True
+    except Exception as e:
+        _LOGGER.exception(f"Exception during async_setup_entry: {e}")
+        return False
 
 async def async_setup(hass: HomeAssistant, config: dict[str, Any]):
     # Inicialización global

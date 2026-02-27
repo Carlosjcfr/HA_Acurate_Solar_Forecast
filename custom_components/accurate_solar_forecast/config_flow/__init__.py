@@ -261,12 +261,20 @@ class AccurateForecastFlow(config_entries.ConfigFlow, AccurateForecastCommonFlow
         self.tempData = {}
 
     async def async_step_user(self, userInput=None):
-        if not self._async_current_entries():
-            return await self.async_step_setup(userInput)
-        
-        return self.async_abort(reason="not_supported")
+        try:
+            if not self._async_current_entries():
+                return await self.async_step_setup(userInput)
+            return self.async_abort(reason="not_supported")
+        except Exception as e:
+            _LOGGER.exception(f"Error in async_step_user: {e}")
+            return self.async_abort(reason="unknown")
 
     async def async_step_setup(self, userInput=None):
-        if userInput is not None:
-            return self.async_create_entry(title="Accurate Solar Forecast", data={})
-        return self.async_show_form(step_id="setup", data_schema=vol.Schema({}))
+        try:
+            if userInput is not None:
+                return self.async_create_entry(title="Accurate Solar Forecast", data={})
+            return self.async_show_form(step_id="setup", data_schema=vol.Schema({}))
+        except Exception as e:
+            _LOGGER.exception(f"Error in async_step_setup: {e}")
+            return self.async_abort(reason="unknown")
+
