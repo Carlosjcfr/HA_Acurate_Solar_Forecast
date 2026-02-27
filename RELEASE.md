@@ -1,51 +1,46 @@
 # Release Notes - Accurate Solar Forecast
 
-## [2026-02-27] - Update Summary (Refactor & Bug Fixes)
+## [2026-02-27] - Pre-Update Analysis (Global Refactor & Hotfix)
 
-### Identified Issues & Improvements - COMPLETED
+### Identified Issues & Improvements
 
-- **Naming Convention Violation**: SYSTEMATIC REFACTOR. All variables and internal functions have been updated to `camelCase` to comply with user rules.
-- **Logical Bug in Engine**: FIXED. Corrected the `geometric_factor` reference in `core/engine.py`.
-- **Poor Error Handling**: FIXED. Replaced bare `except:` with proper logging and exception handling.
-- **Type Hinting Gaps**: FIXED. Added missing type hints in `__init__.py` and other core files.
-- **Standard Overrides**: MAINTAINED. Home Assistant standard overrides (like `async_setup_entry`) remain in `snake_case` for compatibility.
+- **Coding Standards**: Systematic violation of the `camelCase` naming convention for variables and internal functions. [FIXED]
+- **Integration Failure**: Integration failed to start due to an `ImportError` after renaming core functions (`get_subentry_menu_state` -> `getSubentryMenuState`). [FIXED]
+- **Inconsistent Config Flow**: Multiple files in `config_flow/` were still using legacy `snake_case` database calls. [FIXED]
+- **Solar Engine Bug**: `NameError` related to `geometric_factor` in `core/engine.py`. [FIXED]
+- **Error Handling**: Presence of bare `except:` blocks without proper logging. [FIXED]
+- **Typing Gaps**: Missing type hints in core modules. [FIXED]
 
-### Action Plan - PROGRESS
+### Action Plan
 
-1. **Bug Fix**: COMPLETED.
-2. **Naming Refactor**: COMPLETED. systematic update across `core/`, `databases/`, and root files.
-3. **Error Handling**: COMPLETED.
-4. **Type Hinting**: COMPLETED.
-5. **Final Review**: COMPLETED. No "Acurate" instances found.
+1. **Bug Fixes**: Resolve the `NameError` in the solar engine and the `ImportError` in the config flow. [COMPLETED]
+2. **Global Refactor**: Apply `camelCase` naming convention across all `core`, `databases`, and `root` files. [COMPLETED]
+3. **Config Flow Sync**: Systematically update all mixins in `config_flow/` to match the new naming conventions and database methods. [COMPLETED]
+4. **Resiliency**: Improve error handling with specific exceptions and logging. [COMPLETED]
+5. **Type Safety**: Complete type hinting for better maintainability. [COMPLETED]
+6. **Final Validation**: Ensure no remaining instances of the "Acurate" misspelling. [COMPLETED]
 
 ---
 
-## [v1.3.1] - Naming Standardization & Stability
-
-This release brings the codebase in full alignment with the project's coding standards and fixes a critical calculation bug.
+## [v1.3.2] - 2026-02-27: Stability & Standardization
 
 ### 🌟 Key Changes
 
-- **Full camelCase Refactor**: Every variable and internal function now follows the `camelCase` naming convention.
-- **Dataclass Alignment**: Updated `models.py` dataclasses to use `camelCase` fields while maintaining JSON compatibility for stored databases.
-- **Engine Stability**: Fixed a `NameError` in `_updateLogic` that occurred during attribute updates.
-- **Improved Observability**: Added better error logging in values conversion and calculation loops.
-- **Strict Typing**: Enhanced type safety in entry point functions.
+- **Full camelCase Refactor**: Every variable and internal function now follows the project's standard naming convention.
+- **Dataclass Standardization**: Updated `PvModel`, `SolarString`, and `SensorGroup` to use `camelCase` fields while maintaining backward compatibility.
+- **Improved Observability**: Replaced bare `except:` blocks with specific error handling and informative logging.
+- **Strict Typing**: Added comprehensive type hints across the entire codebase.
 
 ### 🩹 Bug Fixes
 
-- Fixed `NameError` on `geometric_factor` in the solar engine.
-- Corrected unit conversion debug logging.
-- Unified `slugify` usage in all diagnostics.
+- **Hotfix**: Resolved integration startup failure caused by inconsistent function naming in imports.
+- **Engine**: Fixed a critical `NameError` in the transposition factor calculation.
+- **Config Flow**: Resolved multiple runtime errors in the setup screens for roofs, strings, and sensors.
+- **Typo Cleanup**: Verified the complete removal of the "Acurate" misspelling in all files.
 
 ---
 
 ## Historical Notes
-
-### [2026-02-27] - Pre-Update Analysis (Step 4: Documentation & Standards)
-
-- **Type Consistency**: While the new `core/models.py` uses dataclasses, many internal functions in `helpers.py` and `engine.py` lack explicit type hints. [RESOLVED]
-- **Architectural Documentation**: README updated with new modular structure. [RESOLVED]
 
 ### [v1.3.0] - Structural Refactor & Optimization
 
@@ -53,8 +48,8 @@ This release focused on a complete internal restructuring of the integration to 
 
 ### Resumen de Situación Actual
 
-Arquitectura: El proyecto está bien modularizado. La separación en core, databases, config_flow y variables sigue los estándares modernos de Home Assistant.
-Consistencia de Nombres: Corregida al 100%. Todos los archivos, clases y enlaces de GitHub usan ahora la ortografía correcta (Accurate).
-Código: Completamente refactorizado a camelCase según las reglas del usuario.
+- **Arquitectura**: Totalmente modularizada (core, databases, config_flow, variables).
+- **Consistencia**: Ortografía corregida a "Accurate" en todo el proyecto.
+- **Estándares**: Código alineado con las reglas de estilo del proyecto (camelCase).
 
-*Developed by Carlosjcfr*
+Developed by Carlosjcfr

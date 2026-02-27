@@ -6,11 +6,11 @@ class RoofsFlowMixin:
     # =================================================================================
     # BRANCH: ROOFS (Create, Edit, Delete)
     # =================================================================================
-    async def async_step_menu_roofs(self, user_input=None):
+    async def async_step_menu_roofs(self, userInput=None):
         """Submenú para Tejados."""
         options = ["roof_create"]
         
-        roofs = self._db.list_roofs()
+        roofs = self._db.listRoofs()
         if roofs and len(roofs) > 0:
              options.append("roof_edit_select")
              options.append("roof_delete_select")
@@ -20,12 +20,12 @@ class RoofsFlowMixin:
             menu_options=options
         )
 
-    async def async_step_roof_edit_select(self, user_input=None):
-        if user_input is not None:
-             self.selected_item_id = user_input["selected_roof"]
+    async def async_step_roof_edit_select(self, userInput=None):
+        if userInput is not None:
+             self.selectedItemId = userInput["selected_roof"]
              return await self.async_step_roof_edit_form()
              
-        roofs = self._db.list_roofs()
+        roofs = self._db.listRoofs()
         if not roofs:
              return self.async_abort(reason="no_roofs_available")
         
@@ -36,31 +36,31 @@ class RoofsFlowMixin:
         })
         return self.async_show_form(step_id="roof_edit_select", data_schema=schema)
 
-    async def async_step_roof_edit_form(self, user_input=None):
-        if user_input is not None:
-            await self._db.add_roof(
-                user_input["name"],
-                user_input[CONF_TILT],
-                user_input[CONF_AZIMUTH]
+    async def async_step_roof_edit_form(self, userInput=None):
+        if userInput is not None:
+            await self._db.addRoof(
+                userInput["name"],
+                userInput[CONF_TILT],
+                userInput[CONF_AZIMUTH]
             )
             return self.async_abort(reason="list_updated")
 
         # Load Data
-        roof_data = self._db.get_roof(self.selected_item_id)
+        roofData = self._db.getRoof(self.selectedItemId)
         schema = vol.Schema({
-            vol.Required("name", default=roof_data.get("name")): str,
-            vol.Required(CONF_TILT, default=roof_data.get("tilt")): vol.All(vol.Coerce(float), vol.Range(min=0, max=90)),
-            vol.Required(CONF_AZIMUTH, default=roof_data.get("azimuth")): vol.All(vol.Coerce(float), vol.Range(min=0, max=360)),
+            vol.Required("name", default=roofData.get("name")): str,
+            vol.Required(CONF_TILT, default=roofData.get("tilt")): vol.All(vol.Coerce(float), vol.Range(min=0, max=90)),
+            vol.Required(CONF_AZIMUTH, default=roofData.get("azimuth")): vol.All(vol.Coerce(float), vol.Range(min=0, max=360)),
         })
         return self.async_show_form(step_id="roof_edit_form", data_schema=schema)
 
-    async def async_step_roof_delete_select(self, user_input=None):
-        if user_input is not None:
-             roof_id = user_input["selected_roof"]
-             await self._db.delete_roof(roof_id)
+    async def async_step_roof_delete_select(self, userInput=None):
+        if userInput is not None:
+             roofId = userInput["selected_roof"]
+             await self._db.deleteRoof(roofId)
              return self.async_abort(reason="list_updated")
              
-        roofs = self._db.list_roofs()
+        roofs = self._db.listRoofs()
         if not roofs:
              return self.async_abort(reason="no_roofs_available")
         

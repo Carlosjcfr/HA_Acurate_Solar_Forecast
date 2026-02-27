@@ -6,14 +6,14 @@ class SensorGroupsFlowMixin:
     # =================================================================================
     # BRANCH 2: SENSOR GROUPS (Integraciones - Create & Edit Only)
     # =================================================================================
-    async def async_step_menu_sensor_groups(self, user_input=None):
+    async def async_step_menu_sensor_groups(self, userInput=None):
         # Explicitly reload DB to ensure freshness just in case
         if self._db:
              await self._db.async_load()
 
         # Optimization: If no groups, go straight to creation
         # We check the length explicitly to be robust
-        groups = self._db.list_sensor_groups()
+        groups = self._db.listSensorGroups()
         if not groups or len(groups) == 0:
              return await self.async_step_sensor_group_create()
 
@@ -24,49 +24,49 @@ class SensorGroupsFlowMixin:
         )
 
     # 2.1 CREATE SENSOR GROUP
-    async def async_step_sensor_group_create(self, user_input=None):
+    async def async_step_sensor_group_create(self, userInput=None):
          errors = {}
-         if user_input is not None:
-            name = user_input[CONF_SENSOR_GROUP_NAME]
+         if userInput is not None:
+            name = userInput[CONF_SENSOR_GROUP_NAME]
             # Validate sensors
-            entities_to_check = [
-                user_input[CONF_REF_SENSOR],
-                user_input[CONF_TEMP_SENSOR],
-                user_input.get(CONF_TEMP_PANEL_SENSOR),
-                user_input.get(CONF_WIND_SENSOR),
-                user_input.get(CONF_ILLUMINANCE_SENSOR)
+            entitiesToCheck = [
+                userInput[CONF_REF_SENSOR],
+                userInput[CONF_TEMP_SENSOR],
+                userInput.get(CONF_TEMP_PANEL_SENSOR),
+                userInput.get(CONF_WIND_SENSOR),
+                userInput.get(CONF_ILLUMINANCE_SENSOR)
             ]
-            for ent_id in entities_to_check:
-                if ent_id:
-                    state = self.hass.states.get(ent_id)
+            for entId in entitiesToCheck:
+                if entId:
+                    state = self.hass.states.get(entId)
                     if state is None or state.state in ["unavailable", "unknown"]:
                         errors["base"] = "sensor_unavailable"
                         break
             
             if not errors:
                 # Save to DB
-                await self._db.add_sensor_group(
+                await self._db.addSensorGroup(
                     name,
-                    user_input[CONF_REF_SENSOR],
-                    user_input[CONF_TEMP_SENSOR],
-                    user_input.get(CONF_TEMP_PANEL_SENSOR),
-                    user_input.get(CONF_WIND_SENSOR),
-                    user_input[CONF_REF_TILT],
-                    user_input[CONF_REF_ORIENTATION],
-                    user_input.get(CONF_WEATHER_ENTITY),
-                    user_input.get(CONF_ILLUMINANCE_SENSOR)
+                    userInput[CONF_REF_SENSOR],
+                    userInput[CONF_TEMP_SENSOR],
+                    userInput.get(CONF_TEMP_PANEL_SENSOR),
+                    userInput.get(CONF_WIND_SENSOR),
+                    userInput[CONF_REF_TILT],
+                    userInput[CONF_REF_ORIENTATION],
+                    userInput.get(CONF_WEATHER_ENTITY),
+                    userInput.get(CONF_ILLUMINANCE_SENSOR)
                 )
                 return self.async_abort(reason="list_updated")
             
-         return self._show_sensor_group_form("sensor_group_create", errors)
+         return self._showSensorGroupForm("sensor_group_create", errors)
 
     # 2.2 EDIT SENSOR GROUP (Update DB only)
-    async def async_step_sensor_group_edit_select(self, user_input=None):
-        if user_input is not None:
-             self.selected_item_id = user_input["selected_group"]
+    async def async_step_sensor_group_edit_select(self, userInput=None):
+        if userInput is not None:
+             self.selectedItemId = userInput["selected_group"]
              return await self.async_step_sensor_group_edit_form()
 
-        groups = self._db.list_sensor_groups()
+        groups = self._db.listSensorGroups()
         if not groups:
              return self.async_abort(reason="no_sensor_groups")
 
@@ -77,46 +77,47 @@ class SensorGroupsFlowMixin:
         })
         return self.async_show_form(step_id="sensor_group_edit_select", data_schema=schema)
 
-    async def async_step_sensor_group_edit_form(self, user_input=None):
-        if user_input is not None:
+    async def async_step_sensor_group_edit_form(self, userInput=None):
+        errors = {}
+        if userInput is not None:
              # Validate sensors
-             entities_to_check = [
-                user_input[CONF_REF_SENSOR],
-                user_input[CONF_TEMP_SENSOR],
-                user_input.get(CONF_TEMP_PANEL_SENSOR),
-                user_input.get(CONF_WIND_SENSOR),
-                user_input.get(CONF_ILLUMINANCE_SENSOR)
+             entitiesToCheck = [
+                userInput[CONF_REF_SENSOR],
+                userInput[CONF_TEMP_SENSOR],
+                userInput.get(CONF_TEMP_PANEL_SENSOR),
+                userInput.get(CONF_WIND_SENSOR),
+                userInput.get(CONF_ILLUMINANCE_SENSOR)
              ]
-             for ent_id in entities_to_check:
-                if ent_id:
-                    state = self.hass.states.get(ent_id)
+             for entId in entitiesToCheck:
+                if entId:
+                    state = self.hass.states.get(entId)
                     if state is None or state.state in ["unavailable", "unknown"]:
                         errors = {"base": "sensor_unavailable"}
                         break
              
              if not errors:
-                 name = user_input[CONF_SENSOR_GROUP_NAME]
-                 await self._db.add_sensor_group(
+                 name = userInput[CONF_SENSOR_GROUP_NAME]
+                 await self._db.addSensorGroup(
                     name,
-                    user_input[CONF_REF_SENSOR],
-                    user_input[CONF_TEMP_SENSOR],
-                    user_input.get(CONF_TEMP_PANEL_SENSOR),
-                    user_input.get(CONF_WIND_SENSOR),
-                    user_input[CONF_REF_TILT],
-                    user_input[CONF_REF_ORIENTATION],
-                    user_input.get(CONF_WEATHER_ENTITY),
-                    user_input.get(CONF_ILLUMINANCE_SENSOR)
+                    userInput[CONF_REF_SENSOR],
+                    userInput[CONF_TEMP_SENSOR],
+                    userInput.get(CONF_TEMP_PANEL_SENSOR),
+                    userInput.get(CONF_WIND_SENSOR),
+                    userInput[CONF_REF_TILT],
+                    userInput[CONF_REF_ORIENTATION],
+                    userInput.get(CONF_WEATHER_ENTITY),
+                    userInput.get(CONF_ILLUMINANCE_SENSOR)
                 )
                  return self.async_abort(reason="list_updated")
              else:
-                 group_data = self._db.get_sensor_group(self.selected_item_id)
-                 return self._show_sensor_group_form("sensor_group_edit_form", errors, default_data=group_data)
+                 groupData = self._db.getSensorGroup(self.selectedItemId)
+                 return self._showSensorGroupForm("sensor_group_edit_form", errors, defaultData=groupData)
 
-        group_data = self._db.get_sensor_group(self.selected_item_id)
-        return self._show_sensor_group_form("sensor_group_edit_form", {}, default_data=group_data)
+        groupData = self._db.getSensorGroup(self.selectedItemId)
+        return self._showSensorGroupForm("sensor_group_edit_form", {}, defaultData=groupData)
 
     # Helper: Sensor Group Form
-    def _show_sensor_group_form(self, step_id, errors, default_data=None):
-        if default_data is None: default_data = {}
-        schema = self._get_sensor_group_schema(default_data)
-        return self.async_show_form(step_id=step_id, data_schema=schema, errors=errors)
+    def _showSensorGroupForm(self, stepId, errors, defaultData=None):
+        if defaultData is None: defaultData = {}
+        schema = self._getSensorGroupSchema(defaultData)
+        return self.async_show_form(step_id=stepId, data_schema=schema, errors=errors)

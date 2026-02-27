@@ -113,10 +113,10 @@ class AccurateSolarSensorDB:
         return False
 
     # --- PV MODEL METHODS ---
-    def addModel(self, name: str, brand: str, p_stc: float, gamma: float, noct: float, voc: float, isc: float, vmp: float, imp: float) -> Coroutine:
+    def addModel(self, name: str, brand: str, pStc: float, gamma: float, noct: float, voc: float, isc: float, vmp: float, imp: float) -> Coroutine:
         modelId = slugify(name)
         self.data[modelId] = PvModel(
-            name=name, brand=brand, p_stc=float(p_stc), gamma=float(gamma),
+            name=name, brand=brand, pStc=float(pStc), gamma=float(gamma),
             noct=float(noct), voc=float(voc), isc=float(isc), vmp=float(vmp), imp=float(imp)
         )
         return self.async_save()
