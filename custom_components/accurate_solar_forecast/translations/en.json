@@ -209,7 +209,8 @@
             "no_sensor_groups": "No sensor groups. Create one first.",
             "no_sensor_groups_available": "No sensor groups available.",
             "no_models_available_to_delete": "No models available to delete.",
-            "cannot_delete_default": "Cannot delete the default model."
+            "cannot_delete_default": "Cannot delete the default model.",
+            "sensor_unavailable": "One or more selected sensors are unavailable or have an unknown state. Please check your configuration."
         },
         "abort": {
             "already_configured": "Device is already configured",
@@ -241,6 +242,11 @@
             },
             "cloud_coverage": {
                 "name": "Cloudiness"
+            }
+        },
+        "binary_sensor": {
+            "integration_health": {
+                "name": "Integration Health"
             }
         }
     },

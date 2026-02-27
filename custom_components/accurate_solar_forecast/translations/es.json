@@ -209,7 +209,8 @@
             "no_sensor_groups": "No hay grupos de sensores. Crea uno primero.",
             "no_sensor_groups_available": "No hay grupos de sensores disponibles.",
             "no_models_available_to_delete": "No hay modelos que se puedan eliminar.",
-            "cannot_delete_default": "No se puede eliminar el modelo predeterminado."
+            "cannot_delete_default": "No se puede eliminar el modelo predeterminado.",
+            "sensor_unavailable": "Uno o más sensores seleccionados no están disponibles o su estado es desconocido. Revisa tu configuración."
         },
         "abort": {
             "already_configured": "El dispositivo ya está configurado",
@@ -241,6 +242,11 @@
             },
             "cloud_coverage": {
                 "name": "Nubosidad"
+            }
+        },
+        "binary_sensor": {
+            "integration_health": {
+                "name": "Estado de la Integración"
             }
         }
     },

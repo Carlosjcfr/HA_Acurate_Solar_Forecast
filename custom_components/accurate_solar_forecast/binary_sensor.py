@@ -1,0 +1,81 @@
+"""Diagnostic entities for Accurate Solar Forecast."""
+import logging
+from homeassistant.components.binary_sensor import (
+    BinarySensorEntity,
+    BinarySensorDeviceClass,
+)
+from homeassistant.helpers.entity import DeviceInfo
+from .variables.const import DOMAIN
+
+_LOGGER = logging.getLogger(__name__)
+
+async def async_setup_entry(hass, config_entry, async_add_entities):
+    """Set up the diagnostic binary sensors."""
+    db = hass.data[DOMAIN]["db"]
+    
+    # We only add the health sensor once (per integration entry that represents a global status)
+    # Usually we can tie it to the first config entry or a global virtual device.
+    async_add_entities([AccurateSolarHealthSensor(hass, db, config_entry)])
+
+class AccurateSolarHealthSensor(BinarySensorEntity):
+    """Reflects the global health of the integration."""
+
+    _attr_has_entity_name = True
+    _attr_translation_key = "integration_health"
+    _attr_device_class = BinarySensorDeviceClass.PROBLEM
+
+    def __init__(self, hass, db, config_entry):
+        self.hass = hass
+        self._db = db
+        self._config_entry = config_entry
+        self._attr_unique_id = f"{config_entry.entry_id}_health"
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, "global_diagnostics")},
+            name="Accurate Solar Forecast (Diagnostics)",
+            manufacturer="Accurate Solar Forecast",
+            model="Diagnostic System",
+        )
+
+    @property
+    def is_on(self) -> bool:
+        """Return True if there is a problem."""
+        # Check 1: Database availability
+        if not self._db or not self._db.data:
+            return True
+            
+        # Check 2: Orphan strings (strings referencing non-existent models)
+        for roof in self._db.roofs.values():
+            for string in roof.strings.values():
+                # Check model
+                from .core import slugify
+                model_id = slugify(string.panel_model)
+                if model_id not in self._db.data:
+                    return True
+                # Check sensor group
+                group_id = slugify(string.selected_sensor_group)
+                if group_id not in self._db.sensor_groups:
+                    return True
+                    
+        return False
+
+    @property
+    def extra_state_attributes(self):
+        """Return detailed status."""
+        issues = []
+        if not self._db or not self._db.data:
+            issues.append("Database not loaded or empty")
+            
+        for roof_id, roof in self._db.roofs.items():
+            for string_id, string in roof.strings.items():
+                from .core import slugify
+                if slugify(string.panel_model) not in self._db.data:
+                    issues.append(f"Orphan string '{string.name}': Model '{string.panel_model}' missing")
+                if slugify(string.selected_sensor_group) not in self._db.sensor_groups:
+                    issues.append(f"Orphan string '{string.name}': Sensor Group '{string.selected_sensor_group}' missing")
+                    
+        return {
+            "issues": issues,
+            "models_count": len(self._db.data),
+            "roofs_count": len(self._db.roofs),
+            "groups_count": len(self._db.sensor_groups),
+        }

@@ -11,7 +11,10 @@ from .helpers import slugify
 
 _LOGGER = logging.getLogger(__name__)
 
-# --- UTILS ---
+# --- UTILS & CONSTANTS ---
+SUN_MOVEMENT_THRESHOLD = 0.5  # Re-calculate geometry only if sun moves > 0.5 degrees
+SENSOR_REFRESH_THRESHOLD = 5.0 # Re-calculate if input changes significantly
+
 def get_converted_value(hass, entity_id, target_type, default=0.0):
     """Fetch state and convert to target internal units (Celsius, m/s, W/m2)."""
     if not entity_id:
@@ -102,6 +105,14 @@ class SolarStringSensor(SensorEntity):
             model=model_name if not real_sensor_id else None,
             via_device=(DOMAIN, self._sensor_group.name if self._sensor_group else "Unknown") if not real_sensor_id else None
         )
+        
+        # Performance caching
+        self._last_sun_az = -100.0
+        self._last_sun_el = -100.0
+        self._cached_geometric_factor = 0.0
+        self._cached_cloud_info = (0.0, "None", 1.0) # (coverage, source, kt)
+        self._last_irr_ref = -1.0
+        self._last_t_amb = -100.0
 
     @property
     def check_config(self):
@@ -131,19 +142,28 @@ class SolarStringSensor(SensorEntity):
                 self.async_write_ha_state()
             return
 
-        # Rest of the calculation...
-
+        # 1. Inputs Check
         ref_sensor = self._sensor_group.ref_sensor
         irr_ref = get_converted_value(self.hass, ref_sensor, "irradiance", 0.0)
         t_amb = get_converted_value(self.hass, self._sensor_group.temp_sensor, "temperature", 25.0)
         
-        target_az = self._config.get(CONF_AZIMUTH)
-        target_tilt = self._config.get(CONF_TILT)
-        cos_theta_target = self.calculate_cos_incidence(sun_az, sun_el, target_az, target_tilt)
-        cos_theta_ref = self.calculate_cos_incidence(sun_az, sun_el, self._sensor_group.ref_orientation, self._sensor_group.ref_tilt)
+        # 2. Geometric & Cloud Update (Throttled)
+        sun_moved = (abs(sun_az - self._last_sun_az) > SUN_MOVEMENT_THRESHOLD or 
+                     abs(sun_el - self._last_sun_el) > SUN_MOVEMENT_THRESHOLD)
+        
+        if sun_moved:
+            target_az = self._config.get(CONF_AZIMUTH)
+            target_tilt = self._config.get(CONF_TILT)
+            cos_theta_target = self.calculate_cos_incidence(sun_az, sun_el, target_az, target_tilt)
+            cos_theta_ref = self.calculate_cos_incidence(sun_az, sun_el, self._sensor_group.ref_orientation, self._sensor_group.ref_tilt)
+            
+            try:
+                self._cached_geometric_factor = 0 if cos_theta_ref < 0.05 else cos_theta_target / cos_theta_ref
+            except ZeroDivisionError:
+                self._cached_geometric_factor = 0
 
-        kt, cloud_source, cloud_coverage = 1.0, "None", 0.0
-        if sun_el > 0:
+            # Cloud & KT calculation (also depends on sun_el)
+            kt, cloud_source, cloud_coverage = 1.0, "None", 0.0
             ill_sensor = self._sensor_group.illuminance_sensor
             if ill_sensor:
                 lux_real = get_converted_value(self.hass, ill_sensor, "illuminance", -1)
@@ -154,38 +174,37 @@ class SolarStringSensor(SensorEntity):
                             kt = max(0.05, min(1.2, lux_real / lux_teo))
                             cloud_coverage = max(0, min(100, 100 * (1 - kt)))
                             cloud_source = "Lux Sensor"
-                        except ZeroDivisionError:
-                            pass
-        
-        if cloud_source in ["None", "Night"]:
-            weather_entity = self._sensor_group.weather_entity
-            if weather_entity:
-                w_state = self.hass.states.get(weather_entity)
-                if w_state and w_state.state not in ["unavailable", "unknown"]:
-                    if w_state.domain == "sensor":
-                        try: cloud_coverage = float(w_state.state)
-                        except: pass
-                    elif w_state.domain == "weather":
-                        c = w_state.attributes.get("cloud_coverage")
-                        if c is not None:
-                           try: cloud_coverage = float(c)
-                           except: pass
-                        else:
-                            condition = w_state.state
-                            if condition in ["sunny", "clear-night"]: cloud_coverage = 0
-                            elif condition in ["partlycloudy"]: cloud_coverage = 40
-                            elif condition in ["cloudy"]: cloud_coverage = 90
-                            else: cloud_coverage = 100
-                    kt = 1.0 - (cloud_coverage / 100.0)
-                    cloud_source = "Weather Entity"
-        
-        k = 0.1 + (0.8 * (cloud_coverage / 100.0))
-        try:
-            geometric_factor = 0 if cos_theta_ref < 0.05 else cos_theta_target / cos_theta_ref
-        except ZeroDivisionError:
-            geometric_factor = 0
+                        except ZeroDivisionError: pass
+            
+            if cloud_source == "None":
+                weather_entity = self._sensor_group.weather_entity
+                if weather_entity:
+                    w_state = self.hass.states.get(weather_entity)
+                    if w_state and w_state.state not in ["unavailable", "unknown"]:
+                        if w_state.domain == "sensor":
+                            try: cloud_coverage = float(w_state.state)
+                            except: pass
+                        elif w_state.domain == "weather":
+                            c = w_state.attributes.get("cloud_coverage")
+                            if c is not None:
+                               try: cloud_coverage = float(c)
+                               except: pass
+                            else:
+                                condition = w_state.state
+                                if condition in ["sunny", "clear-night"]: cloud_coverage = 0
+                                elif condition in ["partlycloudy"]: cloud_coverage = 40
+                                elif condition in ["cloudy"]: cloud_coverage = 90
+                                else: cloud_coverage = 100
+                        kt = 1.0 - (cloud_coverage / 100.0)
+                        cloud_source = "Weather Entity"
+            
+            self._cached_cloud_info = (cloud_coverage, cloud_source, kt)
+            self._last_sun_az, self._last_sun_el = sun_az, sun_el
 
-        combined_factor = ((1 - k) * geometric_factor) + (k * 1.0)
+        # 3. Final Power Calculation (Always uses current inputs)
+        cloud_coverage, cloud_source, kt = self._cached_cloud_info
+        k = 0.1 + (0.8 * (cloud_coverage / 100.0))
+        combined_factor = ((1 - k) * self._cached_geometric_factor) + (k * 1.0)
         irr_target = irr_ref * combined_factor
 
         try:
@@ -198,10 +217,7 @@ class SolarStringSensor(SensorEntity):
             total_power = max(0, power_unit * self._config.get(CONF_NUM_PANELS, 1) * self._config.get(CONF_NUM_STRINGS, 1))
         except Exception as e:
             _LOGGER.error(f"Error calculating solar power for {self.name}: {e}")
-            total_power = 0
-            irr_target = 0
-            geometric_factor = 0
-            t_cell = t_amb
+            total_power, irr_target, t_cell = 0, 0, t_amb
 
         self._attr_native_value = round(total_power, 2)
         self._attr_extra_state_attributes = {
@@ -278,6 +294,8 @@ class SensorGroupCloudinessSensor(SensorEntity):
         self._attr_device_info = DeviceInfo(identifiers=target_device_identifiers) if target_device_identifiers else DeviceInfo(
             identifiers={(DOMAIN, config_entry.entry_id)}, name=self._name, entry_type=dr.DeviceEntryType.SERVICE
         )
+        self._last_sun_el = -100.0
+        self._cached_value = 0.0
 
     async def async_added_to_hass(self):
         entities = ["sun.sun"]
@@ -291,6 +309,13 @@ class SensorGroupCloudinessSensor(SensorEntity):
         sun_state = self.hass.states.get("sun.sun")
         if not sun_state: return
         sun_el = float(sun_state.attributes.get("elevation", 0))
+        
+        # Throttling
+        if abs(sun_el - self._last_sun_el) < SUN_MOVEMENT_THRESHOLD:
+            # Check if source sensors changed (if event is from a sensor change, we should probably re-calc)
+            if event and event.data.get("entity_id") == "sun.sun":
+                return
+
         cloud_coverage = 0.0
         if sun_el > 0:
             ill_sensor = self._config.get(CONF_ILLUMINANCE_SENSOR)
@@ -300,6 +325,8 @@ class SensorGroupCloudinessSensor(SensorEntity):
                     lux_teo = 120000 * math.sin(math.radians(sun_el))
                     if lux_teo > 10:
                         cloud_coverage = max(0, min(100, 100 * (1 - (lux_real / lux_teo))))
+        
+        self._last_sun_el = sun_el
         self._attr_native_value = round(cloud_coverage, 1)
         self.async_write_ha_state()
 

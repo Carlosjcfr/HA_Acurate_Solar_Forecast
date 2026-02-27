@@ -39,29 +39,48 @@ Bug de Importación: Se había eliminado por error la referencia a DeviceEntry e
 Código Duplicado en UI: Los formularios de configuración repetían la misma lógica de "valores por defecto" en cada paso. He creado el helper *get_default en la clase base para limpiar los Mixins de UI. [CORREGIDO]
 Inconsistencia de IDs: Algunas entidades seguían usando lower().replace(' ', '*') mientras otras usaban el nuevo slugify. He unificado todo el motor para que usen la misma función. [CORREGIDO]
 Optimización Nocturna: Los sensores de potencia seguían ejecutando cálculos trigonométricos complejos incluso de noche. Ahora se detienen inmediatamente si el sol baja del horizonte. [CORREGIDO]
+
 ---
 
-## 🚀 Plan de Acción (Action Plan)
+## [2026-02-27] - Pre-Update Analysis (Step 2: Performance Optimization)
 
-### 1. Estabilidad y Robustez (Prioridad Alta)
+### Identified Issues & Improvements
 
-Validación de Base de Datos: Implementar un esquema (usando Dataclasses) para los modelos de paneles. Actualmente, si el JSON se edita mal a mano, la integración podría fallar al cargar.
-Manejo de Errores en Sensores: Añadir bloques try-except más específicos en los cálculos matemáticos para manejar valores NaN o None de sensores externos de forma elegante.
+* **High Update Frequency**: `sun.sun` updates its position very frequently (several times per minute). Each update triggers a full re-calculation across all solar string entities.
+* **Redundant Trigonometry**: The geometric factor only changes significantly when the sun moves more than a fraction of a degree. Recalculating it for every minor sun wobble is inefficient.
+* **Computational Debt**: With many strings, these frequent updates can lead to unnecessary CPU spikes in low-power Home Assistant installations.
 
-### 2. Optimización de Rendimiento (Prioridad Media)
+### Action Plan
 
-Throttling de Posición Solar: El sol se mueve constantemente, disparando actualizaciones cada segundo. Implementaremos un umbral (ej: solo recalcular si el sol se mueve más de 0.2 grados) para ahorrar ciclos de CPU.
-Cache de Cálculos: Almacenar los resultados intermedios de la transposición geométrica para no repetirlos si no han cambiado los inputs.
+1. Define a `SUN_MOVEMENT_THRESHOLD` (0.5 degrees).
+2. Implement caching for `geometric_factor` and `cloud_coverage` within the sensor classes.
+3. Update `_update_logic` to skip heavy math if the sun hasn't moved significantly or is below the horizon.
+4. Refactor `get_converted_value` to be slightly more efficient.
 
-### 3. Experiencia de Usuario - UX (Prioridad Media)
+---
 
-Validación proactively: En el formulario de creación de sensores, añadir una validación inmediata que avise si el sensor seleccionado no tiene una unidad de medida compatible (W/m², LUX, etc.).
-Diagnósticos: Crear una plataforma binary_sensor.py que indique si la base de datos está cargada correctamente o si hay algún string "huérfano" sin modelo de panel.
+## 🚀 Plan de Acción (Action Plan) - Progreso
 
-### 4. Documentación y Estándares (Mantenimiento)
+### 1. Estabilidad y Robustez (Prioridad Alta) - **[CORREGIDO]**
 
-Type Hinting: Completar el tipado de todas las funciones para que el editor de código pueda detectar errores antes de ejecutar.
-Wiki/README: Actualizar los diagramas de flujo para reflejar la nueva estructura modular
+* **Validación de Base de Datos**: Implementado esquema con `Dataclasses` para paneles, tejados y grupos de sensores.
+* **Manejo de Errores**: Bloques `try-except` añadidos en todos los cálculos críticos de `engine.py`.
+
+### 2. Optimización de Rendimiento (Prioridad Media) - **[CORREGIDO]**
+
+* **Throttling de Posición Solar**: Implementado umbral de 0.5 grados. Los cálculos trigonométricos ahora se saltan si el sol no se ha movido significativamente.
+* **Cache de Cálculos**: Los factores de transposición y cobertura nubosa ahora se cachean y solo se recalculan cuando es necesario.
+
+### 3. Experiencia de Usuario - UX (Prioridad Media) - **[CORREGIDO]**
+
+* **Validación proactively**: Implementada validación de estado de sensores en el Config Flow (`unavailable/unknown`). Añadidos mensajes de error traducidos.
+* **Diagnósticos**: Creada plataforma `binary_sensor.py` con una entidad de "Estado de la Integración" que reporta problemas de base de datos o strings huérfanos.
+
+### 4. Documentación y Estándares (Mantenimiento) - **[EN PROCESO]**
+
+* **Type Hinting**: Migración a tipos de Python en `core/*` completada.
+* **Wiki/README**: Pendiente actualización de diagramas.
+
 ---
 
 *Developed by Carlosjcfr*

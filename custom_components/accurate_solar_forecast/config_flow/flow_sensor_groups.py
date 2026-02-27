@@ -28,20 +28,35 @@ class SensorGroupsFlowMixin:
          errors = {}
          if user_input is not None:
             name = user_input[CONF_SENSOR_GROUP_NAME]
-            # Save to DB
-            await self._db.add_sensor_group(
-                name,
+            # Validate sensors
+            entities_to_check = [
                 user_input[CONF_REF_SENSOR],
                 user_input[CONF_TEMP_SENSOR],
                 user_input.get(CONF_TEMP_PANEL_SENSOR),
                 user_input.get(CONF_WIND_SENSOR),
-                user_input[CONF_REF_TILT],
-                user_input[CONF_REF_ORIENTATION],
-                user_input.get(CONF_WEATHER_ENTITY),
                 user_input.get(CONF_ILLUMINANCE_SENSOR)
-            )
-            # Regresar al panel principal
-            return self.async_abort(reason="list_updated")
+            ]
+            for ent_id in entities_to_check:
+                if ent_id:
+                    state = self.hass.states.get(ent_id)
+                    if state is None or state.state in ["unavailable", "unknown"]:
+                        errors["base"] = "sensor_unavailable"
+                        break
+            
+            if not errors:
+                # Save to DB
+                await self._db.add_sensor_group(
+                    name,
+                    user_input[CONF_REF_SENSOR],
+                    user_input[CONF_TEMP_SENSOR],
+                    user_input.get(CONF_TEMP_PANEL_SENSOR),
+                    user_input.get(CONF_WIND_SENSOR),
+                    user_input[CONF_REF_TILT],
+                    user_input[CONF_REF_ORIENTATION],
+                    user_input.get(CONF_WEATHER_ENTITY),
+                    user_input.get(CONF_ILLUMINANCE_SENSOR)
+                )
+                return self.async_abort(reason="list_updated")
             
          return self._show_sensor_group_form("sensor_group_create", errors)
 
@@ -64,19 +79,38 @@ class SensorGroupsFlowMixin:
 
     async def async_step_sensor_group_edit_form(self, user_input=None):
         if user_input is not None:
-             name = user_input[CONF_SENSOR_GROUP_NAME]
-             await self._db.add_sensor_group(
-                name,
+             # Validate sensors
+             entities_to_check = [
                 user_input[CONF_REF_SENSOR],
                 user_input[CONF_TEMP_SENSOR],
                 user_input.get(CONF_TEMP_PANEL_SENSOR),
                 user_input.get(CONF_WIND_SENSOR),
-                user_input[CONF_REF_TILT],
-                user_input[CONF_REF_ORIENTATION],
-                user_input.get(CONF_WEATHER_ENTITY),
                 user_input.get(CONF_ILLUMINANCE_SENSOR)
-            )
-             return self.async_abort(reason="list_updated")
+             ]
+             for ent_id in entities_to_check:
+                if ent_id:
+                    state = self.hass.states.get(ent_id)
+                    if state is None or state.state in ["unavailable", "unknown"]:
+                        errors = {"base": "sensor_unavailable"}
+                        break
+             
+             if not errors:
+                 name = user_input[CONF_SENSOR_GROUP_NAME]
+                 await self._db.add_sensor_group(
+                    name,
+                    user_input[CONF_REF_SENSOR],
+                    user_input[CONF_TEMP_SENSOR],
+                    user_input.get(CONF_TEMP_PANEL_SENSOR),
+                    user_input.get(CONF_WIND_SENSOR),
+                    user_input[CONF_REF_TILT],
+                    user_input[CONF_REF_ORIENTATION],
+                    user_input.get(CONF_WEATHER_ENTITY),
+                    user_input.get(CONF_ILLUMINANCE_SENSOR)
+                )
+                 return self.async_abort(reason="list_updated")
+             else:
+                 group_data = self._db.get_sensor_group(self.selected_item_id)
+                 return self._show_sensor_group_form("sensor_group_edit_form", errors, default_data=group_data)
 
         group_data = self._db.get_sensor_group(self.selected_item_id)
         return self._show_sensor_group_form("sensor_group_edit_form", {}, default_data=group_data)

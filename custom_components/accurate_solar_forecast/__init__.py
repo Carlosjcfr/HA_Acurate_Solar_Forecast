@@ -8,7 +8,7 @@ import logging
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS = ["sensor", "number", "select"]
+PLATFORMS = ["sensor", "number", "select", "binary_sensor"]
 
 async def async_setup_entry(hass: HomeAssistant, entry):
     # Cargar la DB y ponerla disponible globalmente
