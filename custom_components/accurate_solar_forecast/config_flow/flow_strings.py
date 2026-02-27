@@ -78,12 +78,19 @@ class StringsFlowMixin:
              
              await self._db.addStringToRoof(roofId, stringId, stringData)
              
-             # Clear string specifics for the next potential string iteration
+             # Clear string-specific data for the next iteration
              self.tempData.pop(CONF_STRING_NAME, None)
              self.tempData.pop(CONF_REAL_PRODUCTION_SENSOR, None)
+             self.tempData.pop(CONF_PANEL_MODEL, None)
+             self.tempData.pop(CONF_NUM_PANELS, None)
+             self.tempData.pop(CONF_NUM_STRINGS, None)
              
              if getattr(self, "reconfigure_entry", None):
                  return self.async_update_reload_and_abort(self.reconfigure_entry)
+             
+             # In guided flow (RoofSubentryFlowHandler): show loop menu
+             if getattr(self, "_guidedFlow", False):
+                 return await self.async_step_string_loop()
                  
              return self.async_abort(reason="list_updated")
             

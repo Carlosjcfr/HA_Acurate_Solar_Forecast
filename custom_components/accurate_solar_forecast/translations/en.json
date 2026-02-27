@@ -337,6 +337,14 @@
                         "azimuth": "Azimuth (180º=S)",
                         "real_production_sensor": "Real Production (W)"
                     }
+                },
+                "string_loop": {
+                    "title": "String Added",
+                    "description": "String saved. Do you want to add another string to this roof?",
+                    "menu_options": {
+                        "string_add_another": "Add another string",
+                        "string_finish": "Finish and create hub"
+                    }
                 }
             }
         },

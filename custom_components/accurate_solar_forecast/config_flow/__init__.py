@@ -256,6 +256,26 @@ class RoofSubentryFlowHandler(AccurateForecastCommonFlow, RoofsFlowMixin, Sensor
         })
         return self.async_show_form(step_id="roof_select_sensor_group", data_schema=schema)
 
+    async def async_step_string_loop(self, userInput=None):
+        """After each string: offer to add another or finish and create the hub."""
+        roofName = self.tempData.get(CONF_ROOF_NAME, "Roof")
+        return self.async_show_menu(
+            step_id="string_loop",
+            menu_options=["string_add_another", "string_finish"]
+        )
+
+    async def async_step_string_add_another(self, userInput=None):
+        """Loop back to add another string to the same roof."""
+        return await self.async_step_string_create_select_relations()
+
+    async def async_step_string_finish(self, userInput=None):
+        """Finalize the flow: create the HA subentry (hub) for this roof."""
+        roofName = self.tempData.get(CONF_ROOF_NAME, "Roof")
+        return self.async_create_entry(
+            title=roofName,
+            data={CONF_ROOF_NAME: roofName}
+        )
+
 class SensorGroupSubentryFlowHandler(AccurateForecastCommonFlow, SensorGroupsFlowMixin, ConfigSubentryFlow):
     async def async_step_user(self, userInput=None):
         await self._asyncInitRequirements()

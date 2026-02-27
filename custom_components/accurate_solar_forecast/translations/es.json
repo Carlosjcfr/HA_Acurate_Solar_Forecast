@@ -337,6 +337,14 @@
                         "azimuth": "Orientación Paneles (180º=S)",
                         "real_production_sensor": "Producción Real (W)"
                     }
+                },
+                "string_loop": {
+                    "title": "String Añadido",
+                    "description": "String guardado. ¿Quieres añadir otro string a este tejado?",
+                    "menu_options": {
+                        "string_add_another": "Añadir otro string",
+                        "string_finish": "Finalizar y crear hub"
+                    }
                 }
             }
         },
