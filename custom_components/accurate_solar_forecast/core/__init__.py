@@ -11,6 +11,7 @@ from .engine import (
 from .helpers import get_subentry_menu_state, slugify
 from .number import SolarStringTiltNumber, SolarStringAzimuthNumber
 from .select import SolarStringRoofSelect
+from .models import PvModel, SolarString, Roof, SensorGroup
 
 __all__ = [
     "SolarStringSensor",
@@ -24,4 +25,8 @@ __all__ = [
     "SolarStringTiltNumber",
     "SolarStringAzimuthNumber",
     "SolarStringRoofSelect",
+    "PvModel",
+    "SolarString",
+    "Roof",
+    "SensorGroup",
 ]

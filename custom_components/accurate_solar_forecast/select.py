@@ -13,8 +13,8 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         roof_strings = db.get_roof_strings(roof_id)
         
         entities = []
-        for string_id, string_data in roof_strings.items():
-            combined_data = dict(string_data)
+        for string_id, string_obj in roof_strings.items():
+            combined_data = string_obj.to_dict()
             combined_data[CONF_ROOF_NAME] = roof_name
             entities.append(SolarStringRoofSelect(hass, combined_data, db, config_entry, string_id, roof_id))
             

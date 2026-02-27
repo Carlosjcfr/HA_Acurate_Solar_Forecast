@@ -45,16 +45,16 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         roof_strings = db.get_roof_strings(roof_id)
         
         entities = []
-        for string_id, string_data in roof_strings.items():
-            combined_data = dict(string_data)
+        for string_id, string_obj in roof_strings.items():
+            combined_data = string_obj.to_dict()
             combined_data[CONF_ROOF_NAME] = roof_name
-            group_name = string_data.get("selected_sensor_group")
-            sensor_group_data = db.get_sensor_group(group_name)
+            group_name = string_obj.selected_sensor_group
+            sensor_group_obj = db.get_sensor_group(group_name)
             
-            if sensor_group_data:
-                entities.append(SolarStringSensor(hass, combined_data, db, sensor_group_data))
-                if combined_data.get(CONF_REAL_PRODUCTION_SENSOR):
-                    entities.append(SolarStringPerformanceSensor(hass, combined_data, db, sensor_group_data))
+            if sensor_group_obj:
+                entities.append(SolarStringSensor(hass, combined_data, db, sensor_group_obj))
+                if string_obj.real_production_sensor:
+                    entities.append(SolarStringPerformanceSensor(hass, combined_data, db, sensor_group_obj))
                     
         if entities:
             async_add_entities(entities, update_before_add=True)

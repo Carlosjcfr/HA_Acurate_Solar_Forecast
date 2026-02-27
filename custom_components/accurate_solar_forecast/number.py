@@ -13,13 +13,13 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         roof_strings = db.get_roof_strings(roof_id)
         
         entities = []
-        for string_id, string_data in roof_strings.items():
-            combined_data = dict(string_data)
+        for string_id, string_obj in roof_strings.items():
+            combined_data = string_obj.to_dict()
             combined_data[CONF_ROOF_NAME] = roof_name
-            sensor_group_data = db.get_sensor_group(string_data.get("selected_sensor_group"))
+            sensor_group_obj = db.get_sensor_group(string_obj.selected_sensor_group)
             
-            entities.append(SolarStringTiltNumber(hass, combined_data, db, config_entry, string_id, roof_id, sensor_group_data))
-            entities.append(SolarStringAzimuthNumber(hass, combined_data, db, config_entry, string_id, roof_id, sensor_group_data))
+            entities.append(SolarStringTiltNumber(hass, combined_data, db, config_entry, string_id, roof_id, sensor_group_obj))
+            entities.append(SolarStringAzimuthNumber(hass, combined_data, db, config_entry, string_id, roof_id, sensor_group_obj))
             
         if entities:
             async_add_entities(entities)

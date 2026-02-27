@@ -14,12 +14,14 @@ class SolarStringNumberEntity(NumberEntity):
         self._string_id, self._roof_id, self._sensor_group = string_id, roof_id, sensor_group_data
         self._string_name = self._data.get(CONF_STRING_NAME)
         self._attr_has_entity_name, self._debounce_unsub, self._key = True, None, None
+        from .helpers import slugify
         model_name = self._data.get(CONF_PANEL_MODEL)
-        self._panel_data = next((v for v in (db.data.values() if db else []) if v.get("name") == model_name), {})
+        self._panel_data = db.data.get(slugify(model_name)) if db and db.data else None
 
     @property
     def device_info(self):
-        string_id_slug = f"str_{self._string_name.lower().replace(' ', '_')}"
+        from .helpers import slugify
+        string_id_slug = f"str_{slugify(self._string_name)}"
         device_identifiers = {(DOMAIN, string_id_slug)}
         real_sensor_id = self._data.get(CONF_REAL_PRODUCTION_SENSOR)
         found_device = False
@@ -32,9 +34,9 @@ class SolarStringNumberEntity(NumberEntity):
         return DeviceInfo(
             identifiers=device_identifiers,
             name=self._string_name if not found_device else None,
-            manufacturer=self._panel_data.get(CONF_BRAND, "Generic") if not found_device else None,
-            model=self._data.get(CONF_PANEL_MODEL) if not found_device else None,
-            via_device=(DOMAIN, self._sensor_group.get(CONF_SENSOR_GROUP_NAME)) if (not found_device and self._sensor_group) else None
+            manufacturer=(self._panel_data.brand if self._panel_data else "Generic") if not found_device else None,
+            model=(self._panel_data.name if self._panel_data else model_name) if not found_device else None,
+            via_device=(DOMAIN, self._sensor_group.name) if (not found_device and self._sensor_group) else None
         )
 
     async def async_set_native_value(self, value: float) -> None:

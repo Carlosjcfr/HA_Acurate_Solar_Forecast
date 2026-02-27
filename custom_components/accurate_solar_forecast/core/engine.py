@@ -98,9 +98,9 @@ class SolarStringSensor(SensorEntity):
         self._attr_device_info = DeviceInfo(
             identifiers=device_iden,
             name=device_name if not real_sensor_id else None,
-            manufacturer=self._panel_data.get("brand", "Generic") if not real_sensor_id else None,
+            manufacturer=(self._panel_data.brand if self._panel_data else "Generic") if not real_sensor_id else None,
             model=model_name if not real_sensor_id else None,
-            via_device=(DOMAIN, sensor_group_data.get(CONF_SENSOR_GROUP_NAME)) if not real_sensor_id else None
+            via_device=(DOMAIN, self._sensor_group.name if self._sensor_group else "Unknown") if not real_sensor_id else None
         )
 
     @property
@@ -133,29 +133,32 @@ class SolarStringSensor(SensorEntity):
 
         # Rest of the calculation...
 
-        ref_sensor = self._sensor_group.get(CONF_REF_SENSOR)
+        ref_sensor = self._sensor_group.ref_sensor
         irr_ref = get_converted_value(self.hass, ref_sensor, "irradiance", 0.0)
-        t_amb = get_converted_value(self.hass, self._sensor_group.get(CONF_TEMP_SENSOR), "temperature", 25.0)
+        t_amb = get_converted_value(self.hass, self._sensor_group.temp_sensor, "temperature", 25.0)
         
         target_az = self._config.get(CONF_AZIMUTH)
         target_tilt = self._config.get(CONF_TILT)
         cos_theta_target = self.calculate_cos_incidence(sun_az, sun_el, target_az, target_tilt)
-        cos_theta_ref = self.calculate_cos_incidence(sun_az, sun_el, self._sensor_group.get(CONF_REF_ORIENTATION), self._sensor_group.get(CONF_REF_TILT))
+        cos_theta_ref = self.calculate_cos_incidence(sun_az, sun_el, self._sensor_group.ref_orientation, self._sensor_group.ref_tilt)
 
         kt, cloud_source, cloud_coverage = 1.0, "None", 0.0
         if sun_el > 0:
-            ill_sensor = self._sensor_group.get(CONF_ILLUMINANCE_SENSOR)
+            ill_sensor = self._sensor_group.illuminance_sensor
             if ill_sensor:
                 lux_real = get_converted_value(self.hass, ill_sensor, "illuminance", -1)
                 if lux_real >= 0 and sun_el > 2:
                     lux_teo = 120000 * math.sin(math.radians(sun_el))
                     if lux_teo > 10:
-                        kt = max(0.05, min(1.2, lux_real / lux_teo))
-                        cloud_coverage = max(0, min(100, 100 * (1 - kt)))
-                        cloud_source = "Lux Sensor"
+                        try:
+                            kt = max(0.05, min(1.2, lux_real / lux_teo))
+                            cloud_coverage = max(0, min(100, 100 * (1 - kt)))
+                            cloud_source = "Lux Sensor"
+                        except ZeroDivisionError:
+                            pass
         
         if cloud_source in ["None", "Night"]:
-            weather_entity = self._sensor_group.get(CONF_WEATHER_ENTITY)
+            weather_entity = self._sensor_group.weather_entity
             if weather_entity:
                 w_state = self.hass.states.get(weather_entity)
                 if w_state and w_state.state not in ["unavailable", "unknown"]:
@@ -177,15 +180,28 @@ class SolarStringSensor(SensorEntity):
                     cloud_source = "Weather Entity"
         
         k = 0.1 + (0.8 * (cloud_coverage / 100.0))
-        geometric_factor = 0 if cos_theta_ref < 0.05 else cos_theta_target / cos_theta_ref
+        try:
+            geometric_factor = 0 if cos_theta_ref < 0.05 else cos_theta_target / cos_theta_ref
+        except ZeroDivisionError:
+            geometric_factor = 0
+
         combined_factor = ((1 - k) * geometric_factor) + (k * 1.0)
         irr_target = irr_ref * combined_factor
 
-        t_cell = t_amb + (irr_target / 800) * (self._panel_data.get("noct", 45) - 20)
-        p_stc = self._panel_data.get("p_stc", 400)
-        gamma = self._panel_data.get("gamma", -0.4) / 100.0
-        power_unit = p_stc * (irr_target / 1000.0) * (1 + (gamma * (t_cell - 25)))
-        total_power = max(0, power_unit * self._config.get(CONF_NUM_PANELS, 1) * self._config.get(CONF_NUM_STRINGS, 1))
+        try:
+            p_stc = self._panel_data.p_stc if self._panel_data else 450
+            gamma = (self._panel_data.gamma if self._panel_data else -0.35) / 100.0
+            noct = self._panel_data.noct if self._panel_data else 45
+            
+            t_cell = t_amb + (irr_target / 800) * (noct - 20)
+            power_unit = p_stc * (irr_target / 1000.0) * (1 + (gamma * (t_cell - 25)))
+            total_power = max(0, power_unit * self._config.get(CONF_NUM_PANELS, 1) * self._config.get(CONF_NUM_STRINGS, 1))
+        except Exception as e:
+            _LOGGER.error(f"Error calculating solar power for {self.name}: {e}")
+            total_power = 0
+            irr_target = 0
+            geometric_factor = 0
+            t_cell = t_amb
 
         self._attr_native_value = round(total_power, 2)
         self._attr_extra_state_attributes = {
@@ -199,9 +215,9 @@ class SolarStringSensor(SensorEntity):
 
     async def async_added_to_hass(self):
         """Suscribirse a actualizaciones."""
-        entities = ["sun.sun", self._sensor_group.get(CONF_REF_SENSOR), self._sensor_group.get(CONF_TEMP_SENSOR)]
-        if self._sensor_group.get(CONF_WEATHER_ENTITY): entities.append(self._sensor_group.get(CONF_WEATHER_ENTITY))
-        if self._sensor_group.get(CONF_ILLUMINANCE_SENSOR): entities.append(self._sensor_group.get(CONF_ILLUMINANCE_SENSOR))
+        entities = ["sun.sun", self._sensor_group.ref_sensor, self._sensor_group.temp_sensor]
+        if self._sensor_group.weather_entity: entities.append(self._sensor_group.weather_entity)
+        if self._sensor_group.illuminance_sensor: entities.append(self._sensor_group.illuminance_sensor)
         self.async_on_remove(async_track_state_change_event(self.hass, entities, self._update_logic))
 
 class SensorGroupVirtualSensor(SensorEntity):
