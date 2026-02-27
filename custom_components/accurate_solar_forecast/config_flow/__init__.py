@@ -236,6 +236,27 @@ class AccurateForecastFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Config flow for Accurate Solar Forecast."""
     VERSION = 1
 
+    @classmethod
+    @callback
+    def async_get_supported_subentry_types(cls, configEntry) -> dict[str, type[ConfigSubentryFlow]]:
+        """Return supported subentry flow types dynamically based on state."""
+        try:
+            state = getSubentryMenuState(configEntry.hass)
+            
+            supported = {
+                "pv_model": PvModelSubentryFlowHandler,
+                "roof": RoofSubentryFlowHandler,
+                "sensor_group": SensorGroupSubentryFlowHandler,
+                "management": MenuSubentryFlowHandler,
+            }
+            
+            if state["canAddString"]:
+                supported["string"] = StringSubentryFlowHandler
+                
+            return supported
+        except Exception:
+            return {}
+
     async def async_step_user(self, userInput=None):
         """Handle the initial step."""
         if self._async_current_entries():
@@ -247,3 +268,4 @@ class AccurateForecastFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if userInput is not None:
             return self.async_create_entry(title="Accurate Solar Forecast", data={})
         return self.async_show_form(step_id="setup", data_schema=vol.Schema({}))
+
