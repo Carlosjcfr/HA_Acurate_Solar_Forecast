@@ -1,4 +1,45 @@
 {
+    "entity": {
+        "sensor": {
+            "solar_string_forecast": {
+                "default": "mdi:solar-power-variant"
+            },
+            "sensor_group_status": {
+                "default": "mdi:weather-sunny"
+            },
+            "sensor_group_cloudiness": {
+                "default": "mdi:weather-cloudy"
+            },
+            "pv_model_count": {
+                "default": "mdi:database"
+            },
+            "solar_string_performance": {
+                "default": "mdi:chart-line"
+            }
+        },
+        "binary_sensor": {
+            "integration_health": {
+                "default": "mdi:heart-pulse",
+                "state": {
+                    "on": "mdi:alert-circle",
+                    "off": "mdi:check-circle"
+                }
+            }
+        },
+        "number": {
+            "tilt": {
+                "default": "mdi:angle-acute"
+            },
+            "azimuth": {
+                "default": "mdi:compass"
+            }
+        },
+        "select": {
+            "roof": {
+                "default": "mdi:home-roof"
+            }
+        }
+    },
     "config_subentries": {
         "pv_model": "mdi:solar-panel",
         "roof": "mdi:home-roof",
