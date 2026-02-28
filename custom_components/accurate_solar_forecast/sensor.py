@@ -65,8 +65,10 @@ async def async_setup_entry(hass, configEntry, asyncAddEntities):
 
             for roofId, roof in db.roofs.items():
                 if roofId not in roofSubentryMap:
-                    _LOGGER.warning(f"Roof '{roofId}' is in DB but has no subentry. Registering as orphan.")
+                    _LOGGER.info(f"Roof '{roofId}' is in DB but has no subentry. Registering as orphan.")
                     _processEntry(hass, mainEntryId, None, {CONF_ROOF_NAME: roof.name}, db, deviceRegistry, asyncAddEntities)
+                else:
+                    _LOGGER.debug(f"Roof '{roofId}' already has a subentry ({roofSubentryMap[roofId]}). Skipping main-entry processing.")
 
             return
 
@@ -125,10 +127,10 @@ def _processEntry(hass, mainEntryId, subentryId, data, db, deviceRegistry, async
                 entities.append(SolarStringPerformanceSensor(hass, sData, db, sensorGroupObj))
         
         if entities:
-            _LOGGER.info(f"Adding {len(entities)} entities for roof '{roofName}'")
+            _LOGGER.info(f"Adding {len(entities)} entities for roof '{roofName}' (ID: {subentryId or 'Orphan'})")
             asyncAddEntities(entities)
         else:
-            _LOGGER.warning(f"No entities created for roof '{roofName}' (zero strings found in DB object)")
+            _LOGGER.warning(f"No entities created for roof '{roofName}' (zero strings found in DB object for '{roofId}')")
 
     # --- GRUPO DE SENSORES ---
     elif CONF_SENSOR_GROUP_NAME in data:

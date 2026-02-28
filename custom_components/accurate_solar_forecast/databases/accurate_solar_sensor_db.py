@@ -8,7 +8,7 @@ import logging
 _LOGGER = logging.getLogger(__name__)
 
 STORAGE_VERSION = 1
-STORAGE_KEY = "accurate_solar_sensor"
+STORAGE_KEY = "accurate_solar_forecast_data"
 
 class AccurateSolarSensorDB:
     def __init__(self, hass: HomeAssistant):

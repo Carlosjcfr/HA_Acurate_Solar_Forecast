@@ -326,14 +326,9 @@ class AccurateForecastFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return supported
 
     async def async_step_user(self, userInput=None):
-        """Handle the initial step."""
+        """Handle the initial step. Create the main hub entry immediately."""
         if self._async_current_entries():
             return self.async_abort(reason="already_configured")
-        return await self.async_step_setup(userInput)
-
-    async def async_step_setup(self, userInput=None):
-        """Show the setup confirmation form."""
-        if userInput is not None:
-            return self.async_create_entry(title="Accurate Solar Forecast", data={})
-        return self.async_show_form(step_id="setup", data_schema=vol.Schema({}))
+            
+        return self.async_create_entry(title="Accurate Solar Forecast", data={})
 
