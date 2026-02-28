@@ -1,4 +1,5 @@
 import voluptuous as vol
+import logging
 from homeassistant.helpers import selector
 from ..variables.const import (
     CONF_STRING_NAME, 
@@ -12,6 +13,8 @@ from ..variables.const import (
     CONF_NUM_STRINGS
 )
 from ..core import slugify
+
+_LOGGER = logging.getLogger(__name__)
 
 class StringsFlowMixin:
     # =================================================================================

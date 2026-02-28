@@ -1,6 +1,15 @@
 import voluptuous as vol
+import logging
 from homeassistant.helpers import selector
-from ..variables.const import CONF_SENSOR_GROUP_NAME, CONF_REF_SENSOR, CONF_REF_TILT, CONF_REF_ORIENTATION, CONF_TEMP_SENSOR, CONF_WIND_SENSOR, CONF_TEMP_PANEL_SENSOR, CONF_WEATHER_ENTITY, CONF_ILLUMINANCE_SENSOR
+from ..variables.const import (
+    CONF_SENSOR_GROUP_NAME, CONF_REF_SENSOR, CONF_REF_TILT, 
+    CONF_REF_ORIENTATION, CONF_TEMP_SENSOR, CONF_WIND_SENSOR, 
+    CONF_TEMP_PANEL_SENSOR, CONF_WEATHER_ENTITY, CONF_ILLUMINANCE_SENSOR,
+    CONF_ROOF_NAME
+)
+from ..core import slugify
+
+_LOGGER = logging.getLogger(__name__)
 
 class SensorGroupsFlowMixin:
     # =================================================================================
@@ -50,8 +59,7 @@ class SensorGroupsFlowMixin:
                 if getattr(self, '_guidedFlow', False):
                     roofName = self.tempData.get(CONF_ROOF_NAME)
                     if roofName:
-                        from ..core import slugify as _slugify
-                        roofId = _slugify(roofName)
+                        roofId = slugify(roofName)
                         roofObj = self._db.getRoof(roofId)
                         if roofObj:
                              # Re-save roof with the new linked group ID

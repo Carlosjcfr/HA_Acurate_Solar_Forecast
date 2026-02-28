@@ -250,20 +250,26 @@ class SolarStringSensor(SensorEntity):
         self.async_on_remove(async_track_state_change_event(self.hass, entities, self._updateLogic))
 
 class SensorGroupVirtualSensor(SensorEntity):
+    """Reflects the status of the sensor group inputs."""
+
+    _attr_has_entity_name = True
+    _attr_translation_key = "sensor_group_status"
+
     def __init__(self, hass, db, groupId, targetDeviceIdentifiers=None):
         self.hass = hass
         self._db = db
         self._groupId = groupId
-        self._attr_name = self._db.getSensorGroup(self._groupId).name
+        
+        # Safe initialization - do not access group object attributes directly here
         self._attr_unique_id = f"sg_{self._groupId}_status"
         self._attr_icon = "mdi:link-variant"
         
         if targetDeviceIdentifiers:
             self._attr_device_info = DeviceInfo(identifiers=targetDeviceIdentifiers)
         else:
+            # Fallback if created as orphan
             self._attr_device_info = DeviceInfo(
                 identifiers={(DOMAIN, f"sg_{self._groupId}")},
-                name=self._attr_name,
                 manufacturer="Accurate Solar Forecast",
                 model="Sensor Group",
             )
@@ -297,6 +303,8 @@ class SensorGroupVirtualSensor(SensorEntity):
         self.async_write_ha_state()
 
 class SensorGroupCloudinessSensor(SensorEntity):
+    """Calculates cloud coverage based on illuminance/weather for the group."""
+
     _attr_has_entity_name = True
     _attr_translation_key = "cloud_coverage"
     _attr_native_unit_of_measurement = "%"
@@ -307,12 +315,18 @@ class SensorGroupCloudinessSensor(SensorEntity):
         self.hass = hass
         self._db = db
         self._groupId = groupId
-        group = self._db.getSensorGroup(self._groupId)
-        self._groupName = group.name if group else "Unknown"
+        
+        # Safe initialization
         self._attr_unique_id = f"sg_{self._groupId}_cloudiness"
-        self._attr_device_info = DeviceInfo(identifiers=targetDeviceIdentifiers) if targetDeviceIdentifiers else DeviceInfo(
-            identifiers={(DOMAIN, f"sg_{self._groupId}")}, name=self._groupName
-        )
+        
+        if targetDeviceIdentifiers:
+            self._attr_device_info = DeviceInfo(identifiers=targetDeviceIdentifiers)
+        else:
+            self._attr_device_info = DeviceInfo(
+                identifiers={(DOMAIN, f"sg_{self._groupId}")},
+                manufacturer="Accurate Solar Forecast",
+                model="Sensor Group",
+            )
         self._lastSunElevation = -100.0
         self._cachedValue = 0.0
 

@@ -1,6 +1,9 @@
 import voluptuous as vol
+import logging
 from homeassistant.helpers import selector
 from ..variables.const import CONF_TILT, CONF_AZIMUTH
+
+_LOGGER = logging.getLogger(__name__)
 
 class RoofsFlowMixin:
     # =================================================================================

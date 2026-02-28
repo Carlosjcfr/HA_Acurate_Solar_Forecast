@@ -242,6 +242,9 @@
             },
             "cloud_coverage": {
                 "name": "Nubosidad"
+            },
+            "sensor_group_status": {
+                "name": "Estado"
             }
         },
         "binary_sensor": {
