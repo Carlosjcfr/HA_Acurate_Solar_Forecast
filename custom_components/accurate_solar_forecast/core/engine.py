@@ -250,38 +250,42 @@ class SolarStringSensor(SensorEntity):
         self.async_on_remove(async_track_state_change_event(self.hass, entities, self._updateLogic))
 
 class SensorGroupVirtualSensor(SensorEntity):
-    def __init__(self, hass, configEntry, targetDeviceIdentifiers=None):
+    def __init__(self, hass, db, groupId, targetDeviceIdentifiers=None):
         self.hass = hass
-        self._config = configEntry.data
-        self._name = self._config.get(CONF_SENSOR_GROUP_NAME)
-        self._attr_name = self._name
-        self._attr_unique_id = f"sg_{slugify(self._name)}_status"
+        self._db = db
+        self._groupId = groupId
+        self._attr_name = self._db.getSensorGroup(self._groupId).name
+        self._attr_unique_id = f"sg_{self._groupId}_status"
         self._attr_icon = "mdi:link-variant"
         
         if targetDeviceIdentifiers:
             self._attr_device_info = DeviceInfo(identifiers=targetDeviceIdentifiers)
         else:
             self._attr_device_info = DeviceInfo(
-                identifiers={(DOMAIN, configEntry.entry_id)},
-                name=self._name,
+                identifiers={(DOMAIN, f"sg_{self._groupId}")},
+                name=self._attr_name,
                 manufacturer="Accurate Solar Forecast",
                 model="Sensor Group",
-                entry_type=dr.DeviceEntryType.SERVICE
             )
 
     async def async_added_to_hass(self) -> None:
-        sensors = [v for k,v in self._config.items() if "sensor" in k or k == CONF_WEATHER_ENTITY]
+        group = self._db.getSensorGroup(self._groupId)
+        if not group: return
+        sensors = [group.refSensor, group.tempSensor, group.weatherEntity, group.illuminanceSensor]
+        sensors = [s for s in sensors if s]
         self.async_on_remove(async_track_state_change_event(self.hass, sensors, self._updateState))
         self._updateState()
 
     @callback
     def _updateState(self, event: Any = None) -> None:
+        group = self._db.getSensorGroup(self._groupId)
+        if not group: return
+        
         attributes = {}
         status = "OK"
-        for k, attr in [(CONF_REF_SENSOR, "irradiance"), (CONF_TEMP_SENSOR, "temperature")]:
-            entityId = self._config.get(k)
-            if entityId:
-                state = self.hass.states.get(entityId)
+        for sensorId, attr in [(group.refSensor, "irradiance"), (group.tempSensor, "temperature")]:
+            if sensorId:
+                state = self.hass.states.get(sensorId)
                 if state:
                     attributes[attr] = state.state
                     if state.state in ["unavailable", "unknown"]: status = "Partial"
@@ -299,39 +303,44 @@ class SensorGroupCloudinessSensor(SensorEntity):
     _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_icon = "mdi:cloud-percent"
 
-    def __init__(self, hass: HomeAssistant, configEntry: Any, targetDeviceIdentifiers: Any = None):
+    def __init__(self, hass, db, groupId, targetDeviceIdentifiers=None):
         self.hass = hass
-        self._config = configEntry.data
-        self._name = self._config.get(CONF_SENSOR_GROUP_NAME)
-        self._attr_unique_id = f"sg_{slugify(self._name)}_cloudiness"
+        self._db = db
+        self._groupId = groupId
+        group = self._db.getSensorGroup(self._groupId)
+        self._groupName = group.name if group else "Unknown"
+        self._attr_unique_id = f"sg_{self._groupId}_cloudiness"
         self._attr_device_info = DeviceInfo(identifiers=targetDeviceIdentifiers) if targetDeviceIdentifiers else DeviceInfo(
-            identifiers={(DOMAIN, configEntry.entry_id)}, name=self._name, entry_type=dr.DeviceEntryType.SERVICE
+            identifiers={(DOMAIN, f"sg_{self._groupId}")}, name=self._groupName
         )
         self._lastSunElevation = -100.0
         self._cachedValue = 0.0
 
     async def async_added_to_hass(self):
+        group = self._db.getSensorGroup(self._groupId)
+        if not group: return
         entities = ["sun.sun"]
-        if self._config.get(CONF_ILLUMINANCE_SENSOR): entities.append(self._config[CONF_ILLUMINANCE_SENSOR])
-        if self._config.get(CONF_WEATHER_ENTITY): entities.append(self._config[CONF_WEATHER_ENTITY])
+        if group.illuminanceSensor: entities.append(group.illuminanceSensor)
+        if group.weatherEntity: entities.append(group.weatherEntity)
         self.async_on_remove(async_track_state_change_event(self.hass, entities, self._updateLogic))
         self._updateLogic()
 
     @callback
     def _updateLogic(self, event=None):
+        group = self._db.getSensorGroup(self._groupId)
+        if not group: return
         sunState = self.hass.states.get("sun.sun")
         if not sunState: return
         sunElevation = float(sunState.attributes.get("elevation", 0))
         
         # Throttling
         if abs(sunElevation - self._lastSunElevation) < SUN_MOVEMENT_THRESHOLD:
-            # Check if source sensors changed (if event is from a sensor change, we should probably re-calc)
             if event and event.data.get("entity_id") == "sun.sun":
                 return
 
         cloudCoverage = 0.0
         if sunElevation > 0:
-            illSensor = self._config.get(CONF_ILLUMINANCE_SENSOR)
+            illSensor = group.illuminanceSensor
             if illSensor:
                 luxReal = getConvertedValue(self.hass, illSensor, "illuminance", -1)
                 if luxReal >= 0 and sunElevation > 2:

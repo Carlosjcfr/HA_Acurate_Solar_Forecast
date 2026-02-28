@@ -1,6 +1,25 @@
 # Release Notes - Accurate Solar Forecast
 
-## [2026-02-27] - Pre-Update Analysis: Sensor Group → Roof Association
+## [2026-02-28] - Pre-Update Analysis: Initial Installation Diagnostics
+
+### Identified Issues & Improvements
+
+- **Missing Brand Identity**: The integration and its devices show "icon not available" in the HA UI. This is due to a lack of local `static` assets (logo.png/icon.png) for the custom component. [UX]
+- **Summary count mismatch**: Integration shows "1 dispositivo" in the top summary but lists 3 devices in the detail view. This is due to the use of `dr.DeviceEntryType.SERVICE` for virtual hubs. [UI]
+- **Sensor Group Discovery Error**: The config flow reports "No hay grupos de sensores configurados" even when a group (Meteo1) was seemingly created. This points to a sync issue between HA Config Entries and the internal JSON database. [BUG]
+- **"Unknown error occurred"**: Creating a sensor group through the guided flow (Roof flow) results in a generic error. Likely caused by a crash during the transition between sensor group creation and string creation (missing tempData or DB inconsistency). [BUG]
+
+### Action Plan
+
+1. **Static Assets**: Create/recommend the addition of a `static/` folder with `icon.png` and `logo.png` to fix the missing icons in HA.
+2. **Device Registry**: Review `sensor.py` and `binary_sensor.py` device registration. Ensure the main hub is clearly identified to fix the device count summary. [COMPLETED]
+3. **DB Consistency**: Force a DB reload and sync during initial setup to ensure existing groups are recognized by all flow handlers.
+4. **Flow Resilience**: Add robust error handling in `SensorGroupsFlowMixin.async_step_sensor_group_create` to prevent the "Unknown error" crash and provide better feedback if the DB or transition fails.
+5. **Entity Filtering Fix**: Ensure that the "Unknown error" isn't caused by `voluptuous` failing to coerce entity IDs into the expected string format.
+
+---
+
+## [2026-02-27] - Pre-Update Analysis: Sensor Group -> Roof Association
 
 ### Identified Issues & Improvements
 

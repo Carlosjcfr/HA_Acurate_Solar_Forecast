@@ -64,6 +64,12 @@ async def _syncDbWithSubentries(hass: HomeAssistant, entry: ConfigEntry, db) -> 
             if CONF_ROOF_NAME in subData:
                 activeRoofNames.add(slugify(subData[CONF_ROOF_NAME]))
 
+        # Keep sensor groups that are referenced by active roofs
+        for roofId in activeRoofNames:
+            roof = db.getRoof(roofId)
+            if roof and roof.sensorGroupId:
+                activeGroupNames.add(roof.sensorGroupId)
+
         # Remove orphaned sensor groups from DB
         orphanGroups = [gId for gId in db.sensor_groups if gId not in activeGroupNames]
         for gId in orphanGroups:

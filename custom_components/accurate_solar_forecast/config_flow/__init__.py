@@ -27,12 +27,15 @@ class AccurateForecastCommonFlow:
         self.hass.data.setdefault(DOMAIN, {})
         if not hasattr(self, "tempData"):
             self.tempData = {}
+        
+        # Always get or create DB and ensure it is loaded from disk to prevent stale flows
         if "db" not in self.hass.data[DOMAIN]:
             self._db = AccurateSolarSensorDB(self.hass)
-            await self._db.async_load()
             self.hass.data[DOMAIN]["db"] = self._db
         else:
             self._db = self.hass.data[DOMAIN]["db"]
+        
+        await self._db.async_load()
 
     def _getDefault(self, key, sourceData=None, fallback=vol.UNDEFINED):
         """Helper to get default value for schemas."""

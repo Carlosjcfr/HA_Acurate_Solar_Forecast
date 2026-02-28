@@ -52,7 +52,6 @@ async def async_setup_entry(hass, configEntry, asyncAddEntities):
                 name="Módulos Guardados",
                 manufacturer="Accurate Solar Forecast",
                 model="PV Library",
-                entry_type=dr.DeviceEntryType.SERVICE,
             )
             asyncAddEntities([PVModelCountSensor(hass, db)])
             
@@ -92,7 +91,6 @@ def _processEntry(hass, mainEntryId, subentryId, data, db, deviceRegistry, async
             name=roofName,
             manufacturer="Accurate Solar Forecast",
             model="Roof Hub",
-            entry_type=dr.DeviceEntryType.SERVICE,
         )
 
         roofObj = db.getRoof(roofId)
@@ -124,11 +122,9 @@ def _processEntry(hass, mainEntryId, subentryId, data, db, deviceRegistry, async
             name=groupName,
             manufacturer="Accurate Solar Forecast",
             model="Sensor Group",
-            entry_type=dr.DeviceEntryType.SERVICE,
         )
 
-        class _P: entry_id = mainEntryId; data = data
         asyncAddEntities([
-            SensorGroupVirtualSensor(hass, _P(), {sgIdentifier}),
-            SensorGroupCloudinessSensor(hass, _P(), {sgIdentifier}),
+            SensorGroupVirtualSensor(hass, db, groupId, {sgIdentifier}),
+            SensorGroupCloudinessSensor(hass, db, groupId, {sgIdentifier}),
         ])

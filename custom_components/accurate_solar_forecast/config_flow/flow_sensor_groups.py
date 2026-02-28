@@ -27,46 +27,58 @@ class SensorGroupsFlowMixin:
     async def async_step_sensor_group_create(self, userInput=None):
          errors = {}
          if userInput is not None:
-            name = userInput[CONF_SENSOR_GROUP_NAME]
-            
-            if not errors:
-                # Save to DB
+            try:
+                name = userInput.get(CONF_SENSOR_GROUP_NAME)
+                if not name:
+                    errors[CONF_SENSOR_GROUP_NAME] = "required"
+                    return self._showSensorGroupForm("sensor_group_create", errors)
+
+                # Save to DB - Using keyword arguments for safety
                 groupId = await self._db.addSensorGroup(
-                    name,
-                    userInput[CONF_REF_SENSOR],
-                    userInput[CONF_TEMP_SENSOR],
-                    userInput.get(CONF_TEMP_PANEL_SENSOR),
-                    userInput.get(CONF_WIND_SENSOR),
-                    userInput[CONF_REF_TILT],
-                    userInput[CONF_REF_ORIENTATION],
-                    userInput.get(CONF_WEATHER_ENTITY),
-                    userInput.get(CONF_ILLUMINANCE_SENSOR)
+                    name=name,
+                    irradianceSensor=userInput.get(CONF_REF_SENSOR, ""),
+                    tempSensor=userInput.get(CONF_TEMP_SENSOR, ""),
+                    tempPanelSensor=userInput.get(CONF_TEMP_PANEL_SENSOR),
+                    windSensor=userInput.get(CONF_WIND_SENSOR),
+                    refTilt=float(userInput.get(CONF_REF_TILT, 0)),
+                    refOrientation=float(userInput.get(CONF_REF_ORIENTATION, 180)),
+                    weatherEntity=userInput.get(CONF_WEATHER_ENTITY),
+                    illuminanceSensor=userInput.get(CONF_ILLUMINANCE_SENSOR)
                 )
                 
-                # BRANCH A: If in guided flow (Roof -> SG), we continue to string creation
+                # BRANCH A: If in guided flow (Roof -> SG), link them and continue
                 if getattr(self, '_guidedFlow', False):
                     roofName = self.tempData.get(CONF_ROOF_NAME)
                     if roofName:
                         from ..core import slugify as _slugify
                         roofId = _slugify(roofName)
-                        roof = self._db.getRoof(roofId)
-                        if roof:
+                        roofObj = self._db.getRoof(roofId)
+                        if roofObj:
+                             # Re-save roof with the new linked group ID
                              await self._db.addRoof(
-                                roof.name, roof.tilt, roof.azimuth,
-                                sensorGroupId=groupId
+                                name=roofObj.name,
+                                tilt=roofObj.tilt,
+                                azimuth=roofObj.azimuth,
+                                sensorGroupId=groupId,
+                                strings=roofObj.strings
                              )
-                    return await self.async_step_string_create_select_relations()
+                    
+                    # Ensure the next step exists in the current class (Mixins safety)
+                    if hasattr(self, 'async_step_string_create_select_relations'):
+                        return await self.async_step_string_create_select_relations()
                 
-                # BRANCH B: If it's a subentry flow (Pill), we MUST return async_create_entry
-                # We check for our custom flag or if the handler name contains Subentry
+                # BRANCH B: If it's a subentry flow (Pill)
                 if getattr(self, "_isSubentry", False) or "Subentry" in self.__class__.__name__:
                      return self.async_create_entry(
                          title=name,
                          data={CONF_SENSOR_GROUP_NAME: name}
                      )
                 
-                # Fallback
                 return self.async_abort(reason="list_updated")
+
+            except Exception as e:
+                _LOGGER.exception(f"Critical error in sensor group creation flow: {e}")
+                errors["base"] = "unknown"
             
          return self._showSensorGroupForm("sensor_group_create", errors)
 
