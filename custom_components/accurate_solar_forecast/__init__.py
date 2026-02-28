@@ -100,21 +100,29 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
         domainData = hass.data.get(DOMAIN, {})
         db = domainData.get("db")
         if not db:
-            return
+            # Try to load it just to be sure we can wipe the storage if needed
+            db = AccurateSolarSensorDB(hass)
+            await db.async_load()
 
-        # Case A: Sensor Group
+        # Case A: Sensor Group Subentry
         if CONF_SENSOR_GROUP_NAME in entry.data:
             groupName = entry.data[CONF_SENSOR_GROUP_NAME]
             groupId = slugify(groupName)
             _LOGGER.info(f"Removing Sensor Group from DB: {groupId}")
             await db.deleteSensorGroup(groupId)
 
-        # Case B: Roof Entry
-        if CONF_ROOF_NAME in entry.data:
+        # Case B: Roof Subentry
+        elif CONF_ROOF_NAME in entry.data:
             roofName = entry.data[CONF_ROOF_NAME]
             roofId = slugify(roofName) if roofName else "default"
             _LOGGER.info(f"Removing Roof from DB: {roofId}")
             await db.deleteRoof(roofId)
+
+        # Case C: Main Hub Entry (Everything else)
+        else:
+            _LOGGER.warning("Deep Clean: Removing Main Entry. Wiping entire JSON Database.")
+            await db.async_clear()
+            
     except Exception as e:
         _LOGGER.exception(f"Error removing entry from DB: {e}")
 

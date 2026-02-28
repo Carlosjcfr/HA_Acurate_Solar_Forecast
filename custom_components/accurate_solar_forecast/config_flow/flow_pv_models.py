@@ -1,6 +1,7 @@
 import voluptuous as vol
 from homeassistant.helpers import selector
 from ..variables.const import CONF_BRAND, CONF_VOC, CONF_ISC, CONF_VMP, CONF_IMP
+from ..core import slugify
 
 class PvModelsFlowMixin:
     async def async_step_menu_pv_models(self, userInput=None):
@@ -12,8 +13,8 @@ class PvModelsFlowMixin:
              options.append("pv_model_edit_select")
              
              # Check if there are models other than default to allow delete
-             # Assuming 'default_450w' is the key for the default model
-             deletableModels = [k for k in models.keys() if k != "default_450w"]
+             protectedId = slugify("Generico 450W")
+             deletableModels = [k for k in models.keys() if k != protectedId]
              if len(deletableModels) > 0:
                 options.append("pv_model_delete_select")
              
@@ -95,15 +96,16 @@ class PvModelsFlowMixin:
     async def async_step_pv_model_delete_select(self, userInput=None):
         if userInput is not None:
              modelId = userInput["selected_model"]
-             if modelId == "default_450w":
+             if modelId == slugify("Generico 450W"):
                  return self.async_abort(reason="cannot_delete_default")
              
              await self._db.deleteModel(modelId)
              return self.async_abort(reason="list_updated")
              
         models = self._db.listModels()
-        if "default_450w" in models:
-            del models["default_450w"]
+        protectedId = slugify("Generico 450W")
+        if protectedId in models:
+            del models[protectedId]
 
         if not models:
              return self.async_abort(reason="no_models_available_to_delete")

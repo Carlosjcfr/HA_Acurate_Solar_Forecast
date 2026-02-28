@@ -23,9 +23,10 @@ class AccurateSolarSensorDB:
         if data is None:
 
             # Default data if completely empty
+            defName = "Generico 450W"
             self.data = {
-                "default_450w": PvModel.from_dict({
-                    "name": "Generico 450W",
+                slugify(defName): PvModel.from_dict({
+                    "name": defName,
                     "brand": "Generic",
                     "p_stc": 450,
                     "gamma": -0.35,
@@ -41,11 +42,6 @@ class AccurateSolarSensorDB:
             await self.async_save()
         else:
             modelsRaw = data.get("models", {})
-            # Migration check: if "models" is empty but data has values, it might be old structure
-            if not modelsRaw and data:
-                 if "default_450w" in data or any("brand" in v for v in data.values()):
-                     modelsRaw = data
-            
             self.data = {k: PvModel.from_dict(v) for k, v in modelsRaw.items() if isinstance(v, dict)}
             
             groupsRaw = data.get("sensor_groups", {})
@@ -53,9 +49,6 @@ class AccurateSolarSensorDB:
             
             roofsRaw = data.get("roofs", {})
             self.roofs = {k: Roof.from_dict(v) for k, v in roofsRaw.items() if isinstance(v, dict)}
-            
-            # Save to new key (ensures migration is persisted)
-            await self.async_save()
 
 
     async def async_save(self) -> None:
@@ -66,6 +59,13 @@ class AccurateSolarSensorDB:
             "roofs": {k: v.to_dict() for k, v in self.roofs.items()}
         }
         await self._store.async_save(saveData)
+
+    async def async_clear(self) -> None:
+        """Wipe all data and delete the storage file content."""
+        self.data = {}
+        self.sensor_groups = {}
+        self.roofs = {}
+        await self._store.async_remove()
 
     # --- ROOF METHODS ---
     async def addRoof(self, name: str, tilt: Optional[float] = None, azimuth: Optional[float] = None, sensorGroupId: str = "", strings: Optional[dict] = None) -> None:
@@ -136,7 +136,7 @@ class AccurateSolarSensorDB:
 
     async def deleteModel(self, modelId: str) -> bool:
         """Elimina un modelo de la DB."""
-        if modelId == "default_450w":
+        if modelId == slugify("Generico 450W"):
             return False
         if modelId in self.data:
             del self.data[modelId]

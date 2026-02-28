@@ -19,8 +19,10 @@ async def async_setup_entry(hass, configEntry, asyncAddEntities):
         domainData = hass.data.get(DOMAIN, {})
         db = domainData.get("db")
         if not db:
-            _LOGGER.error("DB not found in hass.data — skipping sensor.py setup")
+            _LOGGER.error("DATABASE NOT FOUND in hass.data. domainData: %s", domainData)
             return
+        
+        _LOGGER.debug(f"async_setup_entry starting for configEntry: {configEntry.title} ({configEntry.entry_id})")
 
         deviceRegistry = dr.async_get(hass)
 
@@ -69,7 +71,7 @@ async def async_setup_entry(hass, configEntry, asyncAddEntities):
             return
 
         # CASO B: SUBENTRADA (PILL)
-        _LOGGER.debug(f"Configuring subentry flow: {configEntry.entry_id}")
+        _LOGGER.info(f"Configuring subentry pill '{configEntry.title}' (ID: {configEntry.entry_id})")
         _processEntry(hass, mainEntryId, configEntry.entry_id, configEntry.data, db, deviceRegistry, asyncAddEntities)
 
     except Exception as e:
@@ -94,20 +96,39 @@ def _processEntry(hass, mainEntryId, subentryId, data, db, deviceRegistry, async
         )
 
         roofObj = db.getRoof(roofId)
-        if not roofObj: return
+        if not roofObj:
+            _LOGGER.error(f"CRITICAL: Roof '{roofId}' NOT FOUND in DB. Available roofs: {list(db.roofs.keys())}")
+            return
 
         sensorGroupObj = db.getSensorGroupForRoof(roofId)
+        _LOGGER.info(f"Processing Roof '{roofName}' ({roofId}). Strings in DB: {len(roofObj.strings)}. SensorGroup: {sensorGroupObj.name if sensorGroupObj else 'None'}")
+        
         entities = []
         for stringId, stringObj in roofObj.strings.items():
             sData = stringObj.to_dict()
             sData[CONF_ROOF_NAME] = roofName
             sData["_roof_hub_identifier"] = roofHubIdentifier
+            
+            # Explicitly register string devices to link them to the subentry pill
+            deviceRegistry.async_get_or_create(
+                config_entry_id=mainEntryId,
+                config_subentry_id=subentryId,
+                identifiers={(DOMAIN, f"str_{slugify(stringObj.name)}")},
+                name=stringObj.name,
+                manufacturer="Accurate Solar Forecast",
+                model=stringObj.panelModel,
+                via_device={roofHubIdentifier},
+            )
+            
             entities.append(SolarStringSensor(hass, sData, db, sensorGroupObj))
             if stringObj.realProductionSensor:
                 entities.append(SolarStringPerformanceSensor(hass, sData, db, sensorGroupObj))
         
         if entities:
+            _LOGGER.info(f"Adding {len(entities)} entities for roof '{roofName}'")
             asyncAddEntities(entities)
+        else:
+            _LOGGER.warning(f"No entities created for roof '{roofName}' (zero strings found in DB object)")
 
     # --- GRUPO DE SENSORES ---
     elif CONF_SENSOR_GROUP_NAME in data:
