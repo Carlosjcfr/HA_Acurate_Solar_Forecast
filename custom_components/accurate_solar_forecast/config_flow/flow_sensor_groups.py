@@ -58,14 +58,14 @@ class SensorGroupsFlowMixin:
                     return await self.async_step_string_create_select_relations()
                 
                 # BRANCH B: If it's a subentry flow (Pill), we MUST return async_create_entry
-                # to register the subentry in Home Assistant.
-                if hasattr(self, 'config_subentry_flow'): # Check if HA 2024.11 subentry flow
+                # We check for our custom flag or if the handler name contains Subentry
+                if getattr(self, "_isSubentry", False) or "Subentry" in self.__class__.__name__:
                      return self.async_create_entry(
                          title=name,
                          data={CONF_SENSOR_GROUP_NAME: name}
                      )
                 
-                # Fallback for old flows or main entry context
+                # Fallback
                 return self.async_abort(reason="list_updated")
             
          return self._showSensorGroupForm("sensor_group_create", errors)

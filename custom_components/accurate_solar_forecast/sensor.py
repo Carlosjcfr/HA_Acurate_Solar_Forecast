@@ -29,11 +29,23 @@ async def async_setup_entry(hass, configEntry, asyncAddEntities):
         mainEntry = next((e for e in allEntries if CONF_ROOF_NAME not in e.data and CONF_SENSOR_GROUP_NAME not in e.data), configEntry)
         mainEntryId = mainEntry.entry_id
 
+        # 2. SEPARATE SUBENTRY MAPS (to avoid Roof vs SG collisions)
+        roofSubentryMap = {}   # slug -> entry_id
+        groupSubentryMap = {}  # slug -> entry_id
+        
+        allSubentries = getattr(mainEntry, "subentries", {}) or {}
+        for sId, sObj in allSubentries.items():
+            sData = sObj.data
+            if CONF_ROOF_NAME in sData:
+                roofSubentryMap[slugify(sData[CONF_ROOF_NAME])] = sId
+            if CONF_SENSOR_GROUP_NAME in sData:
+                groupSubentryMap[slugify(sData[CONF_SENSOR_GROUP_NAME])] = sId
+
         # CASO A: ENTRADA PRINCIPAL
         if configEntry.entry_id == mainEntryId:
             _LOGGER.debug(f"Configuring main entry: {mainEntryId}")
             
-            # Global Counter (PV Library) always on Main Entry
+            # Global Counter (PV Library)
             deviceRegistry.async_get_or_create(
                 config_entry_id=mainEntryId,
                 identifiers={(DOMAIN, "pv_models_library")},
@@ -44,29 +56,16 @@ async def async_setup_entry(hass, configEntry, asyncAddEntities):
             )
             asyncAddEntities([PVModelCountSensor(hass, db)])
             
-            # FALLBACK: Check DB for orphaned objects that don't have their own subentries.
-            # This happens in Case: Guided flow (Roof created with a new SG in one go).
-            subentryIds = {sub.entry_id for sub in getattr(mainEntry, "subentries", {}).values()} or set()
-            
-            # Map of name->subentryId for grouping
-            subentryMap = {}
-            for sId, sObj in getattr(mainEntry, "subentries", {}).items():
-                name = sObj.data.get(CONF_ROOF_NAME, sObj.data.get(CONF_SENSOR_GROUP_NAME))
-                if name: subentryMap[slugify(name)] = sId
-
-            # Iterate DB objects
+            # ORPHAN DETECTION (Objects in DB without HA subentry)
             for sgId, sg in db.sensor_groups.items():
-                if sgId not in subentryMap:
+                if sgId not in groupSubentryMap:
                     _LOGGER.info(f"Sensor group '{sgId}' is in DB but has no subentry. Registering as orphan.")
                     _processEntry(hass, mainEntryId, None, sg.to_dict(), db, deviceRegistry, asyncAddEntities)
 
-            # NOTE: For roofs, we usually always have a subentry unless something went wrong.
-            for rId, roof in db.roofs.items():
-                if rId not in subentryMap:
-                    _LOGGER.warning(f"Roof '{rId}' is in DB but has no subentry. Registering as orphan.")
-                    # Fallback data for orphan roof
-                    dummyData = {CONF_ROOF_NAME: roof.name}
-                    _processEntry(hass, mainEntryId, None, dummyData, db, deviceRegistry, asyncAddEntities)
+            for roofId, roof in db.roofs.items():
+                if roofId not in roofSubentryMap:
+                    _LOGGER.warning(f"Roof '{roofId}' is in DB but has no subentry. Registering as orphan.")
+                    _processEntry(hass, mainEntryId, None, {CONF_ROOF_NAME: roof.name}, db, deviceRegistry, asyncAddEntities)
 
             return
 
@@ -80,12 +79,12 @@ async def async_setup_entry(hass, configEntry, asyncAddEntities):
 
 def _processEntry(hass, mainEntryId, subentryId, data, db, deviceRegistry, asyncAddEntities):
     """Procesa una entrada (subentry o huérfana) para crear sus dispositivos y entidades."""
-    # --- TEJADO (ROOF) ---
+    # --- TEJADO ---
     if CONF_ROOF_NAME in data:
         roofName = data[CONF_ROOF_NAME]
         roofId = slugify(roofName)
-        
         roofHubIdentifier = (DOMAIN, f"roof_{roofId}")
+        
         deviceRegistry.async_get_or_create(
             config_entry_id=mainEntryId,
             config_subentry_id=subentryId,
@@ -113,7 +112,7 @@ def _processEntry(hass, mainEntryId, subentryId, data, db, deviceRegistry, async
             asyncAddEntities(entities)
 
     # --- GRUPO DE SENSORES ---
-    if CONF_SENSOR_GROUP_NAME in data:
+    elif CONF_SENSOR_GROUP_NAME in data:
         groupName = data[CONF_SENSOR_GROUP_NAME]
         groupId = slugify(groupName)
         sgIdentifier = (DOMAIN, f"sg_{groupId}")
@@ -128,11 +127,8 @@ def _processEntry(hass, mainEntryId, subentryId, data, db, deviceRegistry, async
             entry_type=dr.DeviceEntryType.SERVICE,
         )
 
-        class _Proxy: 
-            entry_id = mainEntryId
-            data = data
-        
+        class _P: entry_id = mainEntryId; data = data
         asyncAddEntities([
-            SensorGroupVirtualSensor(hass, _Proxy(), {sgIdentifier}),
-            SensorGroupCloudinessSensor(hass, _Proxy(), {sgIdentifier}),
+            SensorGroupVirtualSensor(hass, _P(), {sgIdentifier}),
+            SensorGroupCloudinessSensor(hass, _P(), {sgIdentifier}),
         ])

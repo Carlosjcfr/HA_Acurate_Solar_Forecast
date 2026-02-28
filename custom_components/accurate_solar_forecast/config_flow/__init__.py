@@ -282,6 +282,7 @@ class RoofSubentryFlowHandler(AccurateForecastCommonFlow, RoofsFlowMixin, Sensor
 class SensorGroupSubentryFlowHandler(AccurateForecastCommonFlow, SensorGroupsFlowMixin, ConfigSubentryFlow):
     async def async_step_user(self, userInput=None):
         await self._asyncInitRequirements()
+        self._isSubentry = True
         return await super().async_step_sensor_group_create(userInput)
 
 class StringSubentryFlowHandler(AccurateForecastCommonFlow, StringsFlowMixin, ConfigSubentryFlow):
