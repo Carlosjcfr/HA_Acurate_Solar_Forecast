@@ -42,19 +42,30 @@ class SensorGroupsFlowMixin:
                     userInput.get(CONF_WEATHER_ENTITY),
                     userInput.get(CONF_ILLUMINANCE_SENSOR)
                 )
-                # If in guided flow, back-assign the new group to the pending roof
+                
+                # BRANCH A: If in guided flow (Roof -> SG), we continue to string creation
                 if getattr(self, '_guidedFlow', False):
-                    roofName = self.tempData.get("roof_name")
+                    roofName = self.tempData.get(CONF_ROOF_NAME)
                     if roofName:
                         from ..core import slugify as _slugify
                         roofId = _slugify(roofName)
                         roof = self._db.getRoof(roofId)
-                        if roof and not roof.sensorGroupId:
-                            await self._db.addRoof(
+                        if roof:
+                             await self._db.addRoof(
                                 roof.name, roof.tilt, roof.azimuth,
-                                sensorGroupId=groupId or name
-                            )
+                                sensorGroupId=groupId
+                             )
                     return await self.async_step_string_create_select_relations()
+                
+                # BRANCH B: If it's a subentry flow (Pill), we MUST return async_create_entry
+                # to register the subentry in Home Assistant.
+                if hasattr(self, 'config_subentry_flow'): # Check if HA 2024.11 subentry flow
+                     return self.async_create_entry(
+                         title=name,
+                         data={CONF_SENSOR_GROUP_NAME: name}
+                     )
+                
+                # Fallback for old flows or main entry context
                 return self.async_abort(reason="list_updated")
             
          return self._showSensorGroupForm("sensor_group_create", errors)

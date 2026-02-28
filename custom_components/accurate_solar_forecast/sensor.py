@@ -23,16 +23,19 @@ async def async_setup_entry(hass, configEntry, asyncAddEntities):
             return
 
         deviceRegistry = dr.async_get(hass)
-        
-        # ── CASE MAIN ENTRY ──────────────────────────────────────────
-        # If this is the main entry, it manages the library and
-        # delegates creation of all current subentries.
-        if CONF_SENSOR_GROUP_NAME not in configEntry.data and CONF_ROOF_NAME not in configEntry.data:
-            _LOGGER.debug("Setting up main entry devices")
+
+        # 1. ENCONTRAR EL ENTRY PRINCIPAL (PARENT)
+        allEntries = hass.config_entries.async_entries(DOMAIN)
+        mainEntry = next((e for e in allEntries if CONF_ROOF_NAME not in e.data and CONF_SENSOR_GROUP_NAME not in e.data), configEntry)
+        mainEntryId = mainEntry.entry_id
+
+        # CASO A: ENTRADA PRINCIPAL
+        if configEntry.entry_id == mainEntryId:
+            _LOGGER.debug(f"Configuring main entry: {mainEntryId}")
             
-            # PV Library device (always flat under main entry)
+            # Global Counter (PV Library) always on Main Entry
             deviceRegistry.async_get_or_create(
-                config_entry_id=configEntry.entry_id,
+                config_entry_id=mainEntryId,
                 identifiers={(DOMAIN, "pv_models_library")},
                 name="Módulos Guardados",
                 manufacturer="Accurate Solar Forecast",
@@ -40,31 +43,78 @@ async def async_setup_entry(hass, configEntry, asyncAddEntities):
                 entry_type=dr.DeviceEntryType.SERVICE,
             )
             asyncAddEntities([PVModelCountSensor(hass, db)])
+            
+            # FALLBACK: Check DB for orphaned objects that don't have their own subentries.
+            # This happens in Case: Guided flow (Roof created with a new SG in one go).
+            subentryIds = {sub.entry_id for sub in getattr(mainEntry, "subentries", {}).values()} or set()
+            
+            # Map of name->subentryId for grouping
+            subentryMap = {}
+            for sId, sObj in getattr(mainEntry, "subentries", {}).items():
+                name = sObj.data.get(CONF_ROOF_NAME, sObj.data.get(CONF_SENSOR_GROUP_NAME))
+                if name: subentryMap[slugify(name)] = sId
 
-            # Iterate child subentries (the pills)
-            subentries = getattr(configEntry, "subentries", {}) or {}
-            for subId, sub in subentries.items():
-                _processSubentry(hass, configEntry.entry_id, sub, db, deviceRegistry, asyncAddEntities)
+            # Iterate DB objects
+            for sgId, sg in db.sensor_groups.items():
+                if sgId not in subentryMap:
+                    _LOGGER.info(f"Sensor group '{sgId}' is in DB but has no subentry. Registering as orphan.")
+                    _processEntry(hass, mainEntryId, None, sg.to_dict(), db, deviceRegistry, asyncAddEntities)
+
+            # NOTE: For roofs, we usually always have a subentry unless something went wrong.
+            for rId, roof in db.roofs.items():
+                if rId not in subentryMap:
+                    _LOGGER.warning(f"Roof '{rId}' is in DB but has no subentry. Registering as orphan.")
+                    # Fallback data for orphan roof
+                    dummyData = {CONF_ROOF_NAME: roof.name}
+                    _processEntry(hass, mainEntryId, None, dummyData, db, deviceRegistry, asyncAddEntities)
+
             return
 
-        # ── CASE SUBENTRY CALL ───────────────────────────────────────
-        # HA also calls setup directly for each pill.
-        _processSubentry(hass, configEntry.entry_id, configEntry, db, deviceRegistry, asyncAddEntities)
+        # CASO B: SUBENTRADA (PILL)
+        _LOGGER.debug(f"Configuring subentry flow: {configEntry.entry_id}")
+        _processEntry(hass, mainEntryId, configEntry.entry_id, configEntry.data, db, deviceRegistry, asyncAddEntities)
 
     except Exception as e:
         _LOGGER.exception(f"Error during sensor.py setup: {e}")
 
 
-def _processSubentry(hass, mainEntryId, entry, db, deviceRegistry, asyncAddEntities):
-    """Unified handler for subentry processing."""
-    data = entry.data
-    # Use the entry's own ID if it's a subentry (pill), otherwise None
-    # This is CRITICAL for the HA UI to group items under the pill.
-    subentryId = entry.entry_id if entry.entry_id != mainEntryId else None
+def _processEntry(hass, mainEntryId, subentryId, data, db, deviceRegistry, asyncAddEntities):
+    """Procesa una entrada (subentry o huérfana) para crear sus dispositivos y entidades."""
+    # --- TEJADO (ROOF) ---
+    if CONF_ROOF_NAME in data:
+        roofName = data[CONF_ROOF_NAME]
+        roofId = slugify(roofName)
+        
+        roofHubIdentifier = (DOMAIN, f"roof_{roofId}")
+        deviceRegistry.async_get_or_create(
+            config_entry_id=mainEntryId,
+            config_subentry_id=subentryId,
+            identifiers={roofHubIdentifier},
+            name=roofName,
+            manufacturer="Accurate Solar Forecast",
+            model="Roof Hub",
+            entry_type=dr.DeviceEntryType.SERVICE,
+        )
 
-    # 1. SENSOR GROUP
+        roofObj = db.getRoof(roofId)
+        if not roofObj: return
+
+        sensorGroupObj = db.getSensorGroupForRoof(roofId)
+        entities = []
+        for stringId, stringObj in roofObj.strings.items():
+            sData = stringObj.to_dict()
+            sData[CONF_ROOF_NAME] = roofName
+            sData["_roof_hub_identifier"] = roofHubIdentifier
+            entities.append(SolarStringSensor(hass, sData, db, sensorGroupObj))
+            if stringObj.realProductionSensor:
+                entities.append(SolarStringPerformanceSensor(hass, sData, db, sensorGroupObj))
+        
+        if entities:
+            asyncAddEntities(entities)
+
+    # --- GRUPO DE SENSORES ---
     if CONF_SENSOR_GROUP_NAME in data:
-        groupName = data.get(CONF_SENSOR_GROUP_NAME)
+        groupName = data[CONF_SENSOR_GROUP_NAME]
         groupId = slugify(groupName)
         sgIdentifier = (DOMAIN, f"sg_{groupId}")
         
@@ -78,44 +128,11 @@ def _processSubentry(hass, mainEntryId, entry, db, deviceRegistry, asyncAddEntit
             entry_type=dr.DeviceEntryType.SERVICE,
         )
 
-        class _SimpleProxy: entry_id = mainEntryId; data = data
-        proxy = _SimpleProxy()
+        class _Proxy: 
+            entry_id = mainEntryId
+            data = data
         
         asyncAddEntities([
-            SensorGroupVirtualSensor(hass, proxy, {sgIdentifier}),
-            SensorGroupCloudinessSensor(hass, proxy, {sgIdentifier}),
+            SensorGroupVirtualSensor(hass, _Proxy(), {sgIdentifier}),
+            SensorGroupCloudinessSensor(hass, _Proxy(), {sgIdentifier}),
         ])
-
-    # 2. ROOF + CHILD STRINGS
-    if CONF_ROOF_NAME in data:
-        roofName = data.get(CONF_ROOF_NAME)
-        roofId = slugify(roofName)
-        roofHubIdentifier = (DOMAIN, f"roof_{roofId}")
-        
-        # Create Roof Hub device linked to this subentry
-        deviceRegistry.async_get_or_create(
-            config_entry_id=mainEntryId,
-            config_subentry_id=subentryId,
-            identifiers={roofHubIdentifier},
-            name=roofName,
-            manufacturer="Accurate Solar Forecast",
-            model="Roof Hub",
-            entry_type=dr.DeviceEntryType.SERVICE,
-        )
-
-        roofStrings = db.getRoofStrings(roofId)
-        sensorGroupObj = db.getSensorGroupForRoof(roofId)
-        
-        entities = []
-        for stringId, stringObj in roofStrings.items():
-            sData = stringObj.to_dict()
-            sData[CONF_ROOF_NAME] = roofName
-            sData["_roof_hub_identifier"] = roofHubIdentifier
-            
-            # Entities will use _roof_hub_identifier as via_device
-            entities.append(SolarStringSensor(hass, sData, db, sensorGroupObj))
-            if stringObj.realProductionSensor:
-                entities.append(SolarStringPerformanceSensor(hass, sData, db, sensorGroupObj))
-        
-        if entities:
-            asyncAddEntities(entities)
