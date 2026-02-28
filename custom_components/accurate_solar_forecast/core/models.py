@@ -57,8 +57,10 @@ class SolarString:
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "SolarString":
+        # Accept both 'string_name' (CONF_STRING_NAME) and legacy 'name' key
+        name = data.get("string_name", data.get("name", "Unknown String"))
         return cls(
-            name=data.get("name", "Unknown String"),
+            name=name,
             panelModel=data.get("panel_model", data.get("panelModel", "Generic")),
             numPanels=int(data.get("num_panels", data.get("numPanels", 1))),
             numStrings=int(data.get("num_strings", data.get("numStrings", 1))),
@@ -70,7 +72,8 @@ class SolarString:
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
         return {
-            "name": self.name,
+            "string_name": self.name,   # CONF_STRING_NAME key (primary)
+            "name": self.name,           # Legacy key for backward compatibility
             "panel_model": self.panelModel,
             "num_panels": self.numPanels,
             "num_strings": self.numStrings,

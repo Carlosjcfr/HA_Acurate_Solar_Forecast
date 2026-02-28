@@ -237,7 +237,13 @@ class SolarStringSensor(SensorEntity):
         self.async_write_ha_state()
 
     async def async_added_to_hass(self):
-        """Suscribirse a actualizaciones."""
+        """Subscribe to state change events for calculation inputs."""
+        if not self._sensorGroup:
+            _LOGGER.warning(
+                f"String '{self._attr_name}' has no sensor group — "
+                "running in degraded mode (no forecast updates)."
+            )
+            return
         entities = ["sun.sun", self._sensorGroup.refSensor, self._sensorGroup.tempSensor]
         if self._sensorGroup.weatherEntity: entities.append(self._sensorGroup.weatherEntity)
         if self._sensorGroup.illuminanceSensor: entities.append(self._sensorGroup.illuminanceSensor)
