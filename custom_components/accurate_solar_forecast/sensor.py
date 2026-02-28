@@ -46,44 +46,42 @@ async def async_setup_entry(hass, configEntry, asyncAddEntities):
                 if CONF_SENSOR_GROUP_NAME in sData:
                     groupSubentryMap[slugify(sData[CONF_SENSOR_GROUP_NAME])] = sId
 
-        # CASO A: ENTRADA PRINCIPAL
-        if configEntry.entry_id == mainEntryId:
-            _LOGGER.debug(f"Configuring main entry: {mainEntryId}")
-            
-            # Global Counter (PV Library)
-            deviceRegistry.async_get_or_create(
-                config_entry_id=mainEntryId,
-                identifiers={(DOMAIN, "pv_models_library")},
-                name="Módulos Guardados",
-                manufacturer="Accurate Solar Forecast",
-                model="PV Library",
-            )
-            asyncAddEntities([PVModelCountSensor(hass, db)])
-            
-            # ORPHAN DETECTION (Objects in DB without HA subentry)
-            # Build set of SGs that are already linked to roofs with subentries (they'll be created with the roof)
-            sgLinkedToActiveRoofs = set()
-            for rId, rObj in db.roofs.items():
-                if rId in roofSubentryMap and rObj.sensorGroupId:
-                    sgLinkedToActiveRoofs.add(rObj.sensorGroupId)
-            
-            for sgId, sg in db.sensor_groups.items():
-                if sgId not in groupSubentryMap and sgId not in sgLinkedToActiveRoofs:
-                    _LOGGER.info(f"Sensor group '{sgId}' is in DB but has no subentry and no active roof link. Registering as orphan.")
-                    _processEntry(hass, mainEntryId, None, sg.to_dict(), db, deviceRegistry, asyncAddEntities)
+        # === PROCESS ALL DATA FROM THE MAIN ENTRY ===
+        # With the Subentries API, async_setup_entry is called ONCE for the main entry.
+        # Subentries are NOT separate config entries — they are data attached to the main entry.
+        # We must process ALL roofs/SGs here, passing the correct subentry ID for each.
+        
+        _LOGGER.debug(f"Configuring main entry: {mainEntryId}")
+        
+        # Global Counter (PV Library)
+        deviceRegistry.async_get_or_create(
+            config_entry_id=mainEntryId,
+            identifiers={(DOMAIN, "pv_models_library")},
+            name="Módulos Guardados",
+            manufacturer="Accurate Solar Forecast",
+            model="PV Library",
+        )
+        asyncAddEntities([PVModelCountSensor(hass, db)])
+        
+        # Build set of SGs that are linked to roofs (they'll be created as children of the roof)
+        sgLinkedToRoofs = set()
+        for rId, rObj in db.roofs.items():
+            if rObj.sensorGroupId:
+                sgLinkedToRoofs.add(rObj.sensorGroupId)
+        
+        # Process standalone sensor groups (those with their own subentry OR orphans NOT linked to any roof)
+        for sgId, sg in db.sensor_groups.items():
+            if sgId in sgLinkedToRoofs:
+                continue  # Will be created as part of the roof processing
+            subId = groupSubentryMap.get(sgId)  # None if orphan
+            _LOGGER.info(f"Processing standalone sensor group '{sgId}' (subentry: {subId or 'orphan'})")
+            _processEntry(hass, mainEntryId, subId, sg.to_dict(), db, deviceRegistry, asyncAddEntities)
 
-            for roofId, roof in db.roofs.items():
-                if roofId not in roofSubentryMap:
-                    _LOGGER.info(f"Roof '{roofId}' is in DB but has no subentry. Registering as orphan.")
-                    _processEntry(hass, mainEntryId, None, {CONF_ROOF_NAME: roof.name}, db, deviceRegistry, asyncAddEntities)
-                else:
-                    _LOGGER.debug(f"Roof '{roofId}' already has a subentry ({roofSubentryMap[roofId]}). Skipping main-entry processing.")
-
-            return
-
-        # CASO B: SUBENTRADA (PILL)
-        _LOGGER.info(f"Configuring subentry pill '{configEntry.title}' (ID: {configEntry.entry_id})")
-        _processEntry(hass, mainEntryId, configEntry.entry_id, configEntry.data, db, deviceRegistry, asyncAddEntities)
+        # Process ALL roofs (with or without subentry)
+        for roofId, roof in db.roofs.items():
+            subId = roofSubentryMap.get(roofId)  # None if orphan
+            _LOGGER.info(f"Processing roof '{roofId}' (subentry: {subId or 'orphan'})")
+            _processEntry(hass, mainEntryId, subId, {CONF_ROOF_NAME: roof.name}, db, deviceRegistry, asyncAddEntities)
 
     except Exception as e:
         _LOGGER.exception(f"Error during sensor.py setup: {e}")

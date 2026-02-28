@@ -1,4 +1,7 @@
 {
     "name": "Accurate Solar Forecast",
-    "render_readme": true
+    "render_readme": true,
+    "content_in_root": false,
+    "filename": "accurate_solar_forecast",
+    "homeassistant": "2024.12.0"
 }

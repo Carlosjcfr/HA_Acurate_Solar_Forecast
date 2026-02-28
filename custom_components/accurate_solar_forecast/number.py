@@ -1,8 +1,18 @@
+"""Number platform for Accurate Solar Forecast."""
 import logging
-from .variables.const import DOMAIN, CONF_ROOF_NAME
-from .core import SolarStringTiltNumber, SolarStringAzimuthNumber, slugify
+from homeassistant.components.number import NumberEntity, NumberMode
+from homeassistant.helpers.event import async_call_later
+from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers import device_registry as dr, entity_registry as er
+from .variables.const import (
+    DOMAIN, CONF_ROOF_NAME, CONF_STRING_NAME,
+    CONF_REAL_PRODUCTION_SENSOR, CONF_PANEL_MODEL,
+    CONF_TILT, CONF_AZIMUTH
+)
+from .core.helpers import slugify
 
 _LOGGER = logging.getLogger(__name__)
+
 
 async def async_setup_entry(hass, configEntry, asyncAddEntities):
     """Set up number entities for solar strings."""
@@ -12,36 +22,106 @@ async def async_setup_entry(hass, configEntry, asyncAddEntities):
         if not db:
             return
 
-        # CASE A: direct subentry call
-        if CONF_ROOF_NAME in configEntry.data:
-            _setupRoofNumbers(hass, configEntry, db, asyncAddEntities, configEntry.data)
-            return
+        entities = []
+        for roofId, roofObj in db.roofs.items():
+            roofName = roofObj.name
+            sensorGroupObj = db.getSensorGroupForRoof(roofId)
+            for stringId, stringObj in roofObj.strings.items():
+                combinedData = stringObj.to_dict()
+                combinedData[CONF_ROOF_NAME] = roofName
+                entities.append(SolarStringTiltNumber(hass, combinedData, db, configEntry, stringId, roofId, sensorGroupObj))
+                entities.append(SolarStringAzimuthNumber(hass, combinedData, db, configEntry, stringId, roofId, sensorGroupObj))
 
-        # CASE B: main entry — iterate subentries
-        subentries = getattr(configEntry, "subentries", {}) or {}
-        for subentryId, subentry in subentries.items():
-            subData = subentry.data if hasattr(subentry, "data") else {}
-            _setupRoofNumbers(hass, configEntry, db, asyncAddEntities, subData)
-
+        if entities:
+            asyncAddEntities(entities)
     except Exception as e:
         _LOGGER.exception(f"Error setting up number platform: {e}")
 
 
-def _setupRoofNumbers(hass, configEntry, db, asyncAddEntities, data):
-    if CONF_ROOF_NAME not in data:
-        return
-    try:
-        roofName = data.get(CONF_ROOF_NAME)
-        roofId = slugify(roofName) if roofName else "default"
-        roofStrings = db.getRoofStrings(roofId)
-        sensorGroupObj = db.getSensorGroupForRoof(roofId)
-        entities = []
-        for stringId, stringObj in roofStrings.items():
-            combinedData = stringObj.to_dict()
-            combinedData[CONF_ROOF_NAME] = roofName
-            entities.append(SolarStringTiltNumber(hass, combinedData, db, configEntry, stringId, roofId, sensorGroupObj))
-            entities.append(SolarStringAzimuthNumber(hass, combinedData, db, configEntry, stringId, roofId, sensorGroupObj))
-        if entities:
-            asyncAddEntities(entities)
-    except Exception as e:
-        _LOGGER.exception(f"Error setting up numbers for roof '{data.get(CONF_ROOF_NAME)}': {e}")
+# ---------------------------------------------------------------------------
+# Entity classes
+# ---------------------------------------------------------------------------
+
+class SolarStringNumberEntity(NumberEntity):
+    """Base class for Solar String numbers."""
+
+    def __init__(self, hass, stringData, db, configEntry, stringId, roofId, sensorGroupData):
+        self.hass = hass
+        self._data = stringData
+        self._db = db
+        self._configEntry = configEntry
+        self._stringId = stringId
+        self._roofId = roofId
+        self._sensorGroup = sensorGroupData
+        self._stringName = self._data.get(CONF_STRING_NAME)
+        self._attr_has_entity_name = True
+        self._debounceUnsub = None
+        self._key = None
+        modelName = self._data.get(CONF_PANEL_MODEL)
+        self._panelData = db.data.get(slugify(modelName)) if db and db.data else None
+
+    @property
+    def device_info(self):
+        stringIdSlug = f"str_{slugify(self._stringName)}"
+        deviceIdentifiers = {(DOMAIN, stringIdSlug)}
+        realSensorId = self._data.get(CONF_REAL_PRODUCTION_SENSOR)
+        foundDevice = False
+        if realSensorId:
+            entityEntry = er.async_get(self.hass).async_get(realSensorId)
+            if entityEntry and entityEntry.device_id:
+                device = dr.async_get(self.hass).async_get(entityEntry.device_id)
+                if device:
+                    deviceIdentifiers = device.identifiers
+                    foundDevice = True
+        return DeviceInfo(
+            identifiers=deviceIdentifiers,
+            name=self._stringName if not foundDevice else None,
+            manufacturer=(self._panelData.brand if self._panelData else "Generic") if not foundDevice else None,
+            model=(self._panelData.name if self._panelData else None) if not foundDevice else None,
+            via_device=(DOMAIN, self._sensorGroup.name) if (not foundDevice and self._sensorGroup) else None
+        )
+
+    async def async_set_native_value(self, value: float) -> None:
+        self._attr_native_value = value
+        self.async_write_ha_state()
+        if self._debounceUnsub:
+            self._debounceUnsub()
+
+        async def _performUpdate(_now):
+            self._data[self._key] = value
+            await self._db.addStringToRoof(self._roofId, self._stringId, self._data)
+            await self.hass.config_entries.async_reload(self._configEntry.entry_id)
+
+        self._debounceUnsub = async_call_later(self.hass, 2, _performUpdate)
+
+
+class SolarStringTiltNumber(SolarStringNumberEntity):
+    _attr_native_min_value = 0
+    _attr_native_max_value = 90
+    _attr_native_step = 1
+    _attr_native_unit_of_measurement = "°"
+    _attr_mode = NumberMode.BOX
+    _attr_icon = "mdi:angle-acute"
+
+    def __init__(self, hass, stringData, db, configEntry, stringId, roofId, sensorGroupData):
+        super().__init__(hass, stringData, db, configEntry, stringId, roofId, sensorGroupData)
+        self._attr_name = "Inclinación"
+        self._attr_unique_id = f"str_{self._stringId}_tilt"
+        self._attr_native_value = self._data.get(CONF_TILT, 0)
+        self._key = CONF_TILT
+
+
+class SolarStringAzimuthNumber(SolarStringNumberEntity):
+    _attr_native_min_value = 0
+    _attr_native_max_value = 360
+    _attr_native_step = 1
+    _attr_native_unit_of_measurement = "°"
+    _attr_mode = NumberMode.BOX
+    _attr_icon = "mdi:compass"
+
+    def __init__(self, hass, stringData, db, configEntry, stringId, roofId, sensorGroupData):
+        super().__init__(hass, stringData, db, configEntry, stringId, roofId, sensorGroupData)
+        self._attr_name = "Orientación"
+        self._attr_unique_id = f"str_{self._stringId}_azimuth"
+        self._attr_native_value = self._data.get(CONF_AZIMUTH, 180)
+        self._key = CONF_AZIMUTH
