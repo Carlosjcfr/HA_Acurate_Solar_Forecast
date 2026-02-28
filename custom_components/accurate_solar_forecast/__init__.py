@@ -35,12 +35,48 @@ async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up integration from a config entry."""
     try:
-        await _ensureDbLoaded(hass)
+        db = await _ensureDbLoaded(hass)
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+
+        # Sync DB with current subentries — remove orphaned DB records
+        await _syncDbWithSubentries(hass, entry, db)
+
         return True
     except Exception as e:
         _LOGGER.exception(f"Exception during async_setup_entry: {e}")
         return False
+
+
+async def _syncDbWithSubentries(hass: HomeAssistant, entry: ConfigEntry, db) -> None:
+    """Remove DB records whose subentries no longer exist in HA."""
+    try:
+        subentries = getattr(entry, "subentries", None)
+        if subentries is None:
+            return  # subentries API not available — skip sync
+
+        # Collect names of existing sensor groups and roofs from subentries
+        activeGroupNames = set()
+        activeRoofNames = set()
+        for subId, sub in subentries.items():
+            subData = sub.data if hasattr(sub, "data") else {}
+            if CONF_SENSOR_GROUP_NAME in subData:
+                activeGroupNames.add(slugify(subData[CONF_SENSOR_GROUP_NAME]))
+            if CONF_ROOF_NAME in subData:
+                activeRoofNames.add(slugify(subData[CONF_ROOF_NAME]))
+
+        # Remove orphaned sensor groups from DB
+        orphanGroups = [gId for gId in db.sensor_groups if gId not in activeGroupNames]
+        for gId in orphanGroups:
+            _LOGGER.info(f"DB sync: removing orphaned sensor group '{gId}'")
+            await db.deleteSensorGroup(gId)
+
+        # Remove orphaned roofs from DB
+        orphanRoofs = [rId for rId in db.roofs if rId not in activeRoofNames]
+        for rId in orphanRoofs:
+            _LOGGER.info(f"DB sync: removing orphaned roof '{rId}'")
+            await db.deleteRoof(rId)
+    except Exception as e:
+        _LOGGER.warning(f"Error syncing DB with subentries: {e}")
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -49,11 +85,11 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     except Exception as e:
         _LOGGER.exception(f"Error during async_unload_entry: {e}")
-        return True  # Return True to allow HA to clean up the entry
+        return True
 
 
 async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Handle removal of an entry."""
+    """Handle removal of an entry (main or subentry)."""
     try:
         domainData = hass.data.get(DOMAIN, {})
         db = domainData.get("db")
@@ -75,6 +111,7 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
             await db.deleteRoof(roofId)
     except Exception as e:
         _LOGGER.exception(f"Error removing entry from DB: {e}")
+
 
 
 async def async_remove_config_entry_device(

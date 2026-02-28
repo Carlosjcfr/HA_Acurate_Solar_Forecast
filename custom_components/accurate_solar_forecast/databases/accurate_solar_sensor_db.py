@@ -8,7 +8,7 @@ import logging
 _LOGGER = logging.getLogger(__name__)
 
 STORAGE_VERSION = 1
-STORAGE_KEY = "accurate_forecast_pv_models"
+STORAGE_KEY = "accurate_solar_sensor"
 
 class AccurateSolarSensorDB:
     def __init__(self, hass: HomeAssistant):
@@ -18,10 +18,11 @@ class AccurateSolarSensorDB:
         self.roofs: dict[str, Roof] = {}
 
     async def async_load(self) -> None:
-        """Carga la DB del disco."""
+        """Load DB from disk."""
         data = await self._store.async_load()
         if data is None:
-            # Datos por defecto si está vacío
+
+            # Default data if completely empty
             self.data = {
                 "default_450w": PvModel.from_dict({
                     "name": "Generico 450W",
@@ -53,8 +54,9 @@ class AccurateSolarSensorDB:
             roofsRaw = data.get("roofs", {})
             self.roofs = {k: Roof.from_dict(v) for k, v in roofsRaw.items() if isinstance(v, dict)}
             
-            # Save if we cleared old "default" roofs or fixed structure
+            # Save to new key (ensures migration is persisted)
             await self.async_save()
+
 
     async def async_save(self) -> None:
         """Guarda la DB al disco serializando los objetos a diccionarios."""
