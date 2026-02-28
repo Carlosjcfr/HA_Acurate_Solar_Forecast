@@ -12,6 +12,7 @@ STORAGE_KEY = "accurate_solar_forecast_data"
 
 class AccurateSolarSensorDB:
     def __init__(self, hass: HomeAssistant):
+        self.hass = hass
         self._store = Store(hass, STORAGE_VERSION, STORAGE_KEY)
         self.data: dict[str, PvModel] = {}
         self.sensor_groups: dict[str, SensorGroup] = {}

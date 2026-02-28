@@ -63,8 +63,8 @@ async def _syncDbWithSubentries(hass: HomeAssistant, entry: ConfigEntry, db) -> 
         # Collect names of existing sensor groups and roofs from subentries
         activeGroupNames = set()
         activeRoofNames = set()
-        for subId, sub in subentries.items():
-            subData = sub.data if hasattr(sub, "data") else {}
+        for sub in subentries:
+            subData = getattr(sub, "data", {})
             if CONF_SENSOR_GROUP_NAME in subData:
                 activeGroupNames.add(slugify(subData[CONF_SENSOR_GROUP_NAME]))
             if CONF_ROOF_NAME in subData:
