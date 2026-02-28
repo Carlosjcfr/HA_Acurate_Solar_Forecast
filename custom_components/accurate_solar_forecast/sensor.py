@@ -35,13 +35,16 @@ async def async_setup_entry(hass, configEntry, asyncAddEntities):
         roofSubentryMap = {}   # slug -> entry_id
         groupSubentryMap = {}  # slug -> entry_id
         
-        allSubentries = getattr(mainEntry, "subentries", {}) or {}
-        for sId, sObj in allSubentries.items():
-            sData = sObj.data
-            if CONF_ROOF_NAME in sData:
-                roofSubentryMap[slugify(sData[CONF_ROOF_NAME])] = sId
-            if CONF_SENSOR_GROUP_NAME in sData:
-                groupSubentryMap[slugify(sData[CONF_SENSOR_GROUP_NAME])] = sId
+        allSubentries = getattr(mainEntry, "subentries", None)
+        if allSubentries:
+            # Handle both dict-like and iterable subentries
+            items = allSubentries.items() if hasattr(allSubentries, 'items') else ((getattr(s, 'subentry_id', idx), s) for idx, s in enumerate(allSubentries))
+            for sId, sObj in items:
+                sData = getattr(sObj, 'data', {}) or {}
+                if CONF_ROOF_NAME in sData:
+                    roofSubentryMap[slugify(sData[CONF_ROOF_NAME])] = sId
+                if CONF_SENSOR_GROUP_NAME in sData:
+                    groupSubentryMap[slugify(sData[CONF_SENSOR_GROUP_NAME])] = sId
 
         # CASO A: ENTRADA PRINCIPAL
         if configEntry.entry_id == mainEntryId:
@@ -58,9 +61,15 @@ async def async_setup_entry(hass, configEntry, asyncAddEntities):
             asyncAddEntities([PVModelCountSensor(hass, db)])
             
             # ORPHAN DETECTION (Objects in DB without HA subentry)
+            # Build set of SGs that are already linked to roofs with subentries (they'll be created with the roof)
+            sgLinkedToActiveRoofs = set()
+            for rId, rObj in db.roofs.items():
+                if rId in roofSubentryMap and rObj.sensorGroupId:
+                    sgLinkedToActiveRoofs.add(rObj.sensorGroupId)
+            
             for sgId, sg in db.sensor_groups.items():
-                if sgId not in groupSubentryMap:
-                    _LOGGER.info(f"Sensor group '{sgId}' is in DB but has no subentry. Registering as orphan.")
+                if sgId not in groupSubentryMap and sgId not in sgLinkedToActiveRoofs:
+                    _LOGGER.info(f"Sensor group '{sgId}' is in DB but has no subentry and no active roof link. Registering as orphan.")
                     _processEntry(hass, mainEntryId, None, sg.to_dict(), db, deviceRegistry, asyncAddEntities)
 
             for roofId, roof in db.roofs.items():
@@ -125,6 +134,21 @@ def _processEntry(hass, mainEntryId, subentryId, data, db, deviceRegistry, async
             entities.append(SolarStringSensor(hass, sData, db, sensorGroupObj))
             if stringObj.realProductionSensor:
                 entities.append(SolarStringPerformanceSensor(hass, sData, db, sensorGroupObj))
+        
+        # Also create sensor group entities (Estado / Nubosidad) under this roof's subentry
+        if sensorGroupObj and roofObj.sensorGroupId:
+            sgIdentifier = (DOMAIN, f"sg_{roofObj.sensorGroupId}")
+            deviceRegistry.async_get_or_create(
+                config_entry_id=mainEntryId,
+                config_subentry_id=subentryId,
+                identifiers={sgIdentifier},
+                name=sensorGroupObj.name,
+                manufacturer="Accurate Solar Forecast",
+                model="Sensor Group",
+                via_device=roofHubIdentifier,
+            )
+            entities.append(SensorGroupVirtualSensor(hass, db, roofObj.sensorGroupId, {sgIdentifier}))
+            entities.append(SensorGroupCloudinessSensor(hass, db, roofObj.sensorGroupId, {sgIdentifier}))
         
         if entities:
             _LOGGER.info(f"Adding {len(entities)} entities for roof '{roofName}' (ID: {subentryId or 'Orphan'})")
