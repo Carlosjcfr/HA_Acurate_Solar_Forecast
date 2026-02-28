@@ -26,6 +26,8 @@ async def _ensureDbLoaded(hass: HomeAssistant) -> AccurateSolarSensorDB:
 async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
     """Global initialization."""
     try:
+        # Reset removal flag on startup
+        hass.data.setdefault(DOMAIN, {})["is_removing_all"] = False
         await _ensureDbLoaded(hass)
     except Exception as e:
         _LOGGER.exception(f"Error during async_setup: {e}")
@@ -36,11 +38,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up integration from a config entry."""
     try:
         db = await _ensureDbLoaded(hass)
+        
+        # Reset removal flag if this is the main entry setup
+        isMain = (CONF_ROOF_NAME not in entry.data and CONF_SENSOR_GROUP_NAME not in entry.data)
+        if isMain:
+            hass.data.setdefault(DOMAIN, {})["is_removing_all"] = False
+            # Sync DB with current subentries — remove orphaned DB records
+            await _syncDbWithSubentries(hass, entry, db)
+
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-
-        # Sync DB with current subentries — remove orphaned DB records
-        await _syncDbWithSubentries(hass, entry, db)
-
         return True
     except Exception as e:
         _LOGGER.exception(f"Exception during async_setup_entry: {e}")

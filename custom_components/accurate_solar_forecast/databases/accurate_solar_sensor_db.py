@@ -19,6 +19,11 @@ class AccurateSolarSensorDB:
 
     async def async_load(self) -> None:
         """Load DB from disk."""
+        # Check if we are in a middle of a removal to avoid recreating after a wipe
+        if self.hass.data.get(DOMAIN, {}).get("is_removing_all"):
+            _LOGGER.debug("DB async_load: skip load because global removal is in progress")
+            return
+
         data = await self._store.async_load()
         if data is None:
 
@@ -53,6 +58,10 @@ class AccurateSolarSensorDB:
 
     async def async_save(self) -> None:
         """Guarda la DB al disco serializando los objetos a diccionarios."""
+        if self.hass.data.get(DOMAIN, {}).get("is_removing_all"):
+            _LOGGER.debug("DB async_save: skip save because global removal is in progress")
+            return
+
         saveData = {
             "models": {k: v.to_dict() for k, v in self.data.items()},
             "sensor_groups": {k: v.to_dict() for k, v in self.sensor_groups.items()},
@@ -62,10 +71,14 @@ class AccurateSolarSensorDB:
 
     async def async_clear(self) -> None:
         """Wipe all data and delete the storage file content."""
+        # Force the flag in hass data to block parallel saves/loads
+        self.hass.data.setdefault(DOMAIN, {})["is_removing_all"] = True
+        
         self.data = {}
         self.sensor_groups = {}
         self.roofs = {}
         await self._store.async_remove()
+        _LOGGER.warning("DATABASE WIPED: storage file deleted and protection flag set.")
 
     # --- ROOF METHODS ---
     async def addRoof(self, name: str, tilt: Optional[float] = None, azimuth: Optional[float] = None, sensorGroupId: str = "", strings: Optional[dict] = None) -> None:

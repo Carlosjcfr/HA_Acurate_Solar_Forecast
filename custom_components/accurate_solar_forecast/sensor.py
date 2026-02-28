@@ -117,7 +117,7 @@ def _processEntry(hass, mainEntryId, subentryId, data, db, deviceRegistry, async
                 name=stringObj.name,
                 manufacturer="Accurate Solar Forecast",
                 model=stringObj.panelModel,
-                via_device={roofHubIdentifier},
+                via_device=roofHubIdentifier,
             )
             
             entities.append(SolarStringSensor(hass, sData, db, sensorGroupObj))
@@ -136,6 +136,7 @@ def _processEntry(hass, mainEntryId, subentryId, data, db, deviceRegistry, async
         groupId = slugify(groupName)
         sgIdentifier = (DOMAIN, f"sg_{groupId}")
         
+        # Explicitly register the SG device with the subentry
         deviceRegistry.async_get_or_create(
             config_entry_id=mainEntryId,
             config_subentry_id=subentryId,
