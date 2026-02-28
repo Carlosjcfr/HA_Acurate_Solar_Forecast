@@ -22,36 +22,51 @@ async def async_setup_entry(hass, configEntry, asyncAddEntities):
             _LOGGER.error("DATABASE NOT FOUND in hass.data. domainData: %s", domainData)
             return
         
-        _LOGGER.debug(f"async_setup_entry starting for configEntry: {configEntry.title} ({configEntry.entry_id})")
+        _LOGGER.warning(f"[DIAG] sensor.py async_setup_entry called. configEntry.title='{configEntry.title}', entry_id='{configEntry.entry_id}'")
+        _LOGGER.warning(f"[DIAG] configEntry.data keys: {list(configEntry.data.keys())}")
+        _LOGGER.warning(f"[DIAG] DB state: roofs={list(db.roofs.keys())}, sensor_groups={list(db.sensor_groups.keys())}, models={list(db.data.keys())}")
 
         deviceRegistry = dr.async_get(hass)
 
-        # 1. ENCONTRAR EL ENTRY PRINCIPAL (PARENT)
+        # 1. FIND THE MAIN (PARENT) ENTRY
         allEntries = hass.config_entries.async_entries(DOMAIN)
         mainEntry = next((e for e in allEntries if CONF_ROOF_NAME not in e.data and CONF_SENSOR_GROUP_NAME not in e.data), configEntry)
         mainEntryId = mainEntry.entry_id
+        _LOGGER.warning(f"[DIAG] mainEntry.entry_id='{mainEntryId}', configEntry.entry_id='{configEntry.entry_id}', same={mainEntryId == configEntry.entry_id}")
 
-        # 2. SEPARATE SUBENTRY MAPS (to avoid Roof vs SG collisions)
-        roofSubentryMap = {}   # slug -> entry_id
-        groupSubentryMap = {}  # slug -> entry_id
+        # 2. BUILD SUBENTRY MAPS
+        roofSubentryMap = {}   # slug -> subentry_id
+        groupSubentryMap = {}  # slug -> subentry_id
         
         allSubentries = getattr(mainEntry, "subentries", None)
+        _LOGGER.warning(f"[DIAG] allSubentries type: {type(allSubentries)}, value: {allSubentries}")
+        
         if allSubentries:
             # Handle both dict-like and iterable subentries
-            items = allSubentries.items() if hasattr(allSubentries, 'items') else ((getattr(s, 'subentry_id', idx), s) for idx, s in enumerate(allSubentries))
+            if hasattr(allSubentries, 'items'):
+                items = list(allSubentries.items())
+            else:
+                items = [(getattr(s, 'subentry_id', idx), s) for idx, s in enumerate(allSubentries)]
+            
+            _LOGGER.warning(f"[DIAG] Subentry items count: {len(items)}")
             for sId, sObj in items:
                 sData = getattr(sObj, 'data', {}) or {}
+                sType = getattr(sObj, 'subentry_type', 'unknown')
+                sTitle = getattr(sObj, 'title', 'unknown')
+                _LOGGER.warning(f"[DIAG] Subentry: id='{sId}', type='{sType}', title='{sTitle}', data_keys={list(sData.keys())}, data={dict(sData)}")
                 if CONF_ROOF_NAME in sData:
-                    roofSubentryMap[slugify(sData[CONF_ROOF_NAME])] = sId
+                    slug = slugify(sData[CONF_ROOF_NAME])
+                    roofSubentryMap[slug] = sId
+                    _LOGGER.warning(f"[DIAG] Mapped roof '{sData[CONF_ROOF_NAME]}' -> slug '{slug}' -> subentry '{sId}'")
                 if CONF_SENSOR_GROUP_NAME in sData:
-                    groupSubentryMap[slugify(sData[CONF_SENSOR_GROUP_NAME])] = sId
+                    slug = slugify(sData[CONF_SENSOR_GROUP_NAME])
+                    groupSubentryMap[slug] = sId
+                    _LOGGER.warning(f"[DIAG] Mapped sensor group '{sData[CONF_SENSOR_GROUP_NAME]}' -> slug '{slug}' -> subentry '{sId}'")
+
+        _LOGGER.warning(f"[DIAG] Final roofSubentryMap: {roofSubentryMap}")
+        _LOGGER.warning(f"[DIAG] Final groupSubentryMap: {groupSubentryMap}")
 
         # === PROCESS ALL DATA FROM THE MAIN ENTRY ===
-        # With the Subentries API, async_setup_entry is called ONCE for the main entry.
-        # Subentries are NOT separate config entries — they are data attached to the main entry.
-        # We must process ALL roofs/SGs here, passing the correct subentry ID for each.
-        
-        _LOGGER.debug(f"Configuring main entry: {mainEntryId}")
         
         # Global Counter (PV Library)
         deviceRegistry.async_get_or_create(
@@ -63,24 +78,24 @@ async def async_setup_entry(hass, configEntry, asyncAddEntities):
         )
         asyncAddEntities([PVModelCountSensor(hass, db)])
         
-        # Build set of SGs that are linked to roofs (they'll be created as children of the roof)
+        # Build set of SGs linked to roofs
         sgLinkedToRoofs = set()
         for rId, rObj in db.roofs.items():
             if rObj.sensorGroupId:
                 sgLinkedToRoofs.add(rObj.sensorGroupId)
         
-        # Process standalone sensor groups (those with their own subentry OR orphans NOT linked to any roof)
+        # Process standalone sensor groups
         for sgId, sg in db.sensor_groups.items():
             if sgId in sgLinkedToRoofs:
-                continue  # Will be created as part of the roof processing
-            subId = groupSubentryMap.get(sgId)  # None if orphan
-            _LOGGER.info(f"Processing standalone sensor group '{sgId}' (subentry: {subId or 'orphan'})")
+                continue
+            subId = groupSubentryMap.get(sgId)
+            _LOGGER.warning(f"[DIAG] Processing standalone SG '{sgId}' (subentry: {subId or 'orphan'})")
             _processEntry(hass, mainEntryId, subId, sg.to_dict(), db, deviceRegistry, asyncAddEntities)
 
-        # Process ALL roofs (with or without subentry)
+        # Process ALL roofs
         for roofId, roof in db.roofs.items():
-            subId = roofSubentryMap.get(roofId)  # None if orphan
-            _LOGGER.info(f"Processing roof '{roofId}' (subentry: {subId or 'orphan'})")
+            subId = roofSubentryMap.get(roofId)
+            _LOGGER.warning(f"[DIAG] Processing roof '{roofId}' (name='{roof.name}', strings={list(roof.strings.keys())}, sgId='{roof.sensorGroupId}', subentry={subId or 'orphan'})")
             _processEntry(hass, mainEntryId, subId, {CONF_ROOF_NAME: roof.name}, db, deviceRegistry, asyncAddEntities)
 
     except Exception as e:
