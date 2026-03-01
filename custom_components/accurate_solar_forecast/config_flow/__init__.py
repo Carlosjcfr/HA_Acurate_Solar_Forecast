@@ -281,8 +281,10 @@ class RoofSubentryFlowHandler(AccurateForecastCommonFlow, RoofsFlowMixin, Sensor
         """Step 2 (when groups exist): choose which sensor group to assign to the new roof."""
         if userInput is not None:
             selectedGroupId = userInput["selected_sensor_group"]
-            self.tempData[CONF_SENSOR_GROUP_NAME] = selectedGroupId # Store the ID for the subentry data
-            return await self.async_step_string_create_select_relations()
+            data = dict(self.tempData)
+            data[CONF_SENSOR_GROUP_NAME] = selectedGroupId
+            self.tempData = data
+            return await self.async_step_roof_finish()
 
         groups = self._db.listSensorGroups()
         schema = vol.Schema({
@@ -297,34 +299,21 @@ class RoofSubentryFlowHandler(AccurateForecastCommonFlow, RoofsFlowMixin, Sensor
 
     async def async_step_string_loop(self, userInput=None):
         """After each string: offer to add another or finish and create the hub."""
-        roofName = self.tempData.get(CONF_ROOF_NAME, "Roof")
-        return self.async_show_menu(
-            step_id="string_loop",
-            menu_options=["string_add_another", "string_finish"]
-        )
-
-    async def async_step_string_add_another(self, userInput=None):
-        """Loop back to add another string to the same roof."""
-        return await self.async_step_string_create_select_relations()
-
-    async def async_step_string_finish(self, userInput=None):
-        """Finalize the flow: create the HA subentry (hub) for this roof with ALL gathered data."""
+    async def async_step_roof_finish(self, userInput=None):
+        """Finalize the roof creation: create the HA subentry with geometry and sensor group."""
         roofName = self.tempData.get(CONF_ROOF_NAME, "Roof")
         
-        _LOGGER.info(f"Finalizing Guided Flow. Final Collected tempData: {self.tempData}")
+        _LOGGER.info(f"Finalizing Roof Creation. Data: {self.tempData}")
 
-        # Build the complete data dictionary for the Subentry
         subentryData = {
             CONF_ROOF_NAME: roofName,
             CONF_TILT: self.tempData.get(CONF_TILT, 30.0),
             CONF_AZIMUTH: self.tempData.get(CONF_AZIMUTH, 180.0),
             CONF_SENSOR_GROUP_NAME: self.tempData.get(CONF_SENSOR_GROUP_NAME, ""),
-            "strings": self.tempData.get("strings", {})
+            "strings": {}
         }
         
-        _LOGGER.info(f"Creating Roof Subentry '{roofName}' with data: {subentryData}")
-        
-        # Wipe the context data before finishing to avoid contamination if user adds another roof later
+        # Wipe context
         self.context.pop("temp_data", None)
         self.context.pop("guided_flow", None)
 

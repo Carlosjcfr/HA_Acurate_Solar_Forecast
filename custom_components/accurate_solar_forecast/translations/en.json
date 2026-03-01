@@ -284,6 +284,14 @@
                 "user": "Roof"
             },
             "step": {
+                "roof_manage_menu": {
+                    "title": "Manage Roof",
+                    "description": "What would you like to do with roof '{name}'?",
+                    "menu_options": {
+                        "roof_edit_form": "Edit Geometry / Sensors",
+                        "string_create_select_relations": "Add String (PV Module)"
+                    }
+                },
                 "roof_create": {
                     "title": "New Roof",
                     "description": "Enter the geometry data",
@@ -381,6 +389,13 @@
                 "user": "Solar String"
             },
             "step": {
+                "string_select_roof": {
+                    "title": "Select Roof",
+                    "description": "Select the roof where you want to add the new solar module.",
+                    "data": {
+                        "selected_roof": "Target Roof"
+                    }
+                },
                 "string_create_select_relations": {
                     "title": "New String",
                     "description": "Step 1: Select Sensors and Panel.",

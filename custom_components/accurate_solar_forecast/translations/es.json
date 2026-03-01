@@ -287,6 +287,14 @@
                 "user": "Tejado"
             },
             "step": {
+                "roof_manage_menu": {
+                    "title": "Gestionar Tejado",
+                    "description": "¿Qué deseas hacer con el tejado '{name}'?",
+                    "menu_options": {
+                        "roof_edit_form": "Editar Geometría / Sensores",
+                        "string_create_select_relations": "Añadir String (Módulo FV)"
+                    }
+                },
                 "roof_create": {
                     "title": "Nuevo Tejado",
                     "description": "Introduce los datos",
@@ -384,6 +392,13 @@
                 "user": "String Solar"
             },
             "step": {
+                "string_select_roof": {
+                    "title": "Seleccionar Tejado",
+                    "description": "Selecciona el tejado al que deseas añadir el nuevo módulo fotovoltaico.",
+                    "data": {
+                        "selected_roof": "Tejado de destino"
+                    }
+                },
                 "string_create_select_relations": {
                     "title": "Nuevo String",
                     "description": "Paso 1: Selecciona Sensores y Panel.",

@@ -40,6 +40,21 @@ class RoofsFlowMixin:
             menu_options=options
         )
 
+    async def async_step_user(self, userInput=None):
+        """Handle managing an existing roof subentry (Configuraciones de la subentrada)."""
+        # If we have a subentry_id, it means we are editing an existing roof
+        if hasattr(self, "subentry_id") or self.context.get("subentry_id"):
+            return await self.async_step_roof_manage_menu()
+        
+        return await self.async_step_roof_create(userInput)
+
+    async def async_step_roof_manage_menu(self, userInput=None):
+        """Menu for an existing roof."""
+        return self.async_show_menu(
+            step_id="roof_manage_menu",
+            menu_options=["roof_edit_form", "string_create_select_relations"]
+        )
+
     async def async_step_roof_create(self, userInput=None):
         """Create a roof from the management menu (pill: Gestión → Tejados → Crear)."""
         errors = {}

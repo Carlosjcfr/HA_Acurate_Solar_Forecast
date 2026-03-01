@@ -57,14 +57,25 @@ class SensorGroupsFlowMixin:
                 
                 # BRANCH A: If in guided flow (Roof -> SG), link them and continue
                 if self._guidedFlow:
+                    # IMPORTANT: We must also register the subentry in HA so the Sensor Group Device is created.
+                    # Since we are in a 'roof' flow, we create the 'sensor_group' subentry manually.
+                    mainEntryId = self.context.get("entry_id")
+                    if mainEntryId:
+                        await self.hass.config_entries.async_add_subentry(
+                            self.hass.config_entries.async_get_entry(mainEntryId),
+                            "sensor_group",
+                            data={CONF_SENSOR_GROUP_NAME: name},
+                            title=name
+                        )
+
                     # Store the group ID in tempData so it's included in the final subentry creation
                     data = dict(self.tempData)
                     data[CONF_SENSOR_GROUP_NAME] = groupId
                     self.tempData = data
                     
                     # Ensure the next step exists in the current class (Mixins safety)
-                    if hasattr(self, 'async_step_string_create_select_relations'):
-                        return await self.async_step_string_create_select_relations()
+                    if hasattr(self, 'async_step_roof_finish'):
+                        return await self.async_step_roof_finish()
                 
                 # BRANCH B: If it's a subentry flow (Pill)
                 if getattr(self, "_isSubentry", False) or "Subentry" in self.__class__.__name__:
