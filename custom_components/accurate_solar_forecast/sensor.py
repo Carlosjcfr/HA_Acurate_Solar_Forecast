@@ -221,15 +221,16 @@ def _setupSensorGroupEntities(hass, mainEntryId, subentryId, data, db, deviceReg
     groupId = slugify(groupName)
     sgIdentifier = (DOMAIN, f"sg_{groupId}")
 
-    _LOGGER.info(f"[DIAG-SG] ── START setup for sensor group='{groupName}' (id='{groupId}') ──")
+    _LOGGER.warning(f"[DIAG-SG] ── START setup for sensor group='{groupName}' (id='{groupId}') ──")
     _LOGGER.info(f"[DIAG-SG]   subentry_id='{subentryId}', main_entry_id='{mainEntryId}'")
 
     # 1. Validate group exists in DB
     groupObj = db.getSensorGroup(groupId)
     if not groupObj:
-        _LOGGER.error(
+        _LOGGER.warning(
             f"[DIAG-SG]   [FAIL] Sensor group '{groupId}' NOT FOUND in DB. "
-            f"Available groups: {list(db.sensor_groups.keys())}"
+            f"Available groups: {list(db.sensor_groups.keys())}. "
+            f"Check if the JSON database was accidentally wiped or if the name contains special characters."
         )
         return
 
@@ -258,7 +259,7 @@ def _setupSensorGroupEntities(hass, mainEntryId, subentryId, data, db, deviceReg
 
     if entities:
         asyncAddEntities(entities)
-        _LOGGER.info(f"[DIAG-SG]   [OK] asyncAddEntities called with {len(entities)} entities ✓")
+        _LOGGER.warning(f"[DIAG-SG]   [OK] asyncAddEntities called with {len(entities)} entities for '{groupName}' ✓")
     
-    _LOGGER.info(f"[DIAG-SG] ── END setup for sensor group='{groupName}' ──")
+    _LOGGER.warning(f"[DIAG-SG] ── END setup for sensor group='{groupName}' ──")
 

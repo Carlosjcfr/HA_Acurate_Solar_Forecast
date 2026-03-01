@@ -99,23 +99,37 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
             db = AccurateSolarSensorDB(hass)
             await db.async_load()
 
-        # Case A: Sensor Group Subentry
+        subId = getattr(entry, "subentry_id", None)
+        subType = getattr(entry, "subentry_type", "main")
+        isSubentry = subId is not None
+
+        _LOGGER.info(f"async_remove_entry: entry_id='{entry.entry_id}', subentry_id='{subId}', type='{subType}', data={dict(entry.data)}")
+
+        # Case A: Sensor Group Subentry (or deleted from Management)
         if CONF_SENSOR_GROUP_NAME in entry.data:
             groupName = entry.data[CONF_SENSOR_GROUP_NAME]
             groupId = slugify(groupName)
-            _LOGGER.info(f"Removing Sensor Group from DB: {groupId}")
+            _LOGGER.info(f"Removing Sensor Group from DB: {groupId} (subentry: {subId})")
             await db.deleteSensorGroup(groupId)
 
         # Case B: Roof Subentry
         elif CONF_ROOF_NAME in entry.data:
             roofName = entry.data[CONF_ROOF_NAME]
             roofId = slugify(roofName) if roofName else "default"
-            _LOGGER.info(f"Removing Roof from DB: {roofId}")
+            _LOGGER.info(f"Removing Roof from DB: {roofId} (subentry: {subId})")
             await db.deleteRoof(roofId)
 
-        # Case C: Main Hub Entry
+        # Case C: PV Model Subentry (Specific Cleanup)
+        elif subType == "pv_model" or "panel_model" in entry.data:
+            _LOGGER.info(f"Removing PV Model Subentry UI element (subentry: {subId}). Note: Specific models in JSON are preserved unless manually deleted in Management.")
+
+        # Case D: Management / Other UI-only subentries
+        elif isSubentry:
+            _LOGGER.info(f"Removing UI-only subentry '{subType}' (id: {subId}). No DB changes required.")
+
+        # Case E: Main Hub Entry -> FULL WIPE
         else:
-            _LOGGER.warning("Deep Clean: Removing Main Entry. Wiping entire JSON Database.")
+            _LOGGER.warning("CRITICAL: Removing Main Entry. Performing Deep Clean of the entire JSON Database.")
             await db.async_clear()
             
     except Exception as e:
