@@ -75,7 +75,7 @@ class SolarStringSensor(SensorEntity):
         
         stringNameRaw = self._config.get(CONF_STRING_NAME)
         self._attr_has_entity_name = True
-        self._attr_name = f"{stringNameRaw} Potencia"
+        self._attr_name = "Potencia"
         self._attr_unique_id = f"str_{slugify(stringNameRaw)}"
         self._attr_native_unit_of_measurement = UnitOfPower.WATT
         self._attr_device_class = SensorDeviceClass.POWER
@@ -90,26 +90,18 @@ class SolarStringSensor(SensorEntity):
         # Use the roof hub as via_device when available
         roofHubIdentifier = self._config.get("_roof_hub_identifier")
         
-        if realSensorId:
-             entityRegistry = er.async_get(hass)
-             entityEntry = entityRegistry.async_get(realSensorId)
-             if entityEntry and entityEntry.device_id:
-                 deviceRegistry = dr.async_get(hass)
-                 device = deviceRegistry.async_get(entityEntry.device_id)
-                 if device:
-                     deviceIdentifiers = device.identifiers
-
-        if not deviceIdentifiers:
-            deviceIdentifiers = {(DOMAIN, f"str_{slugify(stringNameRaw)}")}
-            deviceName = stringNameRaw
+        # ALWAYS use the dedicated device for the string (Hijo del Tejado)
+        # even if a real sensor exists, to keep the hierarchy "Roof -> String -> Entities"
+        deviceIdentifiers = {(DOMAIN, f"str_{slugify(stringNameRaw)}")}
+        deviceName = stringNameRaw
 
         self._attr_device_info = DeviceInfo(
             identifiers=deviceIdentifiers,
-            name=deviceName if not realSensorId else None,
-            manufacturer=(self._panelData.brand if self._panelData else "Generic") if not realSensorId else None,
-            model=modelName if not realSensorId else None,
+            name=deviceName,
+            manufacturer=(self._panelData.brand if self._panelData else "Generic"),
+            model=modelName,
             via_device=roofHubIdentifier if roofHubIdentifier else (
-                (DOMAIN, self._sensorGroup.name if self._sensorGroup else "Unknown") if not realSensorId else None
+                (DOMAIN, self._sensorGroup.name if self._sensorGroup else "Unknown")
             )
         )
         
@@ -227,12 +219,24 @@ class SolarStringSensor(SensorEntity):
             totalPower, irradianceTarget, cellTemperature = 0, 0, ambientTemp
 
         self._attr_native_value = round(totalPower, 2)
+        
+        # Calculate incidence angle from geometric factor
+        incAngle = 90.0
+        try:
+            # geometricFactor is the COSINE of incidence angle
+            # Ensure it's in valid range for acos
+            valForAcos = max(-1.0, min(1.0, self._cachedGeometricFactor))
+            incAngle = math.degrees(math.acos(valForAcos))
+        except: pass
+
         self._attr_extra_state_attributes = {
             "irradiancia_incidente_estimada": round(irradianceTarget, 1),
-            "factor_transposicion": round(self._cachedGeometricFactor, 3), # FIXED BUG HERE
+            "factor_transposicion": round(self._cachedGeometricFactor, 3),
+            "angulo_incidencia": round(incAngle, 1),
             "temperatura_celula": round(cellTemperature, 1),
             "cloud_coverage_estimated": round(cloudCoverage, 1),
-            "cloud_source": cloudSource
+            "cloud_source": cloudSource,
+            "sun_elevation": round(sunElevation, 1)
         }
         self.async_write_ha_state()
 
@@ -376,16 +380,10 @@ class SolarStringPerformanceSensor(SensorEntity):
         self._config = configEntryData
         self._stringName = self._config.get(CONF_STRING_NAME)
         self._attr_has_entity_name = True
-        self._attr_name = f"{self._stringName} Rendimiento"
+        self._attr_name = "Rendimiento"
         self._attr_unique_id = f"str_{slugify(self._stringName)}_performance"
-        realSensorId = self._config.get(CONF_REAL_PRODUCTION_SENSOR)
-        deviceIdentifiers = None
-        if realSensorId:
-             entityEntry = er.async_get(hass).async_get(realSensorId)
-             if entityEntry and entityEntry.device_id:
-                 device = dr.async_get(hass).async_get(entityEntry.device_id)
-                 if device: deviceIdentifiers = device.identifiers
-        self._attr_device_info = DeviceInfo(identifiers=deviceIdentifiers or {(DOMAIN, f"str_{slugify(self._stringName)}")})
+        # Stay under the dedicated string device
+        self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, f"str_{slugify(self._stringName)}")})
         self.realSensorId = realSensorId
 
     async def async_added_to_hass(self):

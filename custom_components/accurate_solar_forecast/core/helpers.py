@@ -1,6 +1,6 @@
 from homeassistant.core import HomeAssistant
 from typing import Any
-from ..variables.const import DOMAIN
+from ..variables.const import DOMAIN, CONF_ROOF_NAME, CONF_SENSOR_GROUP_NAME
 
 def slugify(text: str) -> str:
     """Convert a string to a slug (lowercase, replace spaces with underscores)."""
@@ -9,27 +9,35 @@ def slugify(text: str) -> str:
     return str(text).lower().replace(" ", "_").strip()
 
 def getSubentryMenuState(hass: HomeAssistant) -> dict[str, bool]:
-    """Analyze the DB and return the integration's preparation state."""
+    """Analyze the DB and HA subentries to return the integration's preparation state."""
     db = hass.data.get(DOMAIN, {}).get("db")
     
-    if not db:
-        return {
-            "canAddString": False,
-            "hasModels": False,
-            "hasRoofs": False,
-            "hasSensors": False
-        }
-
-    # db.data contains models
-    # db.roofs contains roofs
-    # db.sensor_groups contains sensor groups
-    hasModels = len(db.data) > 0
-    hasRoofs = len(db.roofs) > 0
-    hasSensors = len(db.sensor_groups) > 0
-
-    return {
-        "canAddString": hasRoofs and hasSensors and hasModels,
-        "hasModels": hasModels,
-        "hasRoofs": hasRoofs,
-        "hasSensors": hasSensors
+    state = {
+        "canAddString": False,
+        "hasModels": False,
+        "hasRoofs": False,
+        "hasSensors": False
     }
+
+    if not db:
+        return state
+
+    # 1. Models and Sensor Groups come from DB
+    state["hasModels"] = len(db.data) > 0
+    state["hasSensors"] = len(db.sensor_groups) > 0
+
+    # 2. Roofs (and potentially Sensor Groups too) can come from HA Subentries
+    # We iterate through all entries of our domain
+    for entry in hass.config_entries.async_entries(DOMAIN):
+        # Count roofs in subentries
+        for sub in entry.subentries:
+            if CONF_ROOF_NAME in sub.data:
+                state["hasRoofs"] = True
+            if CONF_SENSOR_GROUP_NAME in sub.data:
+                state["hasSensors"] = True
+        
+        if state["hasRoofs"] and state["hasSensors"]:
+            break
+
+    state["canAddString"] = state["hasRoofs"] and state["hasSensors"] and state["hasModels"]
+    return state

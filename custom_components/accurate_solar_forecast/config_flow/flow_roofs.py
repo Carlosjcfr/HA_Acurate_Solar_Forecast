@@ -42,24 +42,43 @@ class RoofsFlowMixin:
 
     async def async_step_roof_create(self, userInput=None):
         """Create a roof from the management menu (pill: Gestión → Tejados → Crear)."""
+        errors = {}
         if userInput is not None:
-            name = userInput["name"]
-            tilt = float(userInput[CONF_TILT])
-            azimuth = float(userInput[CONF_AZIMUTH])
-            
-            # This is a basic creation without guided flow (no strings yet)
-            return self.async_create_entry(
-                title=name,
-                data={
-                    CONF_ROOF_NAME: name,
-                    CONF_TILT: tilt,
-                    CONF_AZIMUTH: azimuth,
-                    "strings": {}
-                }
-            )
+             # Basic creation still needs a Sensor Group for power calculation to work
+             name = userInput["name"]
+             tilt = float(userInput[CONF_TILT])
+             azimuth = float(userInput[CONF_AZIMUTH])
+             sgId = userInput["selected_sensor_group"]
+             
+             return self.async_create_entry(
+                 title=name,
+                 data={
+                     CONF_ROOF_NAME: name,
+                     CONF_TILT: tilt,
+                     CONF_AZIMUTH: azimuth,
+                     CONF_SENSOR_GROUP_NAME: sgId,
+                     "strings": {}
+                 }
+             )
 
-        schema = self._getRoofCreateSchema()
-        return self.async_show_form(step_id="roof_create", data_schema=schema)
+        # Re-use the schema from main if available, but since this is a mixin
+        # we'll build a local one that includes the sensor group selector
+        groups = self._db.listSensorGroups()
+        if not groups:
+            return self.async_abort(reason="no_sensor_groups")
+
+        schema = vol.Schema({
+            vol.Required("name"): str,
+            vol.Required(CONF_TILT, default=30): vol.All(vol.Coerce(float), vol.Range(min=0, max=90)),
+            vol.Required(CONF_AZIMUTH, default=180): vol.All(vol.Coerce(float), vol.Range(min=0, max=360)),
+            vol.Required("selected_sensor_group"): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=[{"value": k, "label": v} for k, v in groups.items()], 
+                    mode="dropdown"
+                )
+            ),
+        })
+        return self.async_show_form(step_id="roof_create", data_schema=schema, errors=errors)
 
     async def async_step_roof_edit_select(self, userInput=None):
         if userInput is not None:

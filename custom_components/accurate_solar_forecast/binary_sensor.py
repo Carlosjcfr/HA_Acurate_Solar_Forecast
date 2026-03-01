@@ -5,8 +5,9 @@ from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
 )
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
-from .variables.const import DOMAIN
+from .variables.const import DOMAIN, CONF_ROOF_NAME, CONF_SENSOR_GROUP_NAME, CONF_TILT, CONF_AZIMUTH
 from .core.helpers import slugify
+from .core.models import Roof
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -58,20 +59,33 @@ def _runAllChecks(db, hass=None) -> list[dict]:
         if model.gamma >= 0:
             issues.append({"severity": "info", "category": "model", "message": f"Model '{model.name}' has unusual gamma coefficient: {model.gamma} (should be negative)"})
 
-    # --- ROOFS ---
-    for roofId, roof in db.roofs.items():
+    # --- ROOFS (now from Subentries) ---
+    roofs: list[Roof] = []
+    if hass:
+        for entry in hass.config_entries.async_entries(DOMAIN):
+            for sub in entry.subentries:
+                if CONF_ROOF_NAME in sub.data:
+                    try:
+                        roofs.append(Roof.from_dict({
+                            "name": sub.data.get(CONF_ROOF_NAME, "Roof"),
+                            "tilt": sub.data.get(CONF_TILT, 30.0),
+                            "azimuth": sub.data.get(CONF_AZIMUTH, 180.0),
+                            "sensor_group_id": sub.data.get(CONF_SENSOR_GROUP_NAME, ""),
+                            "strings": sub.data.get("strings", {})
+                        }))
+                    except Exception as e:
+                        issues.append({"severity": "critical", "category": "roof", "message": f"Error parsing roof subentry '{sub.title}': {e}"})
+
+    for roof in roofs:
         # Roof without strings
         if not roof.strings or len(roof.strings) == 0:
             issues.append({"severity": "warning", "category": "roof", "message": f"Roof '{roof.name}' has no strings configured"})
 
         # Roof without sensor group
-        sgObj = db.getSensorGroupForRoof(roofId)
-        if not sgObj:
-            if roof.sensorGroupId:
-                # Reference exists but SG is missing from DB
-                issues.append({"severity": "critical", "category": "consistency", "message": f"Roof '{roof.name}' references sensor group '{roof.sensorGroupId}' which does not exist in the database"})
-            else:
-                issues.append({"severity": "critical", "category": "roof", "message": f"Roof '{roof.name}' has no sensor group assigned"})
+        if not roof.sensorGroupId:
+            issues.append({"severity": "critical", "category": "roof", "message": f"Roof '{roof.name}' has no sensor group assigned"})
+        elif roof.sensorGroupId not in db.sensor_groups:
+             issues.append({"severity": "critical", "category": "consistency", "message": f"Roof '{roof.name}' references sensor group '{roof.sensorGroupId}' which does not exist in the database"})
 
         # Geometry validation
         if roof.tilt < 0 or roof.tilt > 90:
@@ -110,7 +124,7 @@ def _runAllChecks(db, hass=None) -> list[dict]:
             issues.append({"severity": "warning", "category": "sensor_group", "message": f"Sensor group '{sg.name}' irradiance sensor tilt out of range: {sg.refTilt}°"})
 
         # Check if this SG is used by any roof
-        linkedRoofs = [r.name for r in db.roofs.values() if r.sensorGroupId == sgId]
+        linkedRoofs = [r.name for r in roofs if r.sensorGroupId == sgId]
         if not linkedRoofs:
             issues.append({"severity": "info", "category": "sensor_group", "message": f"Sensor group '{sg.name}' is not linked to any roof"})
 
@@ -122,7 +136,7 @@ def _runAllChecks(db, hass=None) -> list[dict]:
                 issues.append({"severity": "warning", "category": "sensor_group", "message": f"Sensor group '{sg.name}': temperature sensor '{sg.tempSensor}' not found in HA"})
 
     # --- CONSISTENCY: Orphan sensor groups ---
-    linkedSgIds = {r.sensorGroupId for r in db.roofs.values() if r.sensorGroupId}
+    linkedSgIds = {r.sensorGroupId for r in roofs if r.sensorGroupId}
     for sgId in db.sensor_groups:
         if sgId not in linkedSgIds:
             # Already reported above as "info", skip duplicate
@@ -179,6 +193,23 @@ class AccurateSolarHealthSensor(BinarySensorEntity):
             warningMessages = [i["message"] for i in allIssues if i["severity"] == "warning"]
             infoMessages = [i["message"] for i in allIssues if i["severity"] == "info"]
 
+            # Re-run checks to get the roofs list for counting
+            # (In a real app we'd optimize this to avoid double work, but for diagnostics it's okay)
+            roofs: list[Roof] = []
+            if self.hass:
+                for entry in self.hass.config_entries.async_entries(DOMAIN):
+                    for sub in entry.subentries:
+                        if CONF_ROOF_NAME in sub.data:
+                            try:
+                                roofs.append(Roof.from_dict({
+                                    "name": sub.data.get(CONF_ROOF_NAME, "Roof"),
+                                    "tilt": sub.data.get(CONF_TILT, 30.0),
+                                    "azimuth": sub.data.get(CONF_AZIMUTH, 180.0),
+                                    "sensor_group_id": sub.data.get(CONF_SENSOR_GROUP_NAME, ""),
+                                    "strings": sub.data.get("strings", {})
+                                }))
+                            except: pass
+
             return {
                 "status": "HEALTHY" if criticalCount == 0 else "PROBLEMS DETECTED",
                 "critical_count": criticalCount,
@@ -188,11 +219,11 @@ class AccurateSolarHealthSensor(BinarySensorEntity):
                 "warnings": warningMessages,
                 "info": infoMessages,
                 "models_count": len(self._db.data) if self._db else 0,
-                "roofs_count": len(self._db.roofs) if self._db else 0,
+                "roofs_count": len(roofs),
                 "groups_count": len(self._db.sensor_groups) if self._db else 0,
                 "total_strings": sum(
-                    len(r.strings) for r in self._db.roofs.values()
-                ) if self._db else 0,
+                    len(r.strings) for r in roofs
+                ),
             }
         except Exception:
             return {

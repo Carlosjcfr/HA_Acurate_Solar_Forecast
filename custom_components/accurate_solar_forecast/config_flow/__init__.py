@@ -18,6 +18,8 @@ except ImportError:
     class ConfigSubentryFlow:
         pass
 
+_LOGGER = logging.getLogger(__name__)
+
 class AccurateForecastCommonFlow:
     """Common methods for both ConfigFlow, OptionsFlow and SubentryFlow."""
 
@@ -337,10 +339,33 @@ class SensorGroupSubentryFlowHandler(AccurateForecastCommonFlow, SensorGroupsFlo
         self._isSubentry = True
         return await super().async_step_sensor_group_create(userInput)
 
-class StringSubentryFlowHandler(AccurateForecastCommonFlow, StringsFlowMixin, ConfigSubentryFlow):
+class StringSubentryFlowHandler(AccurateForecastCommonFlow, RoofsFlowMixin, StringsFlowMixin, ConfigSubentryFlow):
     async def async_step_user(self, userInput=None):
         await self._asyncInitRequirements()
-        return await super().async_step_string_create_select_relations(userInput)
+        # If we came from the "Add String" pill, we need to know which roof
+        return await self.async_step_string_select_roof()
+
+    async def async_step_string_select_roof(self, userInput=None):
+        """Step for the pill workflow: select which roof to add the string to."""
+        if userInput is not None:
+            roofId = userInput["selected_roof"]
+            roofs = self._getAllRoofs()
+            self.tempData[CONF_ROOF_NAME] = roofs.get(roofId, "Roof")
+            return await self.async_step_string_create_select_relations()
+
+        roofs = self._getAllRoofs()
+        if not roofs:
+             return self.async_abort(reason="no_roofs_available")
+        
+        schema = vol.Schema({
+            vol.Required("selected_roof"): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=[{"value": k, "label": v} for k, v in roofs.items()], 
+                    mode="dropdown"
+                )
+            )
+        })
+        return self.async_show_form(step_id="string_select_roof", data_schema=schema)
 
 class MenuSubentryFlowHandler(AccurateForecastCommonFlow, PvModelsFlowMixin, RoofsFlowMixin, SensorGroupsFlowMixin, StringsFlowMixin, ConfigSubentryFlow):
     async def async_step_user(self, userInput=None):

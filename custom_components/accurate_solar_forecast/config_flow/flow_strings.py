@@ -63,8 +63,10 @@ class StringsFlowMixin:
              }
              
              # Case 1: Guided Flow - store in tempData for final creation
-             if getattr(self, "_guidedFlow", False):
-                 self.tempData.setdefault("strings", {})[stringId] = stringData
+             if self._guidedFlow:
+                 data = dict(self.tempData)
+                 data.setdefault("strings", {})[stringId] = stringData
+                 self.tempData = data
              
              # Case 2: Standalone creation (Pill) - update existing subentry
              else:
@@ -95,7 +97,7 @@ class StringsFlowMixin:
              self.tempData.pop(CONF_NUM_STRINGS, None)
              
              # In guided flow (RoofSubentryFlowHandler): show loop menu
-             if getattr(self, "_guidedFlow", False):
+             if self._guidedFlow:
                  return await self.async_step_string_loop()
                  
              return self.async_abort(reason="list_updated")

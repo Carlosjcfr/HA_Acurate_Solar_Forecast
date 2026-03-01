@@ -56,9 +56,11 @@ class SensorGroupsFlowMixin:
                 )
                 
                 # BRANCH A: If in guided flow (Roof -> SG), link them and continue
-                if getattr(self, '_guidedFlow', False):
+                if self._guidedFlow:
                     # Store the group ID in tempData so it's included in the final subentry creation
-                    self.tempData[CONF_SENSOR_GROUP_NAME] = groupId
+                    data = dict(self.tempData)
+                    data[CONF_SENSOR_GROUP_NAME] = groupId
+                    self.tempData = data
                     
                     # Ensure the next step exists in the current class (Mixins safety)
                     if hasattr(self, 'async_step_string_create_select_relations'):
@@ -100,16 +102,23 @@ class SensorGroupsFlowMixin:
         errors = {}
         if userInput is not None:
             name = userInput[CONF_SENSOR_GROUP_NAME]
+            
+            # If the name changed, the slug (ID) changes. 
+            # We delete the old one and create the new one to avoid orphans in the JSON DB.
+            newId = slugify(name)
+            if newId != self.selectedItemId:
+                await self._db.deleteSensorGroup(self.selectedItemId)
+
             await self._db.addSensorGroup(
-               name,
-               userInput[CONF_REF_SENSOR],
-               userInput[CONF_TEMP_SENSOR],
-               userInput.get(CONF_TEMP_PANEL_SENSOR),
-               userInput.get(CONF_WIND_SENSOR),
-               userInput[CONF_REF_TILT],
-               userInput[CONF_REF_ORIENTATION],
-               userInput.get(CONF_WEATHER_ENTITY),
-               userInput.get(CONF_ILLUMINANCE_SENSOR)
+                name=name,
+                irradianceSensor=userInput[CONF_REF_SENSOR],
+                tempSensor=userInput[CONF_TEMP_SENSOR],
+                tempPanelSensor=userInput.get(CONF_TEMP_PANEL_SENSOR),
+                windSensor=userInput.get(CONF_WIND_SENSOR),
+                refTilt=float(userInput[CONF_REF_TILT]),
+                refOrientation=float(userInput[CONF_REF_ORIENTATION]),
+                weatherEntity=userInput.get(CONF_WEATHER_ENTITY),
+                illuminanceSensor=userInput.get(CONF_ILLUMINANCE_SENSOR)
             )
             return self.async_abort(reason="list_updated")
 
