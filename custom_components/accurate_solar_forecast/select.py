@@ -62,7 +62,9 @@ class SolarStringRoofSelect(SelectEntity):
         self._db = db
         self._stringName = self._data.get(CONF_STRING_NAME)
         self._attr_unique_id = f"str_{self._stringId}_roof_select"
-        self._sensorGroup = db.getSensorGroup(self._data.get("selected_sensor_group"))
+        # Sensor group is owned by the Roof (not the string) since the 2026-02-27 refactor
+        self._sensorGroup = db.getSensorGroupForRoof(roofId)
+
         modelName = self._data.get("panel_model")
         self._panelData = db.data.get(slugify(modelName)) if db and db.data else None
 
@@ -92,7 +94,7 @@ class SolarStringRoofSelect(SelectEntity):
             name=self._stringName if not foundDevice else None,
             manufacturer=(self._panelData.brand if self._panelData else "Generic") if not foundDevice else None,
             model=(self._panelData.name if self._panelData else None) if not foundDevice else None,
-            via_device=(DOMAIN, self._sensorGroup.name) if (not foundDevice and self._sensorGroup) else None
+            via_device=(DOMAIN, f"roof_{self._roofId}") if (not foundDevice and self._roofId) else None
         )
 
     async def async_select_option(self, option: str) -> None:

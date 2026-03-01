@@ -9,7 +9,7 @@ class PvModelsFlowMixin:
         options = ["pv_model_create"]
         
         models = self._db.listModels()
-        if models and len(models) > 0:
+        if models:
              options.append("pv_model_edit_select")
              
              # Check if there are models other than default to allow delete

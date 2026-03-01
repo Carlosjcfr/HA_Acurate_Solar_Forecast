@@ -10,7 +10,7 @@ from .flow_pv_models import PvModelsFlowMixin
 from .flow_roofs import RoofsFlowMixin
 from .flow_sensor_groups import SensorGroupsFlowMixin
 from .flow_strings import StringsFlowMixin
-from ..core import getSubentryMenuState
+from ..core import getSubentryMenuState, slugify
 
 try:
     from homeassistant.config_entries import ConfigSubentryFlow
@@ -241,8 +241,7 @@ class RoofSubentryFlowHandler(AccurateForecastCommonFlow, RoofsFlowMixin, Sensor
             selectedGroupId = userInput["selected_sensor_group"]
             roofName = self.tempData.get(CONF_ROOF_NAME)
             if roofName:
-                from ..core import slugify as _slugify
-                roofId = _slugify(roofName)
+                roofId = slugify(roofName)
                 roof = self._db.getRoof(roofId)
                 if roof:
                     await self._db.addRoof(

@@ -38,23 +38,6 @@ class StringsFlowMixin:
              
          return self.async_show_form(step_id="string_create_select_relations", data_schema=schema)
 
-    # 3.1.1 CREATE ROOF (Intermediate Step)
-    async def async_step_roof_create(self, userInput=None):
-        if userInput is not None:
-            name = userInput["name"]
-            tilt = userInput[CONF_TILT]
-            azimuth = userInput[CONF_AZIMUTH]
-            
-            # Save Roof
-            await self._db.addRoof(name, tilt, azimuth)
-            
-            # Update tempData specific roof name (replace "Nuevo tejado")
-            self.tempData[CONF_ROOF_NAME] = name
-            
-            return await self.async_step_string_create_select_relations()
-            
-        schema = self._getRoofCreateSchema()
-        return self.async_show_form(step_id="roof_create", data_schema=schema)
 
     # 3.1 CREATE STRING - Step B: Details
     async def async_step_string_create_details(self, userInput=None):
@@ -98,9 +81,6 @@ class StringsFlowMixin:
              self.tempData.pop(CONF_PANEL_MODEL, None)
              self.tempData.pop(CONF_NUM_PANELS, None)
              self.tempData.pop(CONF_NUM_STRINGS, None)
-             
-             if getattr(self, "reconfigure_entry", None):
-                 return self.async_update_reload_and_abort(self.reconfigure_entry)
              
              # In guided flow (RoofSubentryFlowHandler): show loop menu
              if getattr(self, "_guidedFlow", False):

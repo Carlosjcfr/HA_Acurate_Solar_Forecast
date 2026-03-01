@@ -58,7 +58,9 @@ async def async_setup_subentry(hass: HomeAssistant, entry: ConfigEntry, subentry
       - Dynamically: when a new subentry is created via the config flow
     """
     try:
-        _LOGGER.info(f"[DIAG] async_setup_subentry called: title='{subentry.title}', id='{subentry.subentry_id}', type='{subentry.subentry_type}', data={dict(subentry.data)}")
+        subDataDict = dict(subentry.data) if subentry.data else {}
+        _LOGGER.info(f"[DIAG] async_setup_subentry: title='{subentry.title}', id='{subentry.subentry_id}', type='{subentry.subentry_type}', data={subDataDict}")
+
         
         db = await _ensureDbLoaded(hass)
 

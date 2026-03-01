@@ -2,6 +2,12 @@
 from dataclasses import dataclass, field, asdict
 from typing import Dict, Any, Optional
 
+from ..variables.const import (
+    CONF_SENSOR_GROUP_NAME, CONF_REF_SENSOR, CONF_REF_TILT, 
+    CONF_REF_ORIENTATION, CONF_TEMP_SENSOR, CONF_WIND_SENSOR, 
+    CONF_TEMP_PANEL_SENSOR, CONF_WEATHER_ENTITY, CONF_ILLUMINANCE_SENSOR
+)
+
 @dataclass
 class PvModel:
     """Represents a Photovoltaic Panel model."""
@@ -134,11 +140,6 @@ class SensorGroup:
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "SensorGroup":
-        from ..variables.const import (
-            CONF_SENSOR_GROUP_NAME, CONF_REF_SENSOR, CONF_REF_TILT, 
-            CONF_REF_ORIENTATION, CONF_TEMP_SENSOR, CONF_WIND_SENSOR, 
-            CONF_TEMP_PANEL_SENSOR, CONF_WEATHER_ENTITY, CONF_ILLUMINANCE_SENSOR
-        )
         return cls(
             name=data.get(CONF_SENSOR_GROUP_NAME, "Default Group"),
             refSensor=data.get(CONF_REF_SENSOR, ""),
@@ -152,11 +153,6 @@ class SensorGroup:
         )
 
     def to_dict(self) -> Dict[str, Any]:
-        from ..variables.const import (
-            CONF_SENSOR_GROUP_NAME, CONF_REF_SENSOR, CONF_REF_TILT, 
-            CONF_REF_ORIENTATION, CONF_TEMP_SENSOR, CONF_WIND_SENSOR, 
-            CONF_TEMP_PANEL_SENSOR, CONF_WEATHER_ENTITY, CONF_ILLUMINANCE_SENSOR
-        )
         return {
             CONF_SENSOR_GROUP_NAME: self.name,
             CONF_REF_SENSOR: self.refSensor,

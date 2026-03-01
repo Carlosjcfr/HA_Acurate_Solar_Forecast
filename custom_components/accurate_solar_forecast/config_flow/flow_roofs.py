@@ -14,7 +14,7 @@ class RoofsFlowMixin:
         options = ["roof_create"]
         
         roofs = self._db.listRoofs()
-        if roofs and len(roofs) > 0:
+        if roofs:
              options.append("roof_edit_select")
              options.append("roof_delete_select")
              
@@ -22,6 +22,23 @@ class RoofsFlowMixin:
             step_id="menu_roofs",
             menu_options=options
         )
+
+    async def async_step_roof_create(self, userInput=None):
+        """Create a roof from the management menu (pill: Gestión → Tejados → Crear).
+
+        After creation, abort back to the integration page.
+        NOTE: RoofSubentryFlowHandler overrides this for the full guided flow
+        (Roof → SensorGroup → Strings workflow).
+        """
+        if userInput is not None:
+            name = userInput["name"]
+            tilt = userInput[CONF_TILT]
+            azimuth = userInput[CONF_AZIMUTH]
+            await self._db.addRoof(name, tilt, azimuth)
+            return self.async_abort(reason="list_updated")
+
+        schema = self._getRoofCreateSchema()
+        return self.async_show_form(step_id="roof_create", data_schema=schema)
 
     async def async_step_roof_edit_select(self, userInput=None):
         if userInput is not None:

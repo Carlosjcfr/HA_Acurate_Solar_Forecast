@@ -411,30 +411,6 @@ class SolarStringPerformanceSensor(SensorEntity):
         self._attr_native_value = round((realValue / forecastValue) * 100, 1)
         self.async_write_ha_state()
 
-class AccurateSolarSensorDBSensor(SensorEntity):
-    _attr_has_entity_name = True
-    _attr_translation_key = "pv_db_status"
-    _attr_unique_id = "pv_database_status"
-    _attr_icon = "mdi:database"
-    _attr_native_unit_of_measurement = "items"
-
-    def __init__(self, hass, db):
-        self.hass = hass
-        self._db = db
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, "pv_models_library")},
-        )
-        models = self._db.listModels()
-        self._attr_native_value = len(models)
-
-    def _updateState(self):
-        models = self._db.listModels()
-        self._attr_native_value = len(models)
-        if self.hass and self.entity_id:
-            self.async_write_ha_state()
-    
-    async def async_added_to_hass(self):
-        self._updateState()
 
 
 class PVModelCountSensor(SensorEntity):

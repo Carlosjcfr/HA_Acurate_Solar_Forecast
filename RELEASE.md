@@ -1,155 +1,99 @@
 # Release Notes - Accurate Solar Forecast
 
-## [2026-03-01] - Pre-Update Analysis: String Creation & UI Sync Fix
+## [2026-03-01] - String Creation & UI Sync Fix
 
-### Identified Issues & Improvements
+### Identified Issues & Improvements (2026-03-01)
 
-- **UI Sync Gap**: Strings added via the "String" pill (quick action) are saved to the database but do not appear as sensors until a restart or manual reload. This is because the flow returns `async_abort`, which doesn't trigger a reload of the associated Roof subentry. [BUG]
-- **Alarming Logs**: Diagnostic warnings (`_LOGGER.warning`) in `sensor.py` are being flagged by Home Assistant as "Integration Errors" in the UI, causing user confusion despite being normal diagnostic output. [UX]
-- **Subentry Traceability**: Lack of sufficient logging during the `async_setup_subentry` phase makes it difficult to debug why certain subentries might fail to create entities. [MAINTAINABILITY]
+- **UI Sync Gap**: Strings added via the "String" pill (quick action) are saved to the database but do not appear as sensors until a restart or manual reload. [BUG]
+- **Alarming Logs**: Diagnostic warnings (`_LOGGER.warning`) in `sensor.py` are being flagged by Home Assistant as "Integration Errors" in the UI. [UX]
+- **Subentry Traceability**: Lack of sufficient logging during the `async_setup_subentry` phase. [MAINTAINABILITY]
 
-### Action Plan
+### Action Plan (2026-03-01)
 
-1. **Lower Log Severity**: Change diagnostic `warning` logs to `info` or `debug` in `sensor.py` and `__init__.py` to prevent HA from flagging them as critical errors.
-2. **Implement Subentry Reload**: Update `flow_strings.py` to identify and reload the corresponding Roof subentry after a new string is added, ensuring the UI updates immediately.
-3. **Enhance Traceability**: Add specific success/fail logs in `sensor.py` for each subentry type being processed.
-4. **Fix Select Platform Data Access**: Correct an architectural error in `select.py` where it was trying to update main entry data instead of subentry/DB data.
+1. **Lower Log Severity**: Change diagnostic `warning` logs to `info` in `sensor.py` and `__init__.py`.
+2. **Implement Subentry Reload**: Update `flow_strings.py` to reload the corresponding Roof subentry after adding a string.
+3. **Enhance Traceability**: Add specific success/fail logs in `sensor.py` for each subentry.
+4. **Fix Select Platform Data Access**: Correct architectural error in `select.py` for DB sync.
 
-### Completion Status
+### Completion Status (2026-03-01)
 
 - [x] Step 1: Lower Log Severity implemented (Warn -> Info)
 - [x] Step 2: Automatic Subentry Reload implemented in `flow_strings.py`
 - [x] Step 3: Diagnostic logging trace added to `sensor.py`
 - [x] Step 4: `select.py` architectural fix (DB sync)
 - [x] **Extra**: Diagnosis entity unique_id updated to `accurate_solar_forecast_diagnosis`
+- [x] **Audit**: Performed dead code audit and removed unused classes/imports.
 
 ---
 
-## [2026-03-01.1] - Pre-Update Analysis: Subentry Lifecycle Architecture Fix
+## [2026-03-01.1] - Subentry Lifecycle Architecture Fix
 
-### Identified Issues & Improvements
+### Identified Issues & Improvements (2026-03-01.1)
 
-- **CRITICAL: Missing `async_setup_subentry`**: The integration only implemented `async_setup_entry`... [REDACTED FOR SPACE]
+- **CRITICAL: Missing `async_setup_subentry`**: Platforms only implemented `async_setup_entry`, leading to broken dynamic updates.
 
-### Completion Status (ARCHIVED)
+### Completion Status (2026-03-01.1)
 
 - [x] Step 1: `async_setup_subentry` + `async_unload_subentry` implemented
 - [x] Step 2: All 4 platforms refactored with `async_setup_subentry` handlers
 - [x] Step 3: Diagnostic system expanded (15+ checks, 3 severity levels)
 - [x] Step 4: Platform files consolidated
 
-## [2026-02-28] - Pre-Update Analysis: Initial Installation Diagnostics
+---
 
-### Identified Issues & Improvements
+## [2026-02-28] - Initial Installation Diagnostics
 
-- **Missing Brand Identity**: The integration and its devices show "icon not available" in the HA UI. This is due to a lack of local `static` assets (logo.png/icon.png) for the custom component. [UX]
-- **Summary count mismatch**: Integration shows "1 dispositivo" in the top summary but lists 3 devices in the detail view. This is due to the use of `dr.DeviceEntryType.SERVICE` for virtual hubs. [UI]
-- **Sensor Group Discovery Error**: The config flow reports "No hay grupos de sensores configurados" even when a group (Meteo1) was seemingly created. This points to a sync issue between HA Config Entries and the internal JSON database. [BUG]
-- **"Unknown error occurred"**: Creating a sensor group through the guided flow (Roof flow) results in a generic error. Likely caused by a crash during the transition between sensor group creation and string creation (missing tempData or DB inconsistency). [BUG]
+### Identified Issues & Improvements (2026-02-28)
 
-### Action Plan
+- **Missing Brand Identity**: Integration devices show "icon not available".
+- **Summary count mismatch**: Integration shows incorrect device count in summary.
+- **Sensor Group Discovery Error**: Sync issue between Config Entries and JSON DB.
+- **"Unknown error occurred"**: Generic error in guided flow.
 
-1. **Static Assets**: Create/recommend the addition of a `static/` folder with `icon.png` and `logo.png` to fix the missing icons in HA.
-2. **Device Registry**: Review `sensor.py` and `binary_sensor.py` device registration. Ensure the main hub is clearly identified to fix the device count summary. [COMPLETED]
-3. **DB Consistency**: Force a DB reload and sync during initial setup to ensure existing groups are recognized by all flow handlers.
-4. **Flow Resilience**: Add robust error handling in `SensorGroupsFlowMixin.async_step_sensor_group_create` to prevent the "Unknown error" crash and provide better feedback if the DB or transition fails.
-5. **Entity Filtering Fix**: Ensure that the "Unknown error" isn't caused by `voluptuous` failing to coerce entity IDs into the expected string format.
+### Action Plan (2026-02-28)
+
+1. **Static Assets**: Recommend `static/` folder for icons/logos.
+2. **Device Registry**: Review registration to fix device count summary.
+3. **DB Consistency**: Force DB reload during setup.
+4. **Flow Resilience**: Add robust error handling in sensor group creation.
 
 ---
 
-## [2026-02-27] - Pre-Update Analysis: Sensor Group -> Roof Association
+## [2026-02-27.2] - Sensor Group -> Roof Association
 
-### Identified Issues & Improvements
+### Identified Issues & Improvements (2026-02-27.2)
 
-- **UX Redundancy**: `selected_sensor_group` is stored per-string, forcing users to repeat the same selection for every string on the same roof. Typically only 1 irradiance sensor exists in an installation.
-- **Wrong Conceptual Association**: A sensor group is a property of the physical installation environment, not of an individual string. The transposition engine already handles adapting measured irradiance to different roof geometries, so a single sensor group per roof is architecturally correct.
-- **SolarString model carries unnecessary field**: `selectedSensorGroup` on `SolarString` should be moved to `Roof` as `sensorGroupId`.
+- **UX Redundancy**: `selected_sensor_group` stored per-string causes repetition.
+- **Wrong Conceptual Association**: Sensor group belongs to the physical environment (Roof), not the string.
 
-### Action Plan
+### Action Plan (2026-02-27.2)
 
-1. **`core/models.py`**: Add `sensorGroupId: str` to `Roof`. Remove `selectedSensorGroup` from `SolarString` (keep `from_dict` backward-compat to migrate existing data).
-2. **`databases/accurate_solar_sensor_db.py`**: Update `addRoof()` to accept `sensorGroupId`. Add `getSensorGroupForRoof()` helper. Add `migrateStringGroupToRoof()` for existing data.
-3. **`databases/accurate_solar_sensor_db.py`**: Update `async_load()` to run migration: if a roof has no `sensorGroupId`, read it from the first string in that roof.
-4. **`config_flow/flow_strings.py`**: Remove `selected_sensor_group` from `_getStringSelectRelationsSchema()`.
-5. **`config_flow/__init__.py`**: Update `RoofSubentryFlowHandler` and `_getStringSelectRelationsSchema` — pass sensor group from roof context.
-6. **`config_flow/flow_roofs.py`**: Add `selected_sensor_group` selector when creating/editing a roof.
-7. **`sensor.py`**: Read sensor group from `roof.sensorGroupId` instead of `string.selectedSensorGroup`.
-8. **Translations**: Remove `selected_sensor_group` from string steps, add it to roof steps.
+1. **Models Update**: Move `sensorGroupId` from `SolarString` to `Roof`.
+2. **DB Update**: Update helpers and implement migration for existing data.
+3. **Flow Update**: Update selectors in config flows.
+4. **Sensor Update**: Read sensor group from roof context.
 
 ---
 
-## [2026-02-27] - v1.1.0: Stability & Deletion Fixes
+## [2026-02-27.1] - v1.1.0: Stability & Deletion Fixes
 
-### Identified Issues & Improvements
+### Identified Issues & Improvements (2026-02-27.1)
 
-- **Integration Deletion Crash**: `async_unload_entry` blocking deletion when platforms failed to unload. [FIXED]
-- **Integration Load Crash**: `AccurateSolarSensorDBSensor` calling `async_write_ha_state()` in `__init__` before entity registration. [FIXED]
-- **Config Flow Crash**: Multiple mixin inheritance in `AccurateForecastFlow` causing "Invalid flow specified" errors. [FIXED]
-- **Missing Translations**: `strings.json` missing `entity.number.azimuth`, `entity.binary_sensor`, and `config.error.sensor_unavailable`, causing HA to silently fail loading all translations. [FIXED]
-- **Subentry Translations**: Management subentry flow steps missing translations for sub-steps (menu_pv_models, menu_roofs, etc.). [FIXED]
-- **Unsafe Data Access**: Platform `async_setup_entry` functions using `hass.data[DOMAIN]["db"]` instead of safe `.get()` access. [FIXED]
-
-### Action Plan
-
-1. **Clean `__init__.py`**: Centralized DB loading via `_ensureDbLoaded()`, resilient `async_unload_entry` (returns `True` on error). [COMPLETED]
-2. **Fix `AccurateSolarSensorDBSensor`**: Set initial value in `__init__` without `async_write_ha_state()`, guard in `_updateState`. [COMPLETED]
-3. **Simplify `ConfigFlow`**: Clean inheritance (`config_entries.ConfigFlow` only), re-add `async_get_supported_subentry_types` separately. [COMPLETED]
-4. **Sync Translations**: Added all missing keys to `strings.json`/`en.json`/`es.json`. Added all management sub-steps to `config_subentries.management.step`. [COMPLETED]
-5. **Conditional Pills**: Roof pill requires sensor group; String pill requires roof + sensor group. [COMPLETED]
-6. **Version Bump**: Updated manifest.json to v1.1.0. [COMPLETED]
+- **Deletion Crash**: `async_unload_entry` blocking deletion.
+- **Load Crash**: Calling `async_write_ha_state()` before registration.
+- **Missing Translations**: Essential translation keys missing in `strings.json`.
 
 ---
 
-## [2026-02-27] - Pre-Update Analysis (Global Refactor & Hotfix)
+## [2026-02-27.0] - Global Refactor & Hotfix
 
-### Identified Issues & Improvements
+### Identified Issues & Improvements (2026-02-27.0)
 
-- **Coding Standards**: Systematic violation of the `camelCase` naming convention for variables and internal functions. [FIXED]
-- **Integration Failure**: Integration failed to start due to an `ImportError` after renaming core functions (`get_subentry_menu_state` -> `getSubentryMenuState`). [FIXED]
-- **Inconsistent Config Flow**: Multiple files in `config_flow/` were still using legacy `snake_case` database calls. [FIXED]
-- **Solar Engine Bug**: `NameError` related to `geometric_factor` in `core/engine.py`. [FIXED]
-- **Error Handling**: Presence of bare `except:` blocks without proper logging. [FIXED]
-- **Typing Gaps**: Missing type hints in core modules. [FIXED]
+- **Coding Standards**: Violation of `camelCase` convention.
+- **Integration Failure**: `ImportError` after renaming core functions.
 
-### Action Plan
+### Action Plan (2026-02-27.0)
 
-1. **Bug Fixes**: Resolve the `NameError` in the solar engine and the `ImportError` in the config flow. [COMPLETED]
-2. **Global Refactor**: Apply `camelCase` naming convention across all `core`, `databases`, and `root` files. [COMPLETED]
-3. **Config Flow Sync**: Systematically update all mixins in `config_flow/` to match the new naming conventions and database methods. [COMPLETED]
-4. **Resiliency**: Improve error handling with specific exceptions and logging. [COMPLETED]
-5. **Type Safety**: Complete type hinting for better maintainability. [COMPLETED]
-6. **Final Validation**: Ensure no remaining instances of the "Acurate" misspelling. [COMPLETED]
-
----
-
-## [v1.3.2] - 2026-02-27: Stability & Standardization
-
-### 🌟 Key Changes
-
-- **Full camelCase Refactor**: Every variable and internal function now follows the project's standard naming convention.
-- **Dataclass Standardization**: Updated `PvModel`, `SolarString`, and `SensorGroup` to use `camelCase` fields while maintaining backward compatibility.
-- **Improved Observability**: Replaced bare `except:` blocks with specific error handling and informative logging.
-- **Strict Typing**: Added comprehensive type hints across the entire codebase.
-
-### 🩹 Bug Fixes
-
-- **Hotfix**: Resolved integration startup failure caused by inconsistent function naming in imports.
-- **Engine**: Fixed a critical `NameError` in the transposition factor calculation.
-- **Config Flow**: Resolved multiple runtime errors in the setup screens for roofs, strings, and sensors.
-- **Typo Cleanup**: Verified the complete removal of the "Acurate" misspelling in all files.
-
----
-
-## Historical Notes
-
-### [v1.3.0] - Structural Refactor & Optimization
-
-This release focused on a complete internal restructuring of the integration to improve maintainability and performance.
-
-### Current Situation Summary
-
-- **Architecture**: Fully modularized (core, databases, config_flow, variables).
-- **Consistency**: Spelling corrected to "Accurate" throughout the project.
-- **Standards**: Code aligned with the project's style rules (camelCase).
-
-Developed by Carlosjcfr
+1. **Bug Fixes**: Resolve `NameError` and `ImportError`.
+2. **Global Refactor**: Apply `camelCase` across the project.
+3. **Type Safety**: Complete type hinting.

@@ -5,9 +5,7 @@ from .engine import (
     SensorGroupVirtualSensor,
     SensorGroupCloudinessSensor,
     SolarStringPerformanceSensor,
-    AccurateSolarSensorDBSensor,
-    PVModelCountSensor,
-    getConvertedValue
+    PVModelCountSensor
 )
 from .helpers import getSubentryMenuState, slugify
 from .models import PvModel, SolarString, Roof, SensorGroup
@@ -17,9 +15,7 @@ __all__ = [
     "SensorGroupVirtualSensor",
     "SensorGroupCloudinessSensor",
     "SolarStringPerformanceSensor",
-    "AccurateSolarSensorDBSensor",
     "PVModelCountSensor",
-    "getConvertedValue",
     "getSubentryMenuState",
     "slugify",
     "PvModel",

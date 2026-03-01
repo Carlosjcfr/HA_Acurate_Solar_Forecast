@@ -23,7 +23,7 @@ class SensorGroupsFlowMixin:
         # Optimization: If no groups, go straight to creation
         # We check the length explicitly to be robust
         groups = self._db.listSensorGroups()
-        if not groups or len(groups) == 0:
+        if not groups:
              return await self.async_step_sensor_group_create()
 
         options = ["sensor_group_create", "sensor_group_edit_select"]
@@ -110,20 +110,19 @@ class SensorGroupsFlowMixin:
     async def async_step_sensor_group_edit_form(self, userInput=None):
         errors = {}
         if userInput is not None:
-             if not errors:
-                 name = userInput[CONF_SENSOR_GROUP_NAME]
-                 await self._db.addSensorGroup(
-                    name,
-                    userInput[CONF_REF_SENSOR],
-                    userInput[CONF_TEMP_SENSOR],
-                    userInput.get(CONF_TEMP_PANEL_SENSOR),
-                    userInput.get(CONF_WIND_SENSOR),
-                    userInput[CONF_REF_TILT],
-                    userInput[CONF_REF_ORIENTATION],
-                    userInput.get(CONF_WEATHER_ENTITY),
-                    userInput.get(CONF_ILLUMINANCE_SENSOR)
-                 )
-                 return self.async_abort(reason="list_updated")
+            name = userInput[CONF_SENSOR_GROUP_NAME]
+            await self._db.addSensorGroup(
+               name,
+               userInput[CONF_REF_SENSOR],
+               userInput[CONF_TEMP_SENSOR],
+               userInput.get(CONF_TEMP_PANEL_SENSOR),
+               userInput.get(CONF_WIND_SENSOR),
+               userInput[CONF_REF_TILT],
+               userInput[CONF_REF_ORIENTATION],
+               userInput.get(CONF_WEATHER_ENTITY),
+               userInput.get(CONF_ILLUMINANCE_SENSOR)
+            )
+            return self.async_abort(reason="list_updated")
 
         groupData = self._db.getSensorGroup(self.selectedItemId)
         return self._showSensorGroupForm("sensor_group_edit_form", {}, defaultData=groupData)

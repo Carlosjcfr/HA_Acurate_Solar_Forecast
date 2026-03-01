@@ -216,23 +216,26 @@ def _setupRoofEntities(hass, mainEntryId, subentryId, data, db, deviceRegistry, 
 
 
 def _setupSensorGroupEntities(hass, mainEntryId, subentryId, data, db, deviceRegistry, asyncAddEntities):
-    """Create devices and entities for a standalone sensor group subentry."""
+    """Create devices and entities for a standalone sensor group subentry (e.g., Pill: Grupo Sensores)."""
     groupName = data.get(CONF_SENSOR_GROUP_NAME, "?")
     groupId = slugify(groupName)
     sgIdentifier = (DOMAIN, f"sg_{groupId}")
 
     _LOGGER.info(f"[DIAG-SG] ── START setup for sensor group='{groupName}' (id='{groupId}') ──")
+    _LOGGER.info(f"[DIAG-SG]   subentry_id='{subentryId}', main_entry_id='{mainEntryId}'")
 
-    # Validate group exists in DB
+    # 1. Validate group exists in DB
     groupObj = db.getSensorGroup(groupId)
     if not groupObj:
         _LOGGER.error(
-            f"[DIAG-SG]   [FAIL] Sensor group '{groupId}' NOT FOUND in DB after subentry creation. "
+            f"[DIAG-SG]   [FAIL] Sensor group '{groupId}' NOT FOUND in DB. "
             f"Available groups: {list(db.sensor_groups.keys())}"
         )
         return
+
     _LOGGER.info(f"[DIAG-SG]   [OK] Group found in DB: refSensor='{groupObj.refSensor}', tempSensor='{groupObj.tempSensor}'")
 
+    # 2. Register the Sensor Group Device
     try:
         deviceRegistry.async_get_or_create(
             config_entry_id=mainEntryId,
@@ -242,15 +245,20 @@ def _setupSensorGroupEntities(hass, mainEntryId, subentryId, data, db, deviceReg
             manufacturer="Accurate Solar Forecast",
             model="Sensor Group",
         )
-        _LOGGER.info(f"[DIAG-SG]   [OK] Sensor Group device registered: identifier={sgIdentifier}")
+        _LOGGER.info(f"[DIAG-SG]   [OK] Sensor Group device registered: {sgIdentifier}")
     except Exception as e:
         _LOGGER.error(f"[DIAG-SG]   [FAIL] Could not register Sensor Group device: {e}", exc_info=True)
         return
 
-    asyncAddEntities([
+    # 3. Create and add entities
+    entities = [
         SensorGroupVirtualSensor(hass, db, groupId, {sgIdentifier}),
         SensorGroupCloudinessSensor(hass, db, groupId, {sgIdentifier}),
-    ])
-    _LOGGER.info(f"[DIAG-SG]   [OK] 2 entities registered for sensor group '{groupName}' ✓")
+    ]
+
+    if entities:
+        asyncAddEntities(entities)
+        _LOGGER.info(f"[DIAG-SG]   [OK] asyncAddEntities called with {len(entities)} entities ✓")
+    
     _LOGGER.info(f"[DIAG-SG] ── END setup for sensor group='{groupName}' ──")
 
