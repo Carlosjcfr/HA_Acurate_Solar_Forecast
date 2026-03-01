@@ -12,17 +12,19 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(hass, configEntry, asyncAddEntities):
-    """Set up the diagnostic binary sensors."""
+    """Set up the diagnostic binary sensors (global only)."""
     try:
-        from .variables.const import CONF_SENSOR_GROUP_NAME, CONF_ROOF_NAME
-        if CONF_SENSOR_GROUP_NAME in configEntry.data or CONF_ROOF_NAME in configEntry.data:
-            return
         domainData = hass.data.get(DOMAIN, {})
         db = domainData.get("db")
         if db:
             asyncAddEntities([AccurateSolarHealthSensor(hass, db, configEntry)])
     except Exception as e:
         _LOGGER.exception(f"Error setting up binary_sensor platform: {e}")
+
+
+async def async_setup_subentry(hass, configEntry, subentry, asyncAddEntities):
+    """No binary sensors per subentry — diagnostics are global."""
+    pass
 
 
 # ---------------------------------------------------------------------------

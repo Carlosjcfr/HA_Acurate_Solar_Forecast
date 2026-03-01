@@ -15,27 +15,40 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(hass, configEntry, asyncAddEntities):
-    """Set up number entities for solar strings."""
+    """No number entities on the main entry — handled per subentry."""
+    pass
+
+
+async def async_setup_subentry(hass, configEntry, subentry, asyncAddEntities):
+    """Set up number entities for a roof subentry."""
     try:
+        subData = dict(subentry.data) if subentry.data else {}
+        if CONF_ROOF_NAME not in subData:
+            return
+
         domainData = hass.data.get(DOMAIN, {})
         db = domainData.get("db")
         if not db:
             return
 
+        roofName = subData[CONF_ROOF_NAME]
+        roofId = slugify(roofName)
+        roofObj = db.getRoof(roofId)
+        if not roofObj:
+            return
+
+        sensorGroupObj = db.getSensorGroupForRoof(roofId)
         entities = []
-        for roofId, roofObj in db.roofs.items():
-            roofName = roofObj.name
-            sensorGroupObj = db.getSensorGroupForRoof(roofId)
-            for stringId, stringObj in roofObj.strings.items():
-                combinedData = stringObj.to_dict()
-                combinedData[CONF_ROOF_NAME] = roofName
-                entities.append(SolarStringTiltNumber(hass, combinedData, db, configEntry, stringId, roofId, sensorGroupObj))
-                entities.append(SolarStringAzimuthNumber(hass, combinedData, db, configEntry, stringId, roofId, sensorGroupObj))
+        for stringId, stringObj in roofObj.strings.items():
+            combinedData = stringObj.to_dict()
+            combinedData[CONF_ROOF_NAME] = roofName
+            entities.append(SolarStringTiltNumber(hass, combinedData, db, configEntry, stringId, roofId, sensorGroupObj))
+            entities.append(SolarStringAzimuthNumber(hass, combinedData, db, configEntry, stringId, roofId, sensorGroupObj))
 
         if entities:
             asyncAddEntities(entities)
     except Exception as e:
-        _LOGGER.exception(f"Error setting up number platform: {e}")
+        _LOGGER.exception(f"Error setting up number subentry: {e}")
 
 
 # ---------------------------------------------------------------------------

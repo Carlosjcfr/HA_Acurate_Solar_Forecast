@@ -13,25 +13,38 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(hass, configEntry, asyncAddEntities):
-    """Set up the Accurate Solar Forecast select entities."""
+    """No select entities on the main entry — handled per subentry."""
+    pass
+
+
+async def async_setup_subentry(hass, configEntry, subentry, asyncAddEntities):
+    """Set up select entities for a roof subentry."""
     try:
+        subData = dict(subentry.data) if subentry.data else {}
+        if CONF_ROOF_NAME not in subData:
+            return
+
         domainData = hass.data.get(DOMAIN, {})
         db = domainData.get("db")
         if not db:
             return
 
+        roofName = subData[CONF_ROOF_NAME]
+        roofId = slugify(roofName)
+        roofObj = db.getRoof(roofId)
+        if not roofObj:
+            return
+
         entities = []
-        for roofId, roofObj in db.roofs.items():
-            roofName = roofObj.name
-            for stringId, stringObj in roofObj.strings.items():
-                combinedData = stringObj.to_dict()
-                combinedData[CONF_ROOF_NAME] = roofName
-                entities.append(SolarStringRoofSelect(hass, combinedData, db, configEntry, stringId, roofId))
+        for stringId, stringObj in roofObj.strings.items():
+            combinedData = stringObj.to_dict()
+            combinedData[CONF_ROOF_NAME] = roofName
+            entities.append(SolarStringRoofSelect(hass, combinedData, db, configEntry, stringId, roofId))
 
         if entities:
             asyncAddEntities(entities)
     except Exception as e:
-        _LOGGER.exception(f"Error setting up select platform: {e}")
+        _LOGGER.exception(f"Error setting up select subentry: {e}")
 
 
 class SolarStringRoofSelect(SelectEntity):

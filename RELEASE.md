@@ -1,5 +1,29 @@
 # Release Notes - Accurate Solar Forecast
 
+## [2026-03-01] - Pre-Update Analysis: Subentry Lifecycle Architecture Fix
+
+### Identified Issues & Improvements
+
+- **CRITICAL: Missing `async_setup_subentry`**: The integration only implemented `async_setup_entry`, which runs ONCE at startup. Subentries created dynamically (roofs, SGs) never triggered entity creation because HA's Subentry API requires `async_setup_subentry` and `async_unload_subentry` callbacks. [ARCHITECTURE]
+- **Diagnostic system expansion**: The binary_sensor health check was basic (2 checks). Expanded to 15+ checks covering models, geometry, sensor availability, and cross-reference consistency. [FEATURE]
+- **Platform consolidation**: Moved `core/select.py` and `core/number.py` classes into root platform files for HA best practices. [CLEANUP]
+
+### Action Plan
+
+1. Implement `async_setup_subentry` + `async_unload_subentry` in `__init__.py`
+2. Refactor all platforms (sensor, number, select, binary_sensor) to split global vs per-subentry entity creation
+3. Expand diagnostic checks in binary_sensor.py with severity-based issue reporting
+4. Consolidate select.py and number.py (remove core/ duplicates)
+
+### Completion Status
+
+- [x] Step 1: `async_setup_subentry` + `async_unload_subentry` implemented
+- [x] Step 2: All 4 platforms refactored with `async_setup_subentry` handlers
+- [x] Step 3: Diagnostic system expanded (15+ checks, 3 severity levels)
+- [x] Step 4: Platform files consolidated
+
+---
+
 ## [2026-02-28] - Pre-Update Analysis: Initial Installation Diagnostics
 
 ### Identified Issues & Improvements
