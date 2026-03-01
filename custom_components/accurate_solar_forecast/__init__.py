@@ -90,50 +90,57 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         return True
 
 
-async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Handle removal of an entry (main or subentry)."""
+async def async_remove_subentry(hass: HomeAssistant, entry: ConfigEntry, subentry: ConfigSubentry) -> None:
+    """Handle removal of a subentry dynamically without wiping the whole DB."""
     try:
-        domainData = hass.data.get(DOMAIN, {})
-        db = domainData.get("db")
+        subData = dict(subentry.data) if subentry.data else {}
+        subType = subentry.subentry_type
+        
+        _LOGGER.info(f"[DIAG] async_remove_subentry: title='{subentry.title}', id='{subentry.subentry_id}', type='{subType}', data={subData}")
+        
+        db = hass.data.get(DOMAIN, {}).get("db")
         if not db:
             db = AccurateSolarSensorDB(hass)
             await db.async_load()
 
-        subId = getattr(entry, "subentry_id", None)
-        subType = getattr(entry, "subentry_type", "main")
-        isSubentry = subId is not None
-
-        _LOGGER.info(f"async_remove_entry: entry_id='{entry.entry_id}', subentry_id='{subId}', type='{subType}', data={dict(entry.data)}")
-
-        # Case A: Sensor Group Subentry (or deleted from Management)
-        if CONF_SENSOR_GROUP_NAME in entry.data:
-            groupName = entry.data[CONF_SENSOR_GROUP_NAME]
+        # Case A: Sensor Group
+        if CONF_SENSOR_GROUP_NAME in subData:
+            groupName = subData[CONF_SENSOR_GROUP_NAME]
             groupId = slugify(groupName)
-            _LOGGER.info(f"Removing Sensor Group from DB: {groupId} (subentry: {subId})")
+            _LOGGER.warning(f"Removing Sensor Group from DB: {groupId}")
             await db.deleteSensorGroup(groupId)
 
-        # Case B: Roof Subentry
-        elif CONF_ROOF_NAME in entry.data:
-            roofName = entry.data[CONF_ROOF_NAME]
+        # Case B: Roof
+        elif CONF_ROOF_NAME in subData:
+            roofName = subData[CONF_ROOF_NAME]
             roofId = slugify(roofName) if roofName else "default"
-            _LOGGER.info(f"Removing Roof from DB: {roofId} (subentry: {subId})")
+            _LOGGER.warning(f"Removing Roof from DB: {roofId}")
             await db.deleteRoof(roofId)
 
-        # Case C: PV Model Subentry (Specific Cleanup)
-        elif subType == "pv_model" or "panel_model" in entry.data:
-            _LOGGER.info(f"Removing PV Model Subentry UI element (subentry: {subId}). Note: Specific models in JSON are preserved unless manually deleted in Management.")
-
-        # Case D: Management / Other UI-only subentries
-        elif isSubentry:
-            _LOGGER.info(f"Removing UI-only subentry '{subType}' (id: {subId}). No DB changes required.")
-
-        # Case E: Main Hub Entry -> FULL WIPE
+        # Case C: Other subentries (Management, PV Model pills)
         else:
-            _LOGGER.warning("CRITICAL: Removing Main Entry. Performing Deep Clean of the entire JSON Database.")
-            await db.async_clear()
+            _LOGGER.info(f"Removing UI subentry '{subType}'. No DB cleanup needed for this type.")
+
+    except Exception as e:
+        _LOGGER.exception(f"Error during async_remove_subentry: {e}")
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Handle removal of the ENTIRE integration. This is a destructive clean wipe."""
+    try:
+        # If we reach here, HA is deleting the main integration hub
+        _LOGGER.warning("CRITICAL: Main integration entry is being removed. Performing FULL WIPE of the JSON database.")
+        
+        db = hass.data.get(DOMAIN, {}).get("db")
+        if not db:
+            db = AccurateSolarSensorDB(hass)
+            await db.async_load()
+            
+        await db.async_clear()
+        _LOGGER.warning("Full Database Wipe completed. All solar data (roofs, groups, models) has been deleted.")
             
     except Exception as e:
-        _LOGGER.exception(f"Error removing entry from DB: {e}")
+        _LOGGER.exception(f"Error during async_remove_entry (wipe): {e}")
 
 
 async def async_remove_config_entry_device(
