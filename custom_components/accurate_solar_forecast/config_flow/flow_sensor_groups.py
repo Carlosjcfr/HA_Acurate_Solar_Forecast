@@ -59,16 +59,28 @@ class SensorGroupsFlowMixin:
                 if self._guidedFlow:
                     # IMPORTANT: We must also register the subentry in HA so the Sensor Group Device is created.
                     # Since we are in a 'roof' flow, we create the 'sensor_group' subentry manually.
-                    mainEntryId = self.context.get("entry_id")
+                    # In ConfigSubentryFlow, the entry ID is stored in 'self.handler'
+                    mainEntryId = getattr(self, "handler", None) or self.context.get("entry_id")
+                    
+                    _LOGGER.info(f"[FLOW-SG] Guided flow: Programmatically adding subentry for SG '{name}'. Parent Entry: {mainEntryId}")
+                    
                     if mainEntryId:
-                        await self.hass.config_entries.async_add_subentry(
-                            self.hass.config_entries.async_get_entry(mainEntryId),
-                            "sensor_group",
-                            data={CONF_SENSOR_GROUP_NAME: name},
-                            title=name
-                        )
+                        try:
+                            entry = self.hass.config_entries.async_get_entry(mainEntryId)
+                            if entry:
+                                await self.hass.config_entries.async_add_subentry(
+                                    entry,
+                                    "sensor_group",
+                                    data={CONF_SENSOR_GROUP_NAME: name},
+                                    title=name
+                                )
+                                _LOGGER.info(f"[FLOW-SG] [SUCCESS] Subentry for SG '{name}' created programmatically.")
+                            else:
+                                _LOGGER.error(f"[FLOW-SG] [FAIL] Could not find main config entry {mainEntryId}")
+                        except Exception as e:
+                            _LOGGER.exception(f"[FLOW-SG] [ERROR] Failed to add sensor group subentry: {e}")
 
-                    # Store the group ID in tempData so it's included in the final subentry creation
+                    # Store the group ID in tempData so it's included in the final roof subentry creation
                     data = dict(self.tempData)
                     data[CONF_SENSOR_GROUP_NAME] = groupId
                     self.tempData = data

@@ -50,6 +50,12 @@ class RoofsFlowMixin:
 
     async def async_step_roof_manage_menu(self, userInput=None):
         """Menu for an existing roof."""
+        if userInput is not None:
+            if userInput["next_step"] == "roof_edit_form":
+                return await self.async_step_roof_edit_form()
+            if userInput["next_step"] == "string_create_select_relations":
+                return await self.async_step_string_create_select_relations()
+
         return self.async_show_menu(
             step_id="roof_manage_menu",
             menu_options=["roof_edit_form", "string_create_select_relations"]

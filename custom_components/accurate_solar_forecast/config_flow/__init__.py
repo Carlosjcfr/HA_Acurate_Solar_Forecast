@@ -242,8 +242,15 @@ class RoofSubentryFlowHandler(AccurateForecastCommonFlow, RoofsFlowMixin, Sensor
     """Guided flow: Roof -> (Sensor Group if missing) -> String creation."""
     async def async_step_user(self, userInput=None):
         await self._asyncInitRequirements()
+        
+        # Check if we are re-configuring an existing subentry
+        # In ConfigSubentryFlow, the subentry being configured is in self.context
+        if self.context.get("subentry_id"):
+            _LOGGER.info(f"Re-configuring existing roof subentry: {self.context['subentry_id']}")
+            return await self.async_step_roof_manage_menu()
+
         self._guidedFlow = True
-        _LOGGER.info(f"Starting Guided Flow for Roof Subentry. tempData={self.tempData}")
+        _LOGGER.info(f"Starting Guided Flow for NEW Roof Subentry. tempData={self.tempData}")
         return await self.async_step_roof_create(userInput)
 
     async def async_step_roof_create(self, userInput=None):
