@@ -167,14 +167,18 @@ class AccurateForecastCommonFlow:
         # Try to pre-fill tilt/azimuth from the associated roof
         roofName = self.tempData.get(CONF_ROOF_NAME)
         if roofName:
-            from ..core import slugify as _slugify
-            roofId = _slugify(roofName)
-            roofObj = self._db.getRoof(roofId)
-            if roofObj:
-                if CONF_TILT not in self.tempData:
-                    defaultTilt = roofObj.tilt or 30
-                if CONF_AZIMUTH not in self.tempData:
-                    defaultAzimuth = roofObj.azimuth or 180
+            # 1. Search for the subentry with this name to get its data
+            configEntryId = self.context.get("entry_id")
+            if configEntryId:
+                entry = self.hass.config_entries.async_get_entry(configEntryId)
+                if entry:
+                    for sub in entry.subentries:
+                        if sub.data.get(CONF_ROOF_NAME) == roofName:
+                            if CONF_TILT not in self.tempData:
+                                defaultTilt = sub.data.get(CONF_TILT, 30)
+                            if CONF_AZIMUTH not in self.tempData:
+                                defaultAzimuth = sub.data.get(CONF_AZIMUTH, 180)
+                            break
 
         modelDefault = self.tempData.get(CONF_PANEL_MODEL)
         modelOptions = list(modelsFiltered.values())
@@ -218,11 +222,11 @@ class RoofSubentryFlowHandler(AccurateForecastCommonFlow, RoofsFlowMixin, Sensor
             tilt = userInput[CONF_TILT]
             azimuth = userInput[CONF_AZIMUTH]
 
-            # Save roof without sensor group for now
-            await self._db.addRoof(name, tilt, azimuth, sensorGroupId="")
+            # Temporarily store roof basics in tempData to pass between steps
             self.tempData[CONF_ROOF_NAME] = name
             self.tempData[CONF_TILT] = tilt
             self.tempData[CONF_AZIMUTH] = azimuth
+            self.tempData["strings"] = {} # Initialize empty strings dict for the new roof
 
             groups = self._db.listSensorGroups()
             if not groups:
@@ -239,15 +243,7 @@ class RoofSubentryFlowHandler(AccurateForecastCommonFlow, RoofsFlowMixin, Sensor
         """Step 2 (when groups exist): choose which sensor group to assign to the new roof."""
         if userInput is not None:
             selectedGroupId = userInput["selected_sensor_group"]
-            roofName = self.tempData.get(CONF_ROOF_NAME)
-            if roofName:
-                roofId = slugify(roofName)
-                roof = self._db.getRoof(roofId)
-                if roof:
-                    await self._db.addRoof(
-                        roof.name, roof.tilt, roof.azimuth,
-                        sensorGroupId=selectedGroupId
-                    )
+            self.tempData[CONF_SENSOR_GROUP_NAME] = selectedGroupId # Store the ID for the subentry data
             return await self.async_step_string_create_select_relations()
 
         groups = self._db.listSensorGroups()
@@ -274,11 +270,23 @@ class RoofSubentryFlowHandler(AccurateForecastCommonFlow, RoofsFlowMixin, Sensor
         return await self.async_step_string_create_select_relations()
 
     async def async_step_string_finish(self, userInput=None):
-        """Finalize the flow: create the HA subentry (hub) for this roof."""
+        """Finalize the flow: create the HA subentry (hub) for this roof with ALL gathered data."""
         roofName = self.tempData.get(CONF_ROOF_NAME, "Roof")
+        
+        # Build the complete data dictionary for the Subentry
+        subentryData = {
+            CONF_ROOF_NAME: roofName,
+            CONF_TILT: self.tempData.get(CONF_TILT, 30.0),
+            CONF_AZIMUTH: self.tempData.get(CONF_AZIMUTH, 180.0),
+            CONF_SENSOR_GROUP_NAME: self.tempData.get(CONF_SENSOR_GROUP_NAME, ""),
+            "strings": self.tempData.get("strings", {})
+        }
+        
+        _LOGGER.info(f"Creating Roof Subentry '{roofName}' with data: {subentryData}")
+        
         return self.async_create_entry(
             title=roofName,
-            data={CONF_ROOF_NAME: roofName}
+            data=subentryData
         )
 
 class SensorGroupSubentryFlowHandler(AccurateForecastCommonFlow, SensorGroupsFlowMixin, ConfigSubentryFlow):

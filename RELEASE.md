@@ -1,5 +1,28 @@
 # Release Notes - Accurate Solar Forecast
 
+## [2026-03-02] - Architectural Simplification: Roof Storage Refactor
+
+### Summary of Changes
+
+- **Refactored Storage Architecture**: Completely removed `roofs` and `strings` from the internal JSON database (`AccurateSolarSensorDB`).
+- **Subentry as Source of Truth**: All roof geometry (tilt, azimuth), linked sensor groups, and associated strings are now stored directly in the `ConfigSubentry.data`.
+- **Dynamic Platform Setup**: Updated `sensor.py`, `select.py`, and `number.py` to read configuration directly from the subentry, eliminating race conditions.
+- **Refactored Config Flows**:
+  - `RoofSubentryFlowHandler` now constructs a consolidated data dictionary during initial creation.
+  - `StringsFlowMixin` supports both guided flows and standalone additions by updating existing subentry data.
+  - `RoofsFlowMixin` (Pill: Gestión → Tejados) now manages HA subentries directly.
+- **Improved Removal & Device Cleanup**: Updating `async_remove_subentry` and `async_remove_config_entry_device` in `__init__.py` to handle the new subentry-based structure correctly.
+
+### Benefits
+
+- Eliminated redundancy and potential synchronization mismatches.
+- Simplified integration logic and improved performance during startup.
+- More robust and predictable entity creation flow.
+
+---
+
+---
+
 ## [2026-03-01] - String Creation & UI Sync Fix
 
 ### Identified Issues & Improvements (2026-03-01)

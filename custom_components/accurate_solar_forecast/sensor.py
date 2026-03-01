@@ -106,26 +106,21 @@ def _setupRoofEntities(hass, mainEntryId, subentryId, data, db, deviceRegistry, 
         _LOGGER.error(f"[DIAG-ROOF]   [FAIL] Could not register Roof Hub device: {e}", exc_info=True)
         return
 
-    # ── STEP 2: Fetch roof from DB ──
-    _LOGGER.info(f"[DIAG-ROOF]   DB roofs available: {list(db.roofs.keys())}")
-    roofObj = db.getRoof(roofId)
-    if not roofObj:
-        _LOGGER.error(
-            f"[DIAG-ROOF]   [FAIL] Roof '{roofId}' NOT FOUND in DB after subentry setup. "
-            f"This usually means the subentry was created but the DB was not saved correctly. "
-            f"Available roofs: {list(db.roofs.keys())}"
-        )
-        return
-    _LOGGER.info(f"[DIAG-ROOF]   [OK] Roof found in DB: name='{roofObj.name}', tilt={roofObj.tilt}, az={roofObj.azimuth}, sensorGroupId='{roofObj.sensorGroupId}'")
+    # ── STEP 2: Use Subentry Data for geometry ──
+    tilt = data.get(CONF_TILT, 30.0)
+    azimuth = data.get(CONF_AZIMUTH, 180.0)
+    sensorGroupId = data.get(CONF_SENSOR_GROUP_NAME, "")
+    
+    _LOGGER.info(f"[DIAG-ROOF]   [OK] Data from Subentry: tilt={tilt}, az={azimuth}, group='{sensorGroupId}'")
 
     # ── STEP 3: Fetch sensor group ──
-    sensorGroupObj = db.getSensorGroupForRoof(roofId)
+    sensorGroupObj = db.getSensorGroup(sensorGroupId) if sensorGroupId else None
     if sensorGroupObj:
-        _LOGGER.info(f"[DIAG-ROOF]   [OK] Sensor group resolved: '{sensorGroupObj.name}' (id='{roofObj.sensorGroupId}')")
+        _LOGGER.info(f"[DIAG-ROOF]   [OK] Sensor group resolved: '{sensorGroupObj.name}' (id='{sensorGroupId}')")
     else:
-        if roofObj.sensorGroupId:
+        if sensorGroupId:
             _LOGGER.warning(
-                f"[DIAG-ROOF]   [WARN] SensorGroupId='{roofObj.sensorGroupId}' is set on roof "
+                f"[DIAG-ROOF]   [WARN] SensorGroupId='{sensorGroupId}' is set on roof "
                 f"but NOT FOUND in DB. Available groups: {list(db.sensor_groups.keys())}. "
                 f"String sensors will run in DEGRADED mode (no irradiance data)."
             )
@@ -136,24 +131,28 @@ def _setupRoofEntities(hass, mainEntryId, subentryId, data, db, deviceRegistry, 
             )
 
     # ── STEP 4: Create string entities ──
-    stringCount = len(roofObj.strings)
-    _LOGGER.info(f"[DIAG-ROOF]   Strings found in DB for this roof: {stringCount} → {list(roofObj.strings.keys())}")
+    stringsData = data.get("strings", {})
+    stringCount = len(stringsData)
+    _LOGGER.info(f"[DIAG-ROOF]   Strings found in Subentry for this roof: {stringCount} → {list(stringsData.keys())}")
 
     entities = []
-    for stringId, stringObj in roofObj.strings.items():
-        _LOGGER.info(f"[DIAG-ROOF]   Processing string: id='{stringId}', name='{stringObj.name}', model='{stringObj.panelModel}'")
+    for stringId, sDataRaw in stringsData.items():
+        stringName = sDataRaw.get(CONF_STRING_NAME, stringId)
+        panelModelName = sDataRaw.get(CONF_PANEL_MODEL, "Unknown")
+        
+        _LOGGER.info(f"[DIAG-ROOF]   Processing string: id='{stringId}', name='{stringName}', model='{panelModelName}'")
 
         # Validate the panel model exists in the PV library
-        modelId = slugify(stringObj.panelModel)
+        modelId = slugify(panelModelName)
         panelModel = db.data.get(modelId)
         if not panelModel:
             _LOGGER.warning(
-                f"[DIAG-ROOF]   [WARN] String '{stringObj.name}': panel model '{stringObj.panelModel}' "
+                f"[DIAG-ROOF]   [WARN] String '{stringName}': panel model '{panelModelName}' "
                 f"(id='{modelId}') NOT FOUND in PV library. Available models: {list(db.data.keys())}. "
                 f"Power calculation will use defaults."
             )
 
-        sData = stringObj.to_dict()
+        sData = dict(sDataRaw)
         sData[CONF_ROOF_NAME] = roofName
         sData["_roof_hub_identifier"] = roofHubIdentifier
 
@@ -162,26 +161,26 @@ def _setupRoofEntities(hass, mainEntryId, subentryId, data, db, deviceRegistry, 
             deviceRegistry.async_get_or_create(
                 config_entry_id=mainEntryId,
                 config_subentry_id=subentryId,
-                identifiers={(DOMAIN, f"str_{slugify(stringObj.name)}")},
-                name=stringObj.name,
+                identifiers={(DOMAIN, f"str_{slugify(stringName)}")},
+                name=stringName,
                 manufacturer="Accurate Solar Forecast",
-                model=stringObj.panelModel,
+                model=panelModelName,
                 via_device=roofHubIdentifier,
             )
-            _LOGGER.info(f"[DIAG-ROOF]   [OK] Device registered for string '{stringObj.name}'")
+            _LOGGER.info(f"[DIAG-ROOF]   [OK] Device registered for string '{stringName}'")
         except Exception as e:
-            _LOGGER.error(f"[DIAG-ROOF]   [FAIL] Could not register device for string '{stringObj.name}': {e}", exc_info=True)
+            _LOGGER.error(f"[DIAG-ROOF]   [FAIL] Could not register device for string '{stringName}': {e}", exc_info=True)
 
         entities.append(SolarStringSensor(hass, sData, db, sensorGroupObj))
-        _LOGGER.info(f"[DIAG-ROOF]   [OK] SolarStringSensor created for '{stringObj.name}'")
+        _LOGGER.info(f"[DIAG-ROOF]   [OK] SolarStringSensor created for '{stringName}'")
 
-        if stringObj.realProductionSensor:
+        if sData.get(CONF_REAL_PRODUCTION_SENSOR):
             entities.append(SolarStringPerformanceSensor(hass, sData, db, sensorGroupObj))
-            _LOGGER.info(f"[DIAG-ROOF]   [OK] SolarStringPerformanceSensor created for '{stringObj.name}' (real sensor: {stringObj.realProductionSensor})")
+            _LOGGER.info(f"[DIAG-ROOF]   [OK] SolarStringPerformanceSensor created for '{stringName}'")
 
     # ── STEP 5: Create sensor group entities (Estado / Nubosidad) ──
-    if sensorGroupObj and roofObj.sensorGroupId:
-        sgIdentifier = (DOMAIN, f"sg_{roofObj.sensorGroupId}")
+    if sensorGroupObj and sensorGroupId:
+        sgIdentifier = (DOMAIN, f"sg_{sensorGroupId}")
         try:
             deviceRegistry.async_get_or_create(
                 config_entry_id=mainEntryId,
@@ -196,8 +195,8 @@ def _setupRoofEntities(hass, mainEntryId, subentryId, data, db, deviceRegistry, 
         except Exception as e:
             _LOGGER.error(f"[DIAG-ROOF]   [FAIL] Could not register Sensor Group device: {e}", exc_info=True)
 
-        entities.append(SensorGroupVirtualSensor(hass, db, roofObj.sensorGroupId, {sgIdentifier}))
-        entities.append(SensorGroupCloudinessSensor(hass, db, roofObj.sensorGroupId, {sgIdentifier}))
+        entities.append(SensorGroupVirtualSensor(hass, db, sensorGroupId, {sgIdentifier}))
+        entities.append(SensorGroupCloudinessSensor(hass, db, sensorGroupId, {sgIdentifier}))
         _LOGGER.info(f"[DIAG-ROOF]   [OK] SensorGroup status + cloudiness sensors added")
     else:
         _LOGGER.info(f"[DIAG-ROOF]   Skipping SG device/sensors (no sensor group linked to this roof)")
@@ -209,7 +208,7 @@ def _setupRoofEntities(hass, mainEntryId, subentryId, data, db, deviceRegistry, 
     else:
         _LOGGER.warning(
             f"[DIAG-ROOF]   [WARN] No entities generated for roof '{roofName}'. "
-            f"Reason: 0 strings in DB for this roof (stringCount={stringCount})."
+            f"Reason: 0 strings in Subentry for this roof."
         )
 
     _LOGGER.info(f"[DIAG-ROOF] ── END setup for roof='{roofName}' (total entities: {len(entities)}) ──")

@@ -57,19 +57,8 @@ class SensorGroupsFlowMixin:
                 
                 # BRANCH A: If in guided flow (Roof -> SG), link them and continue
                 if getattr(self, '_guidedFlow', False):
-                    roofName = self.tempData.get(CONF_ROOF_NAME)
-                    if roofName:
-                        roofId = slugify(roofName)
-                        roofObj = self._db.getRoof(roofId)
-                        if roofObj:
-                             # Re-save roof with the new linked group ID
-                             await self._db.addRoof(
-                                name=roofObj.name,
-                                tilt=roofObj.tilt,
-                                azimuth=roofObj.azimuth,
-                                sensorGroupId=groupId,
-                                strings=roofObj.strings
-                             )
+                    # Store the group ID in tempData so it's included in the final subentry creation
+                    self.tempData[CONF_SENSOR_GROUP_NAME] = groupId
                     
                     # Ensure the next step exists in the current class (Mixins safety)
                     if hasattr(self, 'async_step_string_create_select_relations'):

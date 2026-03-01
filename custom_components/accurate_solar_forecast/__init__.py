@@ -112,10 +112,7 @@ async def async_remove_subentry(hass: HomeAssistant, entry: ConfigEntry, subentr
 
         # Case B: Roof
         elif CONF_ROOF_NAME in subData:
-            roofName = subData[CONF_ROOF_NAME]
-            roofId = slugify(roofName) if roofName else "default"
-            _LOGGER.warning(f"Removing Roof from DB: {roofId}")
-            await db.deleteRoof(roofId)
+            _LOGGER.info(f"Removing Roof subentry '{subentry.title}'. No DB cleanup needed (stored in subentry).")
 
         # Case C: Other subentries (Management, PV Model pills)
         else:
@@ -128,6 +125,11 @@ async def async_remove_subentry(hass: HomeAssistant, entry: ConfigEntry, subentr
 async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Handle removal of the ENTIRE integration. This is a destructive clean wipe."""
     try:
+        # SAFETY GUARD: If for some reason HA calls this for a subentry, DO NOT WIPE.
+        if getattr(entry, "subentry_id", None):
+            _LOGGER.info(f"async_remove_entry ignored for subentry {entry.subentry_id}")
+            return
+
         # If we reach here, HA is deleting the main integration hub
         _LOGGER.warning("CRITICAL: Main integration entry is being removed. Performing FULL WIPE of the JSON database.")
         
@@ -148,21 +150,30 @@ async def async_remove_config_entry_device(
 ) -> bool:
     """Allow user to remove a device via the UI and clean up the database."""
     try:
-        domainData = hass.data.get(DOMAIN, {})
-        db = domainData.get("db")
-        if not db:
-            return True
-
-        if CONF_ROOF_NAME in configEntry.data:
-            roofName = configEntry.data[CONF_ROOF_NAME]
-            roofId = slugify(roofName) if roofName else "default"
+        # Check all subentries for the device being removed
+        for sub in configEntry.subentries:
+            subData = dict(sub.data)
+            if "strings" not in subData:
+                continue
 
             for domain, identifier in deviceEntry.identifiers:
                 if domain == DOMAIN and isinstance(identifier, str) and identifier.startswith("str_"):
-                    stringId = identifier[4:]
-                    _LOGGER.info(f"Removing string device '{stringId}' from roof '{roofId}'")
-                    await db.deleteStringFromRoof(roofId, stringId)
-                    return True
+                    # This identifier is 'str_<slugified_name>'
+                    foundId = None
+                    for sid in subData["strings"]:
+                        if identifier == f"str_{sid}":
+                           foundId = sid
+                           break
+                    
+                    if foundId:
+                        _LOGGER.warning(f"User deleted string device '{foundId}' from roof subentry '{sub.title}'. Removing from data.")
+                        newStrings = dict(subData["strings"])
+                        newStrings.pop(foundId, None)
+                        subData["strings"] = newStrings
+                        
+                        hass.config_entries.async_update_subentry(configEntry, sub.subentry_id, data=subData)
+                        await hass.config_entries.async_reload_subentry(sub)
+                        return True
     except Exception as e:
         _LOGGER.exception(f"Error removing device: {e}")
 

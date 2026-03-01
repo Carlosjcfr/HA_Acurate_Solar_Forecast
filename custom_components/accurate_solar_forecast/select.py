@@ -30,16 +30,13 @@ async def async_setup_subentry(hass, configEntry, subentry, asyncAddEntities):
             return
 
         roofName = subData[CONF_ROOF_NAME]
-        roofId = slugify(roofName)
-        roofObj = db.getRoof(roofId)
-        if not roofObj:
-            return
+        stringsData = subData.get("strings", {})
 
         entities = []
-        for stringId, stringObj in roofObj.strings.items():
-            combinedData = stringObj.to_dict()
+        for stringId, sDataRaw in stringsData.items():
+            combinedData = dict(sDataRaw)
             combinedData[CONF_ROOF_NAME] = roofName
-            entities.append(SolarStringRoofSelect(hass, combinedData, db, configEntry, stringId, roofId))
+            entities.append(SolarStringRoofSelect(hass, combinedData, db, configEntry, subentry.subentry_id, stringId))
 
         if entities:
             asyncAddEntities(entities)
@@ -53,24 +50,32 @@ class SolarStringRoofSelect(SelectEntity):
     _attr_translation_key = "roof"
     _attr_icon = "mdi:home-roof"
 
-    def __init__(self, hass, stringData, db, configEntry, stringId, roofId):
+    def __init__(self, hass, stringData, db, configEntry, subentryId, stringId):
         self.hass = hass
         self._configEntry = configEntry
         self._data = stringData
         self._stringId = stringId
-        self._roofId = roofId
+        self._subentryId = subentryId
         self._db = db
         self._stringName = self._data.get(CONF_STRING_NAME)
         self._attr_unique_id = f"str_{self._stringId}_roof_select"
-        # Sensor group is owned by the Roof (not the string) since the 2026-02-27 refactor
-        self._sensorGroup = db.getSensorGroupForRoof(roofId)
+        
+        # Get sensor group from subentry data
+        subentry = next((s for s in configEntry.subentries if s.subentry_id == subentryId), None)
+        sensorGroupId = subentry.data.get("selected_sensor_group", "") if subentry else ""
+        self._sensorGroup = db.getSensorGroup(sensorGroupId) if sensorGroupId else None
 
         modelName = self._data.get("panel_model")
         self._panelData = db.data.get(slugify(modelName)) if db and db.data else None
 
     @property
     def options(self):
-        return list(self._db.listRoofs().values())
+        """List names of all available roofs (subentries)."""
+        return [
+            sub.data.get(CONF_ROOF_NAME) 
+            for sub in self._configEntry.subentries 
+            if sub.data.get(CONF_ROOF_NAME)
+        ]
 
     @property
     def current_option(self):
@@ -89,34 +94,56 @@ class SolarStringRoofSelect(SelectEntity):
                 if device:
                     deviceIdentifiers = device.identifiers
                     foundDevice = True
+        
+        # Use the name of the root subentry hub as via_device
+        subentry = next((s for s in self._configEntry.subentries if s.subentry_id == self._subentryId), None)
+        roofName = subentry.data.get(CONF_ROOF_NAME) if subentry else None
+        viaId = (DOMAIN, f"roof_{slugify(roofName)}") if roofName else None
+
         return DeviceInfo(
             identifiers=deviceIdentifiers,
             name=self._stringName if not foundDevice else None,
             manufacturer=(self._panelData.brand if self._panelData else "Generic") if not foundDevice else None,
             model=(self._panelData.name if self._panelData else None) if not foundDevice else None,
-            via_device=(DOMAIN, f"roof_{self._roofId}") if (not foundDevice and self._roofId) else None
+            via_device=viaId if not foundDevice else None
         )
 
     async def async_select_option(self, option: str) -> None:
-        """Update the string's roof association."""
-        targetRoofId = next((rid for rid, rname in self._db.listRoofs().items() if rname == option), None)
-        if not targetRoofId:
+        """Update the string's roof association by moving it between Subentries."""
+        targetSubentry = next(
+            (s for s in self._configEntry.subentries if s.data.get(CONF_ROOF_NAME) == option), 
+            None
+        )
+        if not targetSubentry:
+            _LOGGER.error(f"Target roof '{option}' not found in subentries")
             return
             
-        roofObj = self._db.getRoof(targetRoofId)
-        if not roofObj:
+        currentSubentry = next(
+            (s for s in self._configEntry.subentries if s.subentry_id == self._subentryId),
+            None
+        )
+        if not currentSubentry:
             return
 
-        # 1. Update DB (the source of truth for strings)
-        self._data[CONF_ROOF_NAME] = option
-        self._data[CONF_TILT] = roofObj.tilt
-        self._data[CONF_AZIMUTH] = roofObj.azimuth
-        await self._db.addStringToRoof(self._roofId, self._stringId, self._data)
-
-        # 2. If the string actually belongs to a different roof now, it should probably move subentries?
-        # Actually, in this architecture, strings are PART of a roof subentry.
-        # Moving a string to another roof means removing it from the current subentry and adding it to another.
-        # For now, let's just reload the current and target subentries if possible.
+        # 1. Update Current Subentry: Remove the string
+        currentStrings = dict(currentSubentry.data.get("strings", {}))
+        stringData = currentStrings.pop(self._stringId, self._data)
         
-        # Reload current entry to reflect changes
-        await self.hass.config_entries.async_reload(self._configEntry.entry_id)
+        newCurrentData = dict(currentSubentry.data)
+        newCurrentData["strings"] = currentStrings
+        self.hass.config_entries.async_update_subentry(self._configEntry, currentSubentry.subentry_id, data=newCurrentData)
+
+        # 2. Update Target Subentry: Add the string
+        newTargetData = dict(targetSubentry.data)
+        targetStrings = dict(newTargetData.get("strings", {}))
+        
+        # Update string geometry to match target roof
+        stringData[CONF_ROOF_NAME] = option
+        stringData[CONF_TILT] = newTargetData.get(CONF_TILT, 30.0)
+        stringData[CONF_AZIMUTH] = newTargetData.get(CONF_AZIMUTH, 180.0)
+        
+        targetStrings[self._stringId] = stringData
+        newTargetData["strings"] = targetStrings
+        self.hass.config_entries.async_update_subentry(self._configEntry, targetSubentry.subentry_id, data=newTargetData)
+
+        _LOGGER.warning(f"Moved string '{self._stringName}' from hub '{currentSubentry.title}' to '{targetSubentry.title}'")
