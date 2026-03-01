@@ -96,16 +96,25 @@ class SolarStringRoofSelect(SelectEntity):
         )
 
     async def async_select_option(self, option: str) -> None:
+        """Update the string's roof association."""
         targetRoofId = next((rid for rid, rname in self._db.listRoofs().items() if rname == option), None)
         if not targetRoofId:
             return
+            
         roofObj = self._db.getRoof(targetRoofId)
-        newData = self._configEntry.data.copy()
-        newData[CONF_ROOF_NAME] = option
-        if roofObj:
-            if roofObj.tilt is not None:
-                newData[CONF_TILT] = roofObj.tilt
-            if roofObj.azimuth is not None:
-                newData[CONF_AZIMUTH] = roofObj.azimuth
-        self.hass.config_entries.async_update_entry(self._configEntry, data=newData)
+        if not roofObj:
+            return
+
+        # 1. Update DB (the source of truth for strings)
+        self._data[CONF_ROOF_NAME] = option
+        self._data[CONF_TILT] = roofObj.tilt
+        self._data[CONF_AZIMUTH] = roofObj.azimuth
+        await self._db.addStringToRoof(self._roofId, self._stringId, self._data)
+
+        # 2. If the string actually belongs to a different roof now, it should probably move subentries?
+        # Actually, in this architecture, strings are PART of a roof subentry.
+        # Moving a string to another roof means removing it from the current subentry and adding it to another.
+        # For now, let's just reload the current and target subentries if possible.
+        
+        # Reload current entry to reflect changes
         await self.hass.config_entries.async_reload(self._configEntry.entry_id)

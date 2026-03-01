@@ -80,6 +80,17 @@ class StringsFlowMixin:
              }
              
              await self._db.addStringToRoof(roofId, stringId, stringData)
+
+             # RELOAD UI: Find the subentry for this roof and reload it so the new string appears
+             parentEntryId = getattr(self, "handler", None) or self.context.get("entry_id")
+             if parentEntryId:
+                 parentEntry = self.hass.config_entries.async_get_entry(parentEntryId)
+                 if parentEntry:
+                     for sub in parentEntry.subentries:
+                         if sub.data.get(CONF_ROOF_NAME) == roofName:
+                             _LOGGER.info(f"Reloading subentry '{sub.title}' ({sub.subentry_id}) to show new string")
+                             await self.hass.config_entries.async_reload_subentry(sub)
+                             break
              
              # Clear string-specific data for the next iteration
              self.tempData.pop(CONF_STRING_NAME, None)

@@ -1,28 +1,42 @@
 # Release Notes - Accurate Solar Forecast
 
-## [2026-03-01] - Pre-Update Analysis: Subentry Lifecycle Architecture Fix
+## [2026-03-01] - Pre-Update Analysis: String Creation & UI Sync Fix
 
 ### Identified Issues & Improvements
 
-- **CRITICAL: Missing `async_setup_subentry`**: The integration only implemented `async_setup_entry`, which runs ONCE at startup. Subentries created dynamically (roofs, SGs) never triggered entity creation because HA's Subentry API requires `async_setup_subentry` and `async_unload_subentry` callbacks. [ARCHITECTURE]
-- **Diagnostic system expansion**: The binary_sensor health check was basic (2 checks). Expanded to 15+ checks covering models, geometry, sensor availability, and cross-reference consistency. [FEATURE]
-- **Platform consolidation**: Moved `core/select.py` and `core/number.py` classes into root platform files for HA best practices. [CLEANUP]
+- **UI Sync Gap**: Strings added via the "String" pill (quick action) are saved to the database but do not appear as sensors until a restart or manual reload. This is because the flow returns `async_abort`, which doesn't trigger a reload of the associated Roof subentry. [BUG]
+- **Alarming Logs**: Diagnostic warnings (`_LOGGER.warning`) in `sensor.py` are being flagged by Home Assistant as "Integration Errors" in the UI, causing user confusion despite being normal diagnostic output. [UX]
+- **Subentry Traceability**: Lack of sufficient logging during the `async_setup_subentry` phase makes it difficult to debug why certain subentries might fail to create entities. [MAINTAINABILITY]
 
 ### Action Plan
 
-1. Implement `async_setup_subentry` + `async_unload_subentry` in `__init__.py`
-2. Refactor all platforms (sensor, number, select, binary_sensor) to split global vs per-subentry entity creation
-3. Expand diagnostic checks in binary_sensor.py with severity-based issue reporting
-4. Consolidate select.py and number.py (remove core/ duplicates)
+1. **Lower Log Severity**: Change diagnostic `warning` logs to `info` or `debug` in `sensor.py` and `__init__.py` to prevent HA from flagging them as critical errors.
+2. **Implement Subentry Reload**: Update `flow_strings.py` to identify and reload the corresponding Roof subentry after a new string is added, ensuring the UI updates immediately.
+3. **Enhance Traceability**: Add specific success/fail logs in `sensor.py` for each subentry type being processed.
+4. **Fix Select Platform Data Access**: Correct an architectural error in `select.py` where it was trying to update main entry data instead of subentry/DB data.
 
 ### Completion Status
+
+- [x] Step 1: Lower Log Severity implemented (Warn -> Info)
+- [x] Step 2: Automatic Subentry Reload implemented in `flow_strings.py`
+- [x] Step 3: Diagnostic logging trace added to `sensor.py`
+- [x] Step 4: `select.py` architectural fix (DB sync)
+- [x] **Extra**: Diagnosis entity unique_id updated to `accurate_solar_forecast_diagnosis`
+
+---
+
+## [2026-03-01.1] - Pre-Update Analysis: Subentry Lifecycle Architecture Fix
+
+### Identified Issues & Improvements
+
+- **CRITICAL: Missing `async_setup_subentry`**: The integration only implemented `async_setup_entry`... [REDACTED FOR SPACE]
+
+### Completion Status (ARCHIVED)
 
 - [x] Step 1: `async_setup_subentry` + `async_unload_subentry` implemented
 - [x] Step 2: All 4 platforms refactored with `async_setup_subentry` handlers
 - [x] Step 3: Diagnostic system expanded (15+ checks, 3 severity levels)
 - [x] Step 4: Platform files consolidated
-
----
 
 ## [2026-02-28] - Pre-Update Analysis: Initial Installation Diagnostics
 
