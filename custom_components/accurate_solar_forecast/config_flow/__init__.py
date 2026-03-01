@@ -18,15 +18,15 @@ except ImportError:
     class ConfigSubentryFlow:
         pass
 
-_LOGGER = logging.getLogger(__name__)
-
 class AccurateForecastCommonFlow:
     """Common methods for both ConfigFlow, OptionsFlow and SubentryFlow."""
-    
+
     @property
     def tempData(self):
         """Persistent state storage across flow steps (using HA context)."""
-        return self.context.setdefault("temp_data", {})
+        if "temp_data" not in self.context:
+            self.context["temp_data"] = {}
+        return self.context["temp_data"]
 
     @tempData.setter
     def tempData(self, value):
@@ -54,6 +54,10 @@ class AccurateForecastCommonFlow:
         """Initialize database and ensure it's loaded."""
         self.hass.data.setdefault(DOMAIN, {})
         
+        # Ensure context data is initialized
+        if "temp_data" not in self.context:
+            self.context["temp_data"] = {}
+            
         # Always get or create DB and ensure it is loaded from disk
         if "db" not in self.hass.data[DOMAIN]:
             self._db = AccurateSolarSensorDB(self.hass)
@@ -65,6 +69,7 @@ class AccurateForecastCommonFlow:
 
     def _getDefault(self, key, sourceData=None, fallback=vol.UNDEFINED):
         """Helper to get default value for schemas."""
+        # Use property getter which points to context
         data = sourceData if sourceData is not None else self.tempData
         val = data.get(key)
         return val if val is not None else fallback
@@ -249,21 +254,22 @@ class RoofSubentryFlowHandler(AccurateForecastCommonFlow, RoofsFlowMixin, Sensor
             tilt = userInput[CONF_TILT]
             azimuth = userInput[CONF_AZIMUTH]
 
-            # Temporarily store roof basics in tempData to pass between steps
-            # We use context-backed tempData now
-            self.tempData[CONF_ROOF_NAME] = name
-            self.tempData[CONF_TILT] = float(tilt)
-            self.tempData[CONF_AZIMUTH] = float(azimuth)
-            self.tempData["strings"] = {} # Initialize empty strings dict for the new roof
+            # Temporarily store roof basics in tempData (persisted in self.context)
+            data = dict(self.tempData)
+            data.update({
+                CONF_ROOF_NAME: name,
+                CONF_TILT: float(tilt),
+                CONF_AZIMUTH: float(azimuth),
+                "strings": {}
+            })
+            self.tempData = data
             
-            _LOGGER.info(f"Stepping forward to SG selection. Current tempData: {self.tempData}")
+            _LOGGER.info(f"[FLOW] Roof data stored. Context: {self.context.get('temp_data')}")
 
             groups = self._db.listSensorGroups()
             if not groups:
-                # No sensor groups yet — create one first
                 return await self.async_step_sensor_group_create()
             else:
-                # Sensor groups exist — let user choose which to assign
                 return await self.async_step_roof_select_sensor_group()
 
         schema = self._getRoofCreateSchema()
