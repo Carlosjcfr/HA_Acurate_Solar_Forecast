@@ -9,6 +9,7 @@ Se ha realizado una simplificación estructural profunda para eliminar la redund
 - **Redundancia de datos**: Los tejados y las strings solares se almacenaban tanto en una base de datos JSON propia como en los objetos `ConfigSubentry` de Home Assistant. Esto generaba riesgos de desincronización.
 - **Condiciones de carrera**: La configuración de entidades a veces fallaba en el arranque porque la base de datos JSON no se terminaba de cargar antes del setup de HA.
 - **Fallos en la creación dinámica**: Las nuevas subentries (tejados) a veces no aparecían correctamente en la interfaz sin un reinicio completo.
+- **Creación de Tejados Vacíos**: Se ha corregido un bug crítico donde los tejados se creaban sin strings debido a que la instancia del flujo de configuración se reiniciaba entre pasos del asistente, perdiendo los datos almacenados en memoria.
 - **Complejidad innecesaria**: El uso de `slugify` como clave primaria para tejados era propenso a errores si el nombre contenía caracteres especiales.
 
 ### Cambios de Arquitectura
@@ -19,6 +20,7 @@ Se ha realizado una simplificación estructural profunda para eliminar la redund
 
 ### Mejoras en el Config Flow y UI
 
+- **Persistencia de sesión (Context)**: Se ha implementado el uso de `self.context` de Home Assistant para almacenar datos temporales durante la configuración. Esto garantiza que la información (Tejado -> Grupo -> Strings) sobreviva a los reinicios de clase entre pasos del flujo.
 - **Flujo guiado consolidado**: Al crear un tejado nuevo, se recogen todos los datos y se crea la subentry de una sola vez al finalizar el asistente.
 - **Gestión de Strings dinámica**: Las strings se añaden o modifican editando directamente el diccionario de datos de la subentry, lo que refleja los cambios al instante.
 - **Movilidad entre tejados**: Se ha implementado la capacidad de mover una string de un tejado a otro mediante un selector (`select.py`), actualizando automáticamente ambas subentries vinculadas.

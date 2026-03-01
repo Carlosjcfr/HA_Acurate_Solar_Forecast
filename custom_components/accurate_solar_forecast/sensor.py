@@ -107,6 +107,7 @@ def _setupRoofEntities(hass, mainEntryId, subentryId, data, db, deviceRegistry, 
         return
 
     # ── STEP 2: Use Subentry Data for geometry ──
+    _LOGGER.info(f"[DIAG-ROOF]   Data from Subentry: {data}")
     tilt = data.get(CONF_TILT, 30.0)
     azimuth = data.get(CONF_AZIMUTH, 180.0)
     sensorGroupId = data.get(CONF_SENSOR_GROUP_NAME, "")

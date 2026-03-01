@@ -23,12 +23,38 @@ _LOGGER = logging.getLogger(__name__)
 class AccurateForecastCommonFlow:
     """Common methods for both ConfigFlow, OptionsFlow and SubentryFlow."""
     
+    @property
+    def tempData(self):
+        """Persistent state storage across flow steps (using HA context)."""
+        return self.context.setdefault("temp_data", {})
+
+    @tempData.setter
+    def tempData(self, value):
+        self.context["temp_data"] = value
+
+    @property
+    def _guidedFlow(self):
+        """Flag to indicate if we are in the Roof -> Strings guided workflow."""
+        return self.context.get("guided_flow", False)
+
+    @_guidedFlow.setter
+    def _guidedFlow(self, value):
+        self.context["guided_flow"] = value
+
+    @property
+    def _isSubentry(self):
+        """Flag for direct subentry creation flows (pills)."""
+        return self.context.get("is_subentry", False)
+
+    @_isSubentry.setter
+    def _isSubentry(self, value):
+        self.context["is_subentry"] = value
+
     async def _asyncInitRequirements(self):
+        """Initialize database and ensure it's loaded."""
         self.hass.data.setdefault(DOMAIN, {})
-        if not hasattr(self, "tempData"):
-            self.tempData = {}
         
-        # Always get or create DB and ensure it is loaded from disk to prevent stale flows
+        # Always get or create DB and ensure it is loaded from disk
         if "db" not in self.hass.data[DOMAIN]:
             self._db = AccurateSolarSensorDB(self.hass)
             self.hass.data[DOMAIN]["db"] = self._db
@@ -210,6 +236,7 @@ class RoofSubentryFlowHandler(AccurateForecastCommonFlow, RoofsFlowMixin, Sensor
     async def async_step_user(self, userInput=None):
         await self._asyncInitRequirements()
         self._guidedFlow = True
+        _LOGGER.info(f"Starting Guided Flow for Roof Subentry. tempData={self.tempData}")
         return await self.async_step_roof_create(userInput)
 
     async def async_step_roof_create(self, userInput=None):
@@ -223,10 +250,13 @@ class RoofSubentryFlowHandler(AccurateForecastCommonFlow, RoofsFlowMixin, Sensor
             azimuth = userInput[CONF_AZIMUTH]
 
             # Temporarily store roof basics in tempData to pass between steps
+            # We use context-backed tempData now
             self.tempData[CONF_ROOF_NAME] = name
-            self.tempData[CONF_TILT] = tilt
-            self.tempData[CONF_AZIMUTH] = azimuth
+            self.tempData[CONF_TILT] = float(tilt)
+            self.tempData[CONF_AZIMUTH] = float(azimuth)
             self.tempData["strings"] = {} # Initialize empty strings dict for the new roof
+            
+            _LOGGER.info(f"Stepping forward to SG selection. Current tempData: {self.tempData}")
 
             groups = self._db.listSensorGroups()
             if not groups:
@@ -273,6 +303,8 @@ class RoofSubentryFlowHandler(AccurateForecastCommonFlow, RoofsFlowMixin, Sensor
         """Finalize the flow: create the HA subentry (hub) for this roof with ALL gathered data."""
         roofName = self.tempData.get(CONF_ROOF_NAME, "Roof")
         
+        _LOGGER.info(f"Finalizing Guided Flow. Final Collected tempData: {self.tempData}")
+
         # Build the complete data dictionary for the Subentry
         subentryData = {
             CONF_ROOF_NAME: roofName,
@@ -284,6 +316,10 @@ class RoofSubentryFlowHandler(AccurateForecastCommonFlow, RoofsFlowMixin, Sensor
         
         _LOGGER.info(f"Creating Roof Subentry '{roofName}' with data: {subentryData}")
         
+        # Wipe the context data before finishing to avoid contamination if user adds another roof later
+        self.context.pop("temp_data", None)
+        self.context.pop("guided_flow", None)
+
         return self.async_create_entry(
             title=roofName,
             data=subentryData
