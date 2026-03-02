@@ -71,32 +71,30 @@ class StringsFlowMixin:
              # Case 2: Standalone creation (Pill) - update existing subentry
              else:
                  parentEntryId = getattr(self, "handler", None) or self.context.get("entry_id")
-                 if parentEntryId:
+                 targetSubId = self.context.get("selected_roof_id") or self.context.get("subentry_id")
+                 
+                 if parentEntryId and targetSubId:
                      parentEntry = self.hass.config_entries.async_get_entry(parentEntryId)
                      if parentEntry:
-                         for sub in parentEntry.subentries:
-                             if sub.data.get(CONF_ROOF_NAME) == roofName:
-                                 # Create new data dict with updated strings
-                                 newSubData = dict(sub.data)
-                                 allStrings = dict(newSubData.get("strings", {}))
-                                 allStrings[stringId] = stringData
-                                 newSubData["strings"] = allStrings
-                                 
-                                 _LOGGER.info(f"Updating subentry '{sub.title}' with new string '{stringName}'")
-                                 self.hass.config_entries.async_update_subentry(parentEntry, sub.subentry_id, data=newSubData)
-                                 
-                                 # Reload to reflect changes
-                                 await self.hass.config_entries.async_reload_subentry(sub)
-                                 break
+                        sub = next((s for s in parentEntry.subentries if s.subentry_id == targetSubId), None)
+                        if sub:
+                             # Create new data dict with updated strings
+                             newSubData = dict(sub.data)
+                             allStrings = dict(newSubData.get("strings", {}))
+                             allStrings[stringId] = stringData
+                             newSubData["strings"] = allStrings
+                             
+                             _LOGGER.info(f"Updating subentry '{sub.title}' ({sub.subentry_id}) with new string '{stringName}'")
+                             self.hass.config_entries.async_update_subentry(parentEntry, sub.subentry_id, data=newSubData)
+                             
+                             # Reload to reflect changes
+                             await self.hass.config_entries.async_reload_subentry(sub)
              
-             # Clear string-specific data for the next iteration
-             self.tempData.pop(CONF_STRING_NAME, None)
-             self.tempData.pop(CONF_REAL_PRODUCTION_SENSOR, None)
-             self.tempData.pop(CONF_PANEL_MODEL, None)
-             self.tempData.pop(CONF_NUM_PANELS, None)
-             self.tempData.pop(CONF_NUM_STRINGS, None)
+             # Clear string-specific data for the next iteration (important for the loop)
+             for key in [CONF_STRING_NAME, CONF_REAL_PRODUCTION_SENSOR, CONF_PANEL_MODEL, CONF_NUM_PANELS, CONF_NUM_STRINGS, CONF_TILT, CONF_AZIMUTH]:
+                 self.tempData.pop(key, None)
              
-             # In guided flow (RoofSubentryFlowHandler): show loop menu
+             # In guided flow: show loop menu
              if self._guidedFlow:
                  return await self.async_step_string_loop()
                  

@@ -103,7 +103,7 @@ class RoofsFlowMixin:
 
     async def async_step_roof_edit_select(self, userInput=None):
         if userInput is not None:
-             self.selectedSubentryId = userInput["selected_roof"]
+             self.context["selected_roof_id"] = userInput["selected_roof"]
              return await self.async_step_roof_edit_form()
              
         roofs = self._getAllRoofs()
@@ -123,7 +123,9 @@ class RoofsFlowMixin:
     async def async_step_roof_edit_form(self, userInput=None):
         configEntryId = getattr(self, "handler", None) or self.context.get("entry_id")
         entry = self.hass.config_entries.async_get_entry(configEntryId)
-        subentry = next((s for s in entry.subentries if s.subentry_id == self.selectedSubentryId), None)
+        
+        targetId = self.context.get("selected_roof_id")
+        subentry = next((s for s in entry.subentries if s.subentry_id == targetId), None)
         
         if not subentry:
             return self.async_abort(reason="not_found")

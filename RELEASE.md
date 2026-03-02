@@ -1,5 +1,33 @@
 # Release Notes - Accurate Solar Forecast
 
+## [2026-03-02] - Pre-Update Analysis
+
+### Identified Issues & Improvements
+
+- **Guided Flow Incompleteness**: The `RoofSubentryFlowHandler` successfully starts the guided flow but fails to integrate the string creation loop, ending prematurely after sensor group selection.
+- **Redundant & Divergent Logic**: Overlapping implementations of `async_step_roof_create` between mixins and handlers cause unpredictable behavior depending on the entry point.
+- **Missing Loop Step**: `async_step_string_loop` is currently a placeholder, preventing users from adding multiple strings during initial roof setup.
+- **Fragile Subentry Updates**: Strings added via the "String" pill rely on matching roof names, which is less reliable than using unique subentry IDs.
+- **State Management**: Manual `tempData` cleanup is scattered, potentially leading to "ghost" data in subsequent flow attempts.
+
+### Action Plan
+
+1. **Refactor RoofSubentryFlowHandler**: Properly sequence the guided flow: `Geometry -> Sensor Group (Select/Create) -> String Loop -> Finalize`.
+2. **Consolidate Building Blocks**: Move shared schema generation and basic steps to the Mixins while keeping flow orchestration in the Handlers.
+3. **Implement String Loop**: Create a functional `async_step_string_loop` that allows adding multiple strings or finishing the process.
+4. **Targeted Subentry Updates**: Update `StringSubentryFlowHandler` to use proper subentry identification for standalone string additions.
+5. **Clean State Lifecycle**: Ensure `temp_data` is cleared at the beginning and end of every flow to ensure a fresh state.
+
+### [2026-03-02] - Completion Status
+
+- [x] **Refactored RoofSubentryFlowHandler**: Implemented the complete guided flow sequence: `Geometry -> Sensor Group -> Strings Addition Loop -> Finalize`.
+- [x] **Improved Subentry Targeting**: standalone string additions now use subentry IDs rather than matching by name, making the process much more robust.
+- [x] **Fixed Platform Bugs**: Corrected `NameError` and missing import bugs in `select.py` and `number.py` related to sensor group lookups (`selected_sensor_group` -> `CONF_SENSOR_GROUP_NAME`).
+- [x] **Consolidated State Management**: Centralized `tempData` cleanup and ensured fresh state initialization at the start of each flow.
+- [x] **Aligned Translations**: Updated `en.json` and `es.json` to match the new step IDs used in the guided flow loop.
+
+---
+
 ## [2026-03-02] - Architectural Simplification: Roof Storage Refactor
 
 ### Summary of Changes

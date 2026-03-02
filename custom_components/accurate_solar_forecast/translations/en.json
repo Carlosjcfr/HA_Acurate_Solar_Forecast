@@ -350,8 +350,8 @@
                     "title": "String Added",
                     "description": "String saved. Do you want to add another string to this roof?",
                     "menu_options": {
-                        "string_add_another": "Add another string",
-                        "string_finish": "Finish and create hub"
+                        "string_create_select_relations": "Add another string",
+                        "roof_finish": "Finish and create hub"
                     }
                 }
             }

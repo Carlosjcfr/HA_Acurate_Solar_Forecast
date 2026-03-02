@@ -353,8 +353,8 @@
                     "title": "String Añadido",
                     "description": "String guardado. ¿Quieres añadir otro string a este tejado?",
                     "menu_options": {
-                        "string_add_another": "Añadir otro string",
-                        "string_finish": "Finalizar y crear hub"
+                        "string_create_select_relations": "Añadir otro string",
+                        "roof_finish": "Finalizar y crear hub"
                     }
                 }
             }

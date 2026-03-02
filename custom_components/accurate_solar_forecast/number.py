@@ -7,7 +7,7 @@ from homeassistant.helpers import device_registry as dr, entity_registry as er
 from .variables.const import (
     DOMAIN, CONF_ROOF_NAME, CONF_STRING_NAME,
     CONF_REAL_PRODUCTION_SENSOR, CONF_PANEL_MODEL,
-    CONF_TILT, CONF_AZIMUTH
+    CONF_TILT, CONF_AZIMUTH, CONF_SENSOR_GROUP_NAME
 )
 from .core.helpers import slugify
 
@@ -35,7 +35,7 @@ async def async_setup_subentry(hass, configEntry, subentry, asyncAddEntities):
         stringsData = subData.get("strings", {})
         
         # Get sensor group from subentry data
-        sensorGroupId = subData.get("selected_sensor_group", "")
+        sensorGroupId = subData.get(CONF_SENSOR_GROUP_NAME, "")
         sensorGroupObj = db.getSensorGroup(sensorGroupId) if sensorGroupId else None
 
         entities = []

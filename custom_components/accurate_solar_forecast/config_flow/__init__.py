@@ -243,14 +243,17 @@ class RoofSubentryFlowHandler(AccurateForecastCommonFlow, RoofsFlowMixin, Sensor
     async def async_step_user(self, userInput=None):
         await self._asyncInitRequirements()
         
+        # Ensure fresh state for new flows
+        if not self.context.get("subentry_id"):
+            self.tempData = {}
+            self._guidedFlow = True
+            _LOGGER.info(f"Starting NEW Guided Flow for Roof Subentry.")
+        
         # Check if we are re-configuring an existing subentry
-        # In ConfigSubentryFlow, the subentry being configured is in self.context
         if self.context.get("subentry_id"):
             _LOGGER.info(f"Re-configuring existing roof subentry: {self.context['subentry_id']}")
             return await self.async_step_roof_manage_menu()
 
-        self._guidedFlow = True
-        _LOGGER.info(f"Starting Guided Flow for NEW Roof Subentry. tempData={self.tempData}")
         return await self.async_step_roof_create(userInput)
 
     async def async_step_roof_create(self, userInput=None):
@@ -291,13 +294,15 @@ class RoofSubentryFlowHandler(AccurateForecastCommonFlow, RoofsFlowMixin, Sensor
             data = dict(self.tempData)
             data[CONF_SENSOR_GROUP_NAME] = selectedGroupId
             self.tempData = data
-            return await self.async_step_roof_finish()
+            
+            # After selecting/creating a sensor group, go to string creation
+            return await self.async_step_string_create_select_relations()
 
         groups = self._db.listSensorGroups()
         schema = vol.Schema({
             vol.Required("selected_sensor_group"): selector.SelectSelector(
                 selector.SelectSelectorConfig(
-                    options=list(groups.keys()),
+                    options=[{"value": k, "label": v} for k, v in groups.items()], 
                     mode="dropdown"
                 )
             )
@@ -305,7 +310,13 @@ class RoofSubentryFlowHandler(AccurateForecastCommonFlow, RoofsFlowMixin, Sensor
         return self.async_show_form(step_id="roof_select_sensor_group", data_schema=schema)
 
     async def async_step_string_loop(self, userInput=None):
-        """After each string: offer to add another or finish and create the hub."""
+        """After each string: offer to add another or finish."""
+        options = ["string_create_select_relations", "roof_finish"]
+        return self.async_show_menu(
+            step_id="string_loop",
+            menu_options=options
+        )
+
     async def async_step_roof_finish(self, userInput=None):
         """Finalize the roof creation: create the HA subentry with geometry and sensor group."""
         roofName = self.tempData.get(CONF_ROOF_NAME, "Roof")
@@ -317,7 +328,7 @@ class RoofSubentryFlowHandler(AccurateForecastCommonFlow, RoofsFlowMixin, Sensor
             CONF_TILT: self.tempData.get(CONF_TILT, 30.0),
             CONF_AZIMUTH: self.tempData.get(CONF_AZIMUTH, 180.0),
             CONF_SENSOR_GROUP_NAME: self.tempData.get(CONF_SENSOR_GROUP_NAME, ""),
-            "strings": {}
+            "strings": self.tempData.get("strings", {})
         }
         
         # Wipe context
@@ -346,7 +357,10 @@ class StringSubentryFlowHandler(AccurateForecastCommonFlow, RoofsFlowMixin, Stri
         if userInput is not None:
             roofId = userInput["selected_roof"]
             roofs = self._getAllRoofs()
+            
             self.tempData[CONF_ROOF_NAME] = roofs.get(roofId, "Roof")
+            self.context["selected_roof_id"] = roofId
+            
             return await self.async_step_string_create_select_relations()
 
         roofs = self._getAllRoofs()

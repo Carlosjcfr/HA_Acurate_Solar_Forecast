@@ -5,7 +5,7 @@ from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 from .variables.const import (
     DOMAIN, CONF_ROOF_NAME, CONF_STRING_NAME,
-    CONF_REAL_PRODUCTION_SENSOR, CONF_TILT, CONF_AZIMUTH
+    CONF_REAL_PRODUCTION_SENSOR, CONF_TILT, CONF_AZIMUTH, CONF_SENSOR_GROUP_NAME
 )
 from .core.helpers import slugify
 
@@ -62,7 +62,7 @@ class SolarStringRoofSelect(SelectEntity):
         
         # Get sensor group from subentry data
         subentry = next((s for s in configEntry.subentries if s.subentry_id == subentryId), None)
-        sensorGroupId = subentry.data.get("selected_sensor_group", "") if subentry else ""
+        sensorGroupId = subentry.data.get(CONF_SENSOR_GROUP_NAME, "") if subentry else ""
         self._sensorGroup = db.getSensorGroup(sensorGroupId) if sensorGroupId else None
 
         modelName = self._data.get("panel_model")

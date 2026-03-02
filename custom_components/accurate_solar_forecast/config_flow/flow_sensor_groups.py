@@ -85,7 +85,10 @@ class SensorGroupsFlowMixin:
                     data[CONF_SENSOR_GROUP_NAME] = groupId
                     self.tempData = data
                     
-                    # Ensure the next step exists in the current class (Mixins safety)
+                    # After SG creation in guided flow, proceed to string creation.
+                    if hasattr(self, 'async_step_string_create_select_relations'):
+                        return await self.async_step_string_create_select_relations()
+                    
                     if hasattr(self, 'async_step_roof_finish'):
                         return await self.async_step_roof_finish()
                 
