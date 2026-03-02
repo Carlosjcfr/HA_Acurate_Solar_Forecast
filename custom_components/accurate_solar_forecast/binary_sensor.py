@@ -63,17 +63,18 @@ def _runAllChecks(db, hass=None) -> list[dict]:
     roofs: list[Roof] = []
     if hass:
         for entry in hass.config_entries.async_entries(DOMAIN):
-                # Check for sub.data existence (HA might have subentries with None data during early stages)
-                if sub.data and CONF_ROOF_NAME in sub.data:
+            for sub in entry.subentries:
+                if sub.data and (CONF_ROOF_NAME in sub.data or "name" in sub.data):
                     try:
                         roofs.append(Roof.from_dict({
-                            "name": sub.data.get(CONF_ROOF_NAME, "Roof"),
+                            "name": sub.data.get(CONF_ROOF_NAME, sub.data.get("name", "Roof")),
                             "tilt": sub.data.get(CONF_TILT, 30.0),
                             "azimuth": sub.data.get(CONF_AZIMUTH, 180.0),
                             "sensor_group_id": sub.data.get(CONF_SENSOR_GROUP_NAME, ""),
                             "strings": sub.data.get("strings", {})
                         }))
                     except Exception as e:
+                        _LOGGER.error(f"Error parsing roof subentry: {e}")
                         issues.append({"severity": "critical", "category": "roof", "message": f"Error parsing roof subentry '{sub.title or 'Unknown'}': {e}"})
 
     for roof in roofs:
@@ -194,10 +195,10 @@ class AccurateSolarHealthSensor(BinarySensorEntity):
             if self.hass:
                 for entry in self.hass.config_entries.async_entries(DOMAIN):
                     for sub in entry.subentries:
-                        if sub.data and CONF_ROOF_NAME in sub.data:
+                        if sub.data and (CONF_ROOF_NAME in sub.data or "name" in sub.data):
                             try:
                                 roofs.append(Roof.from_dict({
-                                    "name": sub.data.get(CONF_ROOF_NAME, "Roof"),
+                                    "name": sub.data.get(CONF_ROOF_NAME, sub.data.get("name", "Roof")),
                                     "tilt": sub.data.get(CONF_TILT, 30.0),
                                     "azimuth": sub.data.get(CONF_AZIMUTH, 180.0),
                                     "sensor_group_id": sub.data.get(CONF_SENSOR_GROUP_NAME, ""),

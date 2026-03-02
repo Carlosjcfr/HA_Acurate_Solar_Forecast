@@ -64,27 +64,30 @@ async def async_setup_subentry(hass, configEntry, subentry, asyncAddEntities):
         mainEntryId = configEntry.entry_id
         deviceRegistry = dr.async_get(hass)
 
-        _LOGGER.info(f"[DIAG] sensor.async_setup_subentry: title='{subentry.title}', id='{subId}', data={subData}")
+        _LOGGER.warning(f"[ACCURATE-SETUP] async_setup_subentry: title='{subentry.title}', type='{subentry.subentry_type}', data_keys={list(subData.keys())}")
 
         # --- ROOF SUBENTRY ---
-        if CONF_ROOF_NAME in subData:
+        # We accept both 'roof_name' and legacy 'name'
+        if CONF_ROOF_NAME in subData or "name" in subData:
+            _LOGGER.warning(f"[ACCURATE-SETUP] Identified as ROOF: {subentry.title}")
             _setupRoofEntities(hass, mainEntryId, subId, subData, db, deviceRegistry, asyncAddEntities)
 
         # --- SENSOR GROUP SUBENTRY ---
         elif CONF_SENSOR_GROUP_NAME in subData:
+            _LOGGER.warning(f"[ACCURATE-SETUP] Identified as SENSOR GROUP: {subentry.title}")
             _setupSensorGroupEntities(hass, mainEntryId, subId, subData, db, deviceRegistry, asyncAddEntities)
 
         # --- PV MODEL or MANAGEMENT subentry — no sensors needed ---
         else:
-            _LOGGER.debug(f"Subentry '{subentry.title}' has no sensor entities to create (type: {subentry.subentry_type})")
+            _LOGGER.info(f"[ACCURATE-SETUP] Subentry '{subentry.title}' ignored (no entities to create)")
 
     except Exception as e:
-        _LOGGER.exception(f"Error during sensor.async_setup_subentry: {e}")
+        _LOGGER.exception(f"[ACCURATE-SETUP] Error during sensor.async_setup_subentry: {e}")
 
 
 def _setupRoofEntities(hass, mainEntryId, subentryId, data, db, deviceRegistry, asyncAddEntities):
     """Create all devices and entities for a roof subentry."""
-    roofName = data.get(CONF_ROOF_NAME, "?")
+    roofName = data.get(CONF_ROOF_NAME, data.get("name", "?"))
     roofId = slugify(roofName)
     roofHubIdentifier = (DOMAIN, f"roof_{roofId}")
 
@@ -104,9 +107,12 @@ def _setupRoofEntities(hass, mainEntryId, subentryId, data, db, deviceRegistry, 
     _LOGGER.info(f"[DIAG-ROOF]   [OK] Data from Subentry: tilt={tilt}, az={azimuth}, group='{sensorGroupId}'")
 
     # ── STEP 3: Fetch sensor group ──
-    sensorGroupObj = db.getSensorGroup(sensorGroupId) if sensorGroupId else None
+    # We slugify just in case the stored ID is the raw name
+    groupIdSlug = slugify(sensorGroupId)
+    sensorGroupObj = db.getSensorGroup(groupIdSlug) if groupIdSlug else None
+    
     if sensorGroupObj:
-        _LOGGER.info(f"[DIAG-ROOF]   [OK] Sensor group resolved: '{sensorGroupObj.name}' (id='{sensorGroupId}')")
+        _LOGGER.info(f"[DIAG-ROOF]   [OK] Sensor group resolved: '{sensorGroupObj.name}' (id='{groupIdSlug}')")
     else:
         if sensorGroupId:
             _LOGGER.warning(
