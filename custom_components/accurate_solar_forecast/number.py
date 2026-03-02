@@ -4,12 +4,12 @@ from homeassistant.components.number import NumberEntity, NumberMode
 from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers import device_registry as dr, entity_registry as er
-from .variables.const import (
+from .const import (
     DOMAIN, CONF_ROOF_NAME, CONF_STRING_NAME,
     CONF_REAL_PRODUCTION_SENSOR, CONF_PANEL_MODEL,
     CONF_TILT, CONF_AZIMUTH, CONF_SENSOR_GROUP_NAME
 )
-from .core.helpers import slugify
+from .helpers import slugify
 
 _LOGGER = logging.getLogger(__name__)
 

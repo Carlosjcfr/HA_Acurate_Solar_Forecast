@@ -1,10 +1,21 @@
+# Release Notes - Accurate Solar Forecast
+
+## [2026-03-02] - Pre-Update Analysis (Global Refactor: Flat Structure)
+
+### Identified Issues & Improvements
+
+- **Fragmented Architecture**: 15+ files across 4 subdirectories (`core`, `variables`, `databases`, `config_flow`) cause complex import paths and fragile dependencies.
+- **Import Frailty**: Excessive use of `..` relative imports leads to potential circular dependency issues.
+- **Development Overhead**: High cognitive load due to jumping between multiple directories for a single feature.
+
+### Summary of Changes (Refactor)
+
+- **Unified Structure**: Moved all core logic to the root directory for better reliability and simpler imports.
+- **Consolidated Config Flow**: Entire configuration logic is now in `config_flow.py`, reducing complexity and avoiding circular imports.
+- **Improved Maintainability**: Standard Home Assistant file layout.
+- **Zero-Dependency Imports**: All local imports updated to `.const`, `.db`, etc.
+
 ### [2026-03-02] - Structural Simplification (Final Hierarchy)
-
-### Summary of Changes
-
-- **Flattened Hierarchy**: Removed the intermediate "Roof Hub" device. Strings and Sensor Groups are now top-level devices directly associated with their respective subentries (`ConfigSubentry`).
-- **Direct Linking**: All solar string entities and devices now link directly to the subentry via `config_subentry_id`, eliminating the need for `via_device` to an intermediate roof hub.
-- **Cleaner UI**: The "Tejado" subentry in the Home Assistant integration card now directly displays the Solar Strings as its immediate children, providing a much cleaner and more direct navigation experience.
 
 ### [2026-03-02] - Pre-Update Analysis (Hierarchy & String Linking)
 

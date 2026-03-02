@@ -1,15 +1,15 @@
 """Sensor platform for Accurate Solar Forecast."""
 import logging
 from homeassistant.helpers import device_registry as dr
-from .variables.const import *
-from .core import (
+from .const import *
+from .engine import (
     SolarStringSensor,
     SensorGroupVirtualSensor,
     SensorGroupCloudinessSensor,
     SolarStringPerformanceSensor,
-    PVModelCountSensor,
-    slugify
+    PVModelCountSensor
 )
+from .helpers import slugify
 
 _LOGGER = logging.getLogger(__name__)
 

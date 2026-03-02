@@ -3,9 +3,9 @@ from typing import Any
 from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry, ConfigSubentry
 from homeassistant.helpers.device_registry import DeviceEntry
-from .variables.const import DOMAIN, CONF_SENSOR_GROUP_NAME, CONF_ROOF_NAME
-from .databases import AccurateSolarSensorDB
-from .core import slugify
+from .const import DOMAIN, CONF_SENSOR_GROUP_NAME, CONF_ROOF_NAME
+from .db import AccurateSolarSensorDB
+from .helpers import slugify
 import logging
 
 _LOGGER = logging.getLogger(__name__)

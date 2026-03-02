@@ -5,9 +5,9 @@ from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
 )
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
-from .variables.const import DOMAIN, CONF_ROOF_NAME, CONF_SENSOR_GROUP_NAME, CONF_TILT, CONF_AZIMUTH
-from .core.helpers import slugify
-from .core.models import Roof
+from .const import DOMAIN, CONF_ROOF_NAME, CONF_SENSOR_GROUP_NAME, CONF_TILT, CONF_AZIMUTH
+from .helpers import slugify
+from .models import Roof
 
 _LOGGER = logging.getLogger(__name__)
 
