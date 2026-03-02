@@ -31,6 +31,8 @@ def getSubentryMenuState(hass: HomeAssistant) -> dict[str, bool]:
     for entry in hass.config_entries.async_entries(DOMAIN):
         # Count roofs in subentries
         for sub in entry.subentries:
+            if not sub.data:
+                continue
             if CONF_ROOF_NAME in sub.data:
                 state["hasRoofs"] = True
             if CONF_SENSOR_GROUP_NAME in sub.data:

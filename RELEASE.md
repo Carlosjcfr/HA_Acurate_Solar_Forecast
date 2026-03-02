@@ -1,8 +1,47 @@
-# Release Notes - Accurate Solar Forecast
+### [2026-03-02] - Structural Simplification (Final Hierarchy)
 
-## [2026-03-02] - Pre-Update Analysis
+### Summary of Changes
 
-### Identified Issues & Improvements
+- **Flattened Hierarchy**: Removed the intermediate "Roof Hub" device. Strings and Sensor Groups are now top-level devices directly associated with their respective subentries (`ConfigSubentry`).
+- **Direct Linking**: All solar string entities and devices now link directly to the subentry via `config_subentry_id`, eliminating the need for `via_device` to an intermediate roof hub.
+- **Cleaner UI**: The "Tejado" subentry in the Home Assistant integration card now directly displays the Solar Strings as its immediate children, providing a much cleaner and more direct navigation experience.
+
+### [2026-03-02] - Pre-Update Analysis (Hierarchy & String Linking)
+
+### Identified Issues & Improvements (Hierarchy Fixes)
+
+- **Conceptual Confusion**: The term "Roof Hub" for the device name might lead users to think a new integration Hub is created. It needs to be clear that these are subentries within the main Hub ("Accurate Solar Forecast").
+- **Subentry Clutter**: The "Add String" pill creates an empty subentry of type `string` because it ends with `async_create_entry`. This should be an `async_abort` since the string data is already persisted into the parent Roof subentry.
+- **Diagnostic Sync**: The diagnosis might fail to link sensor groups if it's looking for the slug while the data contains the name (or vice versa).
+
+### Action Plan (Hierarchy Fixes)
+
+1. **Clean Up Standalone Flows**: Modify `flow_strings.py` to use `async_abort(reason="list_updated")` when adding strings standalone, preventing empty subentry creation.
+2. **Clarify Device Naming**: Keep the hierarchy but ensure logging confirms that strings are indeed processed within the correct Roof subentry.
+3. **Robust Linker**: Ensure `_runAllChecks` in `binary_sensor.py` uses both ID and Name to verify the Roof -> Sensor Group link.
+
+---
+
+## [2026-03-02] - Pre-Update Analysis (Diagnosis Error Fixes)
+
+### Identified Issues & Improvements (Diagnosis Fixes)
+
+- **Diagnostic Crash**: The `AccurateSolarHealthSensor` crashes during early startup because `sub.data` might be `None` or inaccessible while Home Assistant is still initializing subentries. This results in the generic "Error reading database" message.
+- **Resilience**: Lack of `None` checks in `_runAllChecks` and `getSubentryMenuState`.
+- **Informative Errors**: The catch block in `extra_state_attributes` hides the real exception, making debugging difficult.
+- **Linker Logic**: Possible mismatch or initialization order issue causing sensor groups to appear "unlinked" immediately after startup.
+
+### Action Plan (Diagnosis Fixes)
+
+1. **Guard Subentry Access**: Add checks for `if sub.data:` before iterating or accessing keys in `binary_sensor.py` and `core/helpers.py`.
+2. **Improve Error Visibility**: Update the catch block in `binary_sensor.py` to log the actual exception.
+3. **Refactor Internal Logic**: Ensure `roofs` are correctly identified by checking for `CONF_ROOF_NAME` key existence and validity.
+
+---
+
+## [2026-03-02] - Pre-Update Analysis (Roof/String Refactor)
+
+### Identified Issues & Improvements (Roof/String Refactor)
 
 - **Guided Flow Incompleteness**: The `RoofSubentryFlowHandler` successfully starts the guided flow but fails to integrate the string creation loop, ending prematurely after sensor group selection.
 - **Redundant & Divergent Logic**: Overlapping implementations of `async_step_roof_create` between mixins and handlers cause unpredictable behavior depending on the entry point.
@@ -10,7 +49,7 @@
 - **Fragile Subentry Updates**: Strings added via the "String" pill rely on matching roof names, which is less reliable than using unique subentry IDs.
 - **State Management**: Manual `tempData` cleanup is scattered, potentially leading to "ghost" data in subsequent flow attempts.
 
-### Action Plan
+### Action Plan (Roof/String Refactor)
 
 1. **Refactor RoofSubentryFlowHandler**: Properly sequence the guided flow: `Geometry -> Sensor Group (Select/Create) -> String Loop -> Finalize`.
 2. **Consolidate Building Blocks**: Move shared schema generation and basic steps to the Mixins while keeping flow orchestration in the Handlers.
@@ -25,6 +64,8 @@
 - [x] **Fixed Platform Bugs**: Corrected `NameError` and missing import bugs in `select.py` and `number.py` related to sensor group lookups (`selected_sensor_group` -> `CONF_SENSOR_GROUP_NAME`).
 - [x] **Consolidated State Management**: Centralized `tempData` cleanup and ensured fresh state initialization at the start of each flow.
 - [x] **Aligned Translations**: Updated `en.json` and `es.json` to match the new step IDs used in the guided flow loop.
+- [x] **Diagnostic Resilience**: Added `sub.data` guards to prevent "Error reading database" crashes during startup.
+- [x] **Robust SG Linker**: Improved diagnostic check to match sensor groups by both slugged ID and display name.
 
 ---
 

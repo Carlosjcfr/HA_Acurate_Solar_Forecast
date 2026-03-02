@@ -98,7 +98,6 @@ class SolarStringNumberEntity(NumberEntity):
             name=self._stringName if not foundDevice else None,
             manufacturer=(self._panelData.brand if self._panelData else "Generic") if not foundDevice else None,
             model=(self._panelData.name if self._panelData else None) if not foundDevice else None,
-            via_device=viaId if not foundDevice else None
         )
 
     async def async_set_native_value(self, value: float) -> None:

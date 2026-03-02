@@ -92,19 +92,8 @@ def _setupRoofEntities(hass, mainEntryId, subentryId, data, db, deviceRegistry, 
     _LOGGER.info(f"[DIAG-ROOF]   subentry_id='{subentryId}', main_entry_id='{mainEntryId}'")
 
     # ── STEP 1: Register the Roof Hub device ──
-    try:
-        deviceRegistry.async_get_or_create(
-            config_entry_id=mainEntryId,
-            config_subentry_id=subentryId,
-            identifiers={roofHubIdentifier},
-            name=roofName,
-            manufacturer="Accurate Solar Forecast",
-            model="Roof Hub",
-        )
-        _LOGGER.info(f"[DIAG-ROOF]   [OK] Roof Hub device registered: identifier={roofHubIdentifier}")
-    except Exception as e:
-        _LOGGER.error(f"[DIAG-ROOF]   [FAIL] Could not register Roof Hub device: {e}", exc_info=True)
-        return
+    # REMOVED as per user request (wants strings directly under subentry)
+    _LOGGER.info(f"[DIAG-ROOF] skipped Roof Hub device registration (Direct Subentry mode)")
 
     # ── STEP 2: Use Subentry Data for geometry ──
     _LOGGER.info(f"[DIAG-ROOF]   Data from Subentry: {data}")
@@ -166,7 +155,6 @@ def _setupRoofEntities(hass, mainEntryId, subentryId, data, db, deviceRegistry, 
                 name=stringName,
                 manufacturer="Accurate Solar Forecast",
                 model=panelModelName,
-                via_device=roofHubIdentifier,
             )
             _LOGGER.info(f"[DIAG-ROOF]   [OK] Device registered for string '{stringName}'")
         except Exception as e:
@@ -190,7 +178,6 @@ def _setupRoofEntities(hass, mainEntryId, subentryId, data, db, deviceRegistry, 
                 name=sensorGroupObj.name,
                 manufacturer="Accurate Solar Forecast",
                 model="Sensor Group",
-                via_device=roofHubIdentifier,
             )
             _LOGGER.info(f"[DIAG-ROOF]   [OK] Sensor Group device registered: '{sensorGroupObj.name}'")
         except Exception as e:

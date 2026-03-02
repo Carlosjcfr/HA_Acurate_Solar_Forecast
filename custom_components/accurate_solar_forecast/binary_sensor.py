@@ -63,8 +63,8 @@ def _runAllChecks(db, hass=None) -> list[dict]:
     roofs: list[Roof] = []
     if hass:
         for entry in hass.config_entries.async_entries(DOMAIN):
-            for sub in entry.subentries:
-                if CONF_ROOF_NAME in sub.data:
+                # Check for sub.data existence (HA might have subentries with None data during early stages)
+                if sub.data and CONF_ROOF_NAME in sub.data:
                     try:
                         roofs.append(Roof.from_dict({
                             "name": sub.data.get(CONF_ROOF_NAME, "Roof"),
@@ -74,7 +74,7 @@ def _runAllChecks(db, hass=None) -> list[dict]:
                             "strings": sub.data.get("strings", {})
                         }))
                     except Exception as e:
-                        issues.append({"severity": "critical", "category": "roof", "message": f"Error parsing roof subentry '{sub.title}': {e}"})
+                        issues.append({"severity": "critical", "category": "roof", "message": f"Error parsing roof subentry '{sub.title or 'Unknown'}': {e}"})
 
     for roof in roofs:
         # Roof without strings
@@ -124,8 +124,10 @@ def _runAllChecks(db, hass=None) -> list[dict]:
             issues.append({"severity": "warning", "category": "sensor_group", "message": f"Sensor group '{sg.name}' irradiance sensor tilt out of range: {sg.refTilt}°"})
 
         # Check if this SG is used by any roof
-        linkedRoofs = [r.name for r in roofs if r.sensorGroupId == sgId]
-        if not linkedRoofs:
+        # We compare both by SG name and SG ID to be robust
+        isLinked = any(r.sensorGroupId == sgId or r.sensorGroupId == sg.name for r in roofs)
+        
+        if not isLinked:
             issues.append({"severity": "info", "category": "sensor_group", "message": f"Sensor group '{sg.name}' is not linked to any roof"})
 
         # Validate sensor entity IDs exist in HA (if hass available)
@@ -134,13 +136,6 @@ def _runAllChecks(db, hass=None) -> list[dict]:
                 issues.append({"severity": "warning", "category": "sensor_group", "message": f"Sensor group '{sg.name}': irradiance sensor '{sg.refSensor}' not found in HA"})
             if sg.tempSensor and not hass.states.get(sg.tempSensor):
                 issues.append({"severity": "warning", "category": "sensor_group", "message": f"Sensor group '{sg.name}': temperature sensor '{sg.tempSensor}' not found in HA"})
-
-    # --- CONSISTENCY: Orphan sensor groups ---
-    linkedSgIds = {r.sensorGroupId for r in roofs if r.sensorGroupId}
-    for sgId in db.sensor_groups:
-        if sgId not in linkedSgIds:
-            # Already reported above as "info", skip duplicate
-            pass
 
     return issues
 
@@ -199,7 +194,7 @@ class AccurateSolarHealthSensor(BinarySensorEntity):
             if self.hass:
                 for entry in self.hass.config_entries.async_entries(DOMAIN):
                     for sub in entry.subentries:
-                        if CONF_ROOF_NAME in sub.data:
+                        if sub.data and CONF_ROOF_NAME in sub.data:
                             try:
                                 roofs.append(Roof.from_dict({
                                     "name": sub.data.get(CONF_ROOF_NAME, "Roof"),
@@ -225,8 +220,9 @@ class AccurateSolarHealthSensor(BinarySensorEntity):
                     len(r.strings) for r in roofs
                 ),
             }
-        except Exception:
+        except Exception as e:
+            _LOGGER.error(f"Error reading database in diagnostic sensor: {e}", exc_info=True)
             return {
                 "status": "ERROR",
-                "critical_issues": ["Error reading database"],
+                "critical_issues": [f"Error reading database: {e}"],
             }

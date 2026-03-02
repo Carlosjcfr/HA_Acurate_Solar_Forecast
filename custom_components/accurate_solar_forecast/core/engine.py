@@ -100,9 +100,6 @@ class SolarStringSensor(SensorEntity):
             name=deviceName,
             manufacturer=(self._panelData.brand if self._panelData else "Generic"),
             model=modelName,
-            via_device=roofHubIdentifier if roofHubIdentifier else (
-                (DOMAIN, self._sensorGroup.name if self._sensorGroup else "Unknown")
-            )
         )
         
         # Performance caching
