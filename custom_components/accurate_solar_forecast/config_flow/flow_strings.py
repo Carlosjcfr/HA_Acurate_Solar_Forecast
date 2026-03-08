@@ -100,8 +100,15 @@ class StringsFlowMixin:
         
         # If we came from "Gestionar tejado" > "Añadir String", the roof entry 
         # already exists in HA. The string was already saved to the DB in 
-        # async_step_string_create_details. We just need to close the flow.
+        # async_step_string_create_details. We need to reload the existing
+        # config entry so async_setup_entry re-runs and creates the new entities.
         if self.temp_data.get("_managing_existing_roof"):
+            # Find and reload the existing roof config entry
+            from ..variables.const import DOMAIN
+            for entry in self.hass.config_entries.async_entries(DOMAIN):
+                if entry.data.get(CONF_ROOF_NAME) == roof_name:
+                    await self.hass.config_entries.async_reload(entry.entry_id)
+                    break
             return self.async_abort(reason="list_updated")
         
         # Normal flow: creating a brand new roof with its first strings
