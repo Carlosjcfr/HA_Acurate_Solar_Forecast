@@ -244,7 +244,58 @@
             "already_configured": "El dispositivo ya está configurado",
             "list_updated": "¡Listado actualizado!",
             "reconfigure_successful": "¡Configuración actualizada con éxito!",
-            "not_supported": "Esta entrada debe gestionarse desde Configurar en la integración principal."
+            "not_supported": "Esta entrada debe gestionarse desde Configurar en la integración principal.",
+            "no_roofs_available": "No hay tejados disponibles. Crea uno primero.",
+            "no_strings_available": "No se encontraron strings en este tejado."
+        }
+    },
+    "options": {
+        "step": {
+            "sensor_group": {
+                "title": "Editar Grupo de Sensores",
+                "description": "Modifica la configuración del grupo de sensores.",
+                "data": {
+                    "sensor_group_name": "Nombre del Grupo",
+                    "irradiance_sensor": "Irradiancia",
+                    "temperature_sensor": "Temp. Ambiente",
+                    "temp_panel_sensor": "Temp. Panel",
+                    "wind_sensor": "Velocidad Viento",
+                    "ref_tilt": "Inclinación Sensor Irrad. (º)",
+                    "ref_orientation": "Orientación Sensor Irrad. (180º=S)",
+                    "weather_entity": "Pronóstico meteorológico",
+                    "illuminance_sensor": "Iluminancia (lm)"
+                }
+            },
+            "string_select_relations": {
+                "title": "Editar String",
+                "description": "Paso 1: Selecciona Sensores y Panel.",
+                "data": {
+                    "string_name": "Nombre del String",
+                    "selected_sensor_group": "Grupo de Sensores",
+                    "brand": "Fabricante del Panel",
+                    "real_production_sensor": "Producción Solar (W)"
+                }
+            },
+            "string_details": {
+                "title": "Detalles del String",
+                "description": "Paso 2: Geometría y Modelo.",
+                "data": {
+                    "panel_model": "Modelo de Panel",
+                    "num_panels": "Paneles en serie",
+                    "num_strings": "Series en paralelo",
+                    "tilt": "Inclinación Paneles (º)",
+                    "azimuth": "Orientación Paneles (180º=S)"
+                }
+            },
+            "roof_create": {
+                "title": "Crear Nuevo Tejado",
+                "description": "Introduce los detalles del nuevo tejado.",
+                "data": {
+                    "name": "Nombre del Tejado",
+                    "tilt": "Inclinación (º)",
+                    "azimuth": "Orientación (180º=S)"
+                }
+            }
         }
     },
     "entity": {
