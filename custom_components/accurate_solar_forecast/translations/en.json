@@ -141,13 +141,13 @@
                 "description": "Manage the roof orientations database.",
                 "menu_options": {
                     "roof_create": "Create roof",
-                    "roof_edit_select": "Edit roof",
+                    "roof_edit_select": "Manage roof",
                     "roof_delete_select": "Delete roof"
                 }
             },
             "roof_edit_select": {
-                "title": "Edit Roof",
-                "description": "Select the roof to edit.",
+                "title": "Manage Roof",
+                "description": "Select the roof to manage.",
                 "data": {
                     "selected_roof": "Roof"
                 }
@@ -161,21 +161,20 @@
                     "azimuth": "Azimuth (180°=S)"
                 }
             },
-            "menu_roof_management": {
-                "title": "Roof Options",
+            "roof_management_menu": {
+                "title": "Manage Roof",
                 "description": "What do you want to do with this roof?",
                 "menu_options": {
-                    "roof_edit": "Edit Roof Parameters",
-                    "string_create_select_relations": "Add New String to this Roof"
+                    "roof_edit_form": "Edit Roof Parameters",
+                    "roof_add_string": "Add New String",
+                    "roof_delete_string_select": "Delete Strings"
                 }
             },
-            "roof_edit": {
-                "title": "Edit Roof",
-                "description": "Modify physical roof details.",
+            "roof_delete_string_select": {
+                "title": "Delete String",
+                "description": "Select the string to delete from this roof.",
                 "data": {
-                    "name": "Name",
-                    "tilt": "Tilt (°)",
-                    "azimuth": "Azimuth (180°=S)"
+                    "selected_string": "String"
                 }
             },
             "roof_delete_select": {

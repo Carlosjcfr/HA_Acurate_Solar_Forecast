@@ -141,13 +141,13 @@
                 "description": "Gestiona la base de datos de orientaciones de tejados.",
                 "menu_options": {
                     "roof_create": "Crear tejado",
-                    "roof_edit_select": "Editar tejado",
+                    "roof_edit_select": "Gestionar tejado",
                     "roof_delete_select": "Eliminar tejado"
                 }
             },
             "roof_edit_select": {
-                "title": "Editar Tejado",
-                "description": "Selecciona el tejado a editar.",
+                "title": "Gestionar Tejado",
+                "description": "Selecciona el tejado que deseas gestionar.",
                 "data": {
                     "selected_roof": "Tejado"
                 }
@@ -161,21 +161,20 @@
                     "azimuth": "Orientación (180º=S)"
                 }
             },
-            "menu_roof_management": {
-                "title": "Opciones de Tejado",
+            "roof_management_menu": {
+                "title": "Gestionar Tejado",
                 "description": "¿Qué deseas hacer con este tejado?",
                 "menu_options": {
-                    "roof_edit": "Editar parámetros del Tejado",
-                    "string_create_select_relations": "Añadir nuevo String a este Tejado"
+                    "roof_edit_form": "Editar parámetros del Tejado",
+                    "roof_add_string": "Añadir nuevo String",
+                    "roof_delete_string_select": "Eliminar Strings"
                 }
             },
-            "roof_edit": {
-                "title": "Editar Tejado",
-                "description": "Modifica los detalles físicos del tejado.",
+            "roof_delete_string_select": {
+                "title": "Eliminar String",
+                "description": "Selecciona el string a eliminar de este tejado.",
                 "data": {
-                    "name": "Nombre",
-                    "tilt": "Inclinación (º)",
-                    "azimuth": "Orientación (180º=S)"
+                    "selected_string": "String"
                 }
             },
             "roof_delete_select": {
