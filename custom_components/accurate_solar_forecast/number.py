@@ -2,7 +2,7 @@ import logging
 from homeassistant.components.number import NumberEntity, NumberDeviceClass, NumberMode
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity import DeviceInfo
-from .variables.const import DOMAIN, CONF_STRING_NAME, CONF_TILT, CONF_AZIMUTH, CONF_SENSOR_GROUP_NAME, CONF_ROOF_NAME, CONF_REAL_PRODUCTION_SENSOR
+from .variables.const import DOMAIN, CONF_STRING_NAME, CONF_TILT, CONF_AZIMUTH, CONF_SENSOR_GROUP_NAME, CONF_ROOF_NAME, CONF_REAL_PRODUCTION_SENSOR, CONF_PANEL_MODEL
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -82,7 +82,7 @@ class SolarStringNumberEntity(NumberEntity):
             identifiers=device_identifiers,
             name=self._string_name if not self.found_device else None,
             manufacturer=self._panel_data.get("brand", "Generic") if not self.found_device else None,
-            model=self._panel_data.get(CONF_PANEL_MODEL) if not self.found_device else None,
+            model=self._panel_data.get("name") if not self.found_device else None,
             via_device=(DOMAIN, self._sensor_group.get(CONF_SENSOR_GROUP_NAME)) if (not self.found_device and self._sensor_group) else None
         )
 
@@ -104,12 +104,10 @@ class SolarStringTiltNumber(SolarStringNumberEntity):
         """Update the current value."""
         self._attr_native_value = value
         
-        # Update DB instead of config entry
+        # Update DB
         self._data[CONF_TILT] = value
         await self._db.add_string_to_roof(self._roof_id, self._string_id, self._data)
-        
-        # Reload entry to propagate changes to sensor
-        await self.hass.config_entries.async_reload(self._config_entry.entry_id)
+        self.async_write_ha_state()
 
 class SolarStringAzimuthNumber(SolarStringNumberEntity):
     _attr_native_min_value = 0
@@ -129,9 +127,7 @@ class SolarStringAzimuthNumber(SolarStringNumberEntity):
         """Update the current value."""
         self._attr_native_value = value
         
-        # Update DB instead of config entry
+        # Update DB
         self._data[CONF_AZIMUTH] = value
         await self._db.add_string_to_roof(self._roof_id, self._string_id, self._data)
-        
-        # Reload entry to propagate changes to sensor
-        await self.hass.config_entries.async_reload(self._config_entry.entry_id)
+        self.async_write_ha_state()
