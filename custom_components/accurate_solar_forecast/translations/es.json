@@ -3,7 +3,7 @@
         "step": {
             "user": {
                 "title": "Accurate solar forecast",
-                "description": "¿Que quieres añadir?",
+                "description": "¿Qué quieres añadir?",
                 "menu_options": {
                     "menu_pv_models": "Configurar Módulos Fotovoltaicos",
                     "menu_roofs": "Configurar Tejados",
@@ -88,9 +88,9 @@
                     "temperature_sensor": "Tª Ambiental",
                     "temp_panel_sensor": "Tª del panel",
                     "wind_sensor": "Sensor de viento",
-                    "ref_tilt": "Inclinación sensor de irrad (º)",
-                    "ref_orientation": "Orientación sensor de irrad (180º=S)",
-                    "weather_entity": "Pronostico del tiempo",
+                    "ref_tilt": "Inclinación sensor de irrad. (º)",
+                    "ref_orientation": "Orientación sensor de irrad. (180º=S)",
+                    "weather_entity": "Pronóstico del tiempo",
                     "illuminance_sensor": "Iluminancia"
                 }
             },
@@ -110,9 +110,9 @@
                     "temperature_sensor": "Tª Ambiental",
                     "temp_panel_sensor": "Tª del panel",
                     "wind_sensor": "Sensor de viento",
-                    "ref_tilt": "Inclinación sensor de irrad (º)",
-                    "ref_orientation": "Orientación sensor de irrad (180º=S)",
-                    "weather_entity": "Pronostico del tiempo",
+                    "ref_tilt": "Inclinación sensor de irrad. (º)",
+                    "ref_orientation": "Orientación sensor de irrad. (180º=S)",
+                    "weather_entity": "Pronóstico del tiempo",
                     "illuminance_sensor": "Iluminancia"
                 }
             },
@@ -197,9 +197,9 @@
                     "temperature_sensor": "Tª Ambiental",
                     "temp_panel_sensor": "Tª del panel",
                     "wind_sensor": "Sensor de viento",
-                    "ref_tilt": "Inclinación sensor de irrad (º)",
-                    "ref_orientation": "Orientación sensor de irrad (180º=S)",
-                    "weather_entity": "Pronostico del tiempo",
+                    "ref_tilt": "Inclinación sensor de irrad. (º)",
+                    "ref_orientation": "Orientación sensor de irrad. (180º=S)",
+                    "weather_entity": "Pronóstico del tiempo",
                     "illuminance_sensor": "Iluminancia"
                 }
             },
