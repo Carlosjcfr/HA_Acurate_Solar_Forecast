@@ -85,6 +85,8 @@ class RoofsFlowMixin:
     async def async_step_roof_add_string(self, user_input=None):
         """Redirects to the string creation flow with the roof pre-selected."""
         # The roof name is already in temp_data from roof_management_menu
+        # Flag: we are managing an existing roof, so don't create a new entry at the end
+        self.temp_data["_managing_existing_roof"] = True
         return await self.async_step_string_create_select_relations()
 
     # --- DELETE STRING FROM THIS ROOF ---
