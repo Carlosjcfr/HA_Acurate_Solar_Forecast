@@ -205,16 +205,6 @@ class AccurateForecastFlow(AccurateForecastCommonFlow, PvModelsFlowMixin, RoofsF
             menu_options=menu_options
         )
 
-
-
-
-
-
-
-    # =================================================================================
-    # BRANCH 3: STRINGS (Integraciones - Create & Edit Only)
-
-
     # =================================================================================
     # RECONFIGURE FLOW (Native "Configure" button support)
     # =================================================================================
@@ -305,7 +295,7 @@ class AccurateForecastOptionsFlowHandler(AccurateForecastCommonFlow, PvModelsFlo
 
     async def async_step_menu_roof_management(self, user_input=None):
         """Intermediate menu for Roof entry."""
-        # Fix: Ensure temp_data has the roof name so that following string steps know where to save
+        # Ensure temp_data has the roof name so that following string steps know where to save
         self.temp_data[CONF_ROOF_NAME] = self.config_entry.data[CONF_ROOF_NAME]
         
         return self.async_show_menu(
@@ -322,8 +312,7 @@ class AccurateForecastOptionsFlowHandler(AccurateForecastCommonFlow, PvModelsFlo
              roof_id = old_name.lower().replace(" ", "_")
              
              # If name changed, we need to handle the ID change or mapping
-             await self._db.update_roof(
-                roof_id,
+             await self._db.add_roof(
                 new_name,
                 user_input[CONF_TILT],
                 user_input[CONF_AZIMUTH]
@@ -337,13 +326,17 @@ class AccurateForecastOptionsFlowHandler(AccurateForecastCommonFlow, PvModelsFlo
              self.hass.config_entries.async_update_entry(self.config_entry, data=updated_data, title=new_name)
              return self.async_create_entry(title="", data={})
 
+        # Load Current Roof Data
+        roof_id = self.config_entry.data[CONF_ROOF_NAME].lower().replace(" ", "_")
+        roof_data = self._db.get_roof(roof_id) or {}
+
         # Pre-fill with existing data
         return self.async_show_form(
             step_id="roof_edit", 
             data_schema=vol.Schema({
-                vol.Required("name", default=self.config_entry.data.get(CONF_ROOF_NAME)): str,
-                vol.Required(CONF_TILT, default=self.config_entry.data.get(CONF_TILT)): vol.All(vol.Coerce(float), vol.Range(min=0, max=90)),
-                vol.Required(CONF_AZIMUTH, default=self.config_entry.data.get(CONF_AZIMUTH)): vol.All(vol.Coerce(float), vol.Range(min=0, max=360)),
+                vol.Required("name", default=roof_data.get("name", self.config_entry.data.get(CONF_ROOF_NAME))): str,
+                vol.Required(CONF_TILT, default=roof_data.get(CONF_TILT, 30)): vol.All(vol.Coerce(float), vol.Range(min=0, max=90)),
+                vol.Required(CONF_AZIMUTH, default=roof_data.get(CONF_AZIMUTH, 180)): vol.All(vol.Coerce(float), vol.Range(min=0, max=360)),
             })
         )
 
