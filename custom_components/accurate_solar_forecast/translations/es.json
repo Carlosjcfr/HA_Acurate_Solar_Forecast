@@ -161,6 +161,23 @@
                     "azimuth": "Orientación (180º=S)"
                 }
             },
+            "menu_roof_management": {
+                "title": "Opciones de Tejado",
+                "description": "¿Qué deseas hacer con este tejado?",
+                "menu_options": {
+                    "roof_edit": "Editar parámetros del Tejado",
+                    "string_create_select_relations": "Añadir nuevo String a este Tejado"
+                }
+            },
+            "roof_edit": {
+                "title": "Editar Tejado",
+                "description": "Modifica los detalles físicos del tejado.",
+                "data": {
+                    "name": "Nombre",
+                    "tilt": "Inclinación (º)",
+                    "azimuth": "Orientación (180º=S)"
+                }
+            },
             "roof_delete_select": {
                 "title": "Eliminar Tejado",
                 "description": "Selecciona el tejado a eliminar.",

@@ -161,6 +161,23 @@
                     "azimuth": "Azimuth (180°=S)"
                 }
             },
+            "menu_roof_management": {
+                "title": "Roof Options",
+                "description": "What do you want to do with this roof?",
+                "menu_options": {
+                    "roof_edit": "Edit Roof Parameters",
+                    "string_create_select_relations": "Add New String to this Roof"
+                }
+            },
+            "roof_edit": {
+                "title": "Edit Roof",
+                "description": "Modify physical roof details.",
+                "data": {
+                    "name": "Name",
+                    "tilt": "Tilt (°)",
+                    "azimuth": "Azimuth (180°=S)"
+                }
+            },
             "roof_delete_select": {
                 "title": "Delete Roof",
                 "description": "Select the roof to delete.",

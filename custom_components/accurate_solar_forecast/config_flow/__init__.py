@@ -299,12 +299,53 @@ class AccurateForecastOptionsFlowHandler(AccurateForecastCommonFlow, PvModelsFlo
         elif CONF_STRING_NAME in self.config_entry.data:
             return await self.async_step_string_select_relations()
         elif CONF_ROOF_NAME in self.config_entry.data:
-            # For a roof entry, we want to allow editing the strings in that roof
-            # We set the roof name in temp_data so the string steps know which roof we are in
-            self.temp_data[CONF_ROOF_NAME] = self.config_entry.data[CONF_ROOF_NAME]
-            return await self.async_step_string_select_relations()
+            return await self.async_step_menu_roof_management()
             
         return self.async_abort(reason="not_supported")
+
+    async def async_step_menu_roof_management(self, user_input=None):
+        """Intermediate menu for Roof entry."""
+        # Fix: Ensure temp_data has the roof name so that following string steps know where to save
+        self.temp_data[CONF_ROOF_NAME] = self.config_entry.data[CONF_ROOF_NAME]
+        
+        return self.async_show_menu(
+            step_id="menu_roof_management",
+            menu_options=["roof_edit", "string_create_select_relations"]
+        )
+
+    async def async_step_roof_edit(self, user_input=None):
+        """Step to edit roof parameters directly from the entry."""
+        if user_input is not None:
+             # Find roof ID in DB by name
+             old_name = self.config_entry.data[CONF_ROOF_NAME]
+             new_name = user_input["name"]
+             roof_id = old_name.lower().replace(" ", "_")
+             
+             # If name changed, we need to handle the ID change or mapping
+             await self._db.update_roof(
+                roof_id,
+                new_name,
+                user_input[CONF_TILT],
+                user_input[CONF_AZIMUTH]
+             )
+             
+             # Sync entry data
+             updated_data = dict(self.config_entry.data)
+             updated_data.update(user_input)
+             updated_data[CONF_ROOF_NAME] = new_name
+             
+             self.hass.config_entries.async_update_entry(self.config_entry, data=updated_data, title=new_name)
+             return self.async_create_entry(title="", data={})
+
+        # Pre-fill with existing data
+        return self.async_show_form(
+            step_id="roof_edit", 
+            data_schema=vol.Schema({
+                vol.Required("name", default=self.config_entry.data.get(CONF_ROOF_NAME)): str,
+                vol.Required(CONF_TILT, default=self.config_entry.data.get(CONF_TILT)): vol.All(vol.Coerce(float), vol.Range(min=0, max=90)),
+                vol.Required(CONF_AZIMUTH, default=self.config_entry.data.get(CONF_AZIMUTH)): vol.All(vol.Coerce(float), vol.Range(min=0, max=360)),
+            })
+        )
 
     async def async_step_sensor_group(self, user_input=None):
         if user_input is not None:
